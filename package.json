@@ -1,0 +1,50 @@
+{
+  "name": "nextjs-authentication",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@types/react-datepicker": "^6.2.0",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/react-time-picker": "^4.0.3",
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "js-cookie": "^3.0.5",
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "jwt-decode": "^4.0.0",
+    "next": "14.1.3",
+    "next-auth": "^4.24.10",
+    "react": "^18",
+    "react-calendar": "^5.1.0",
+    "react-datepicker": "^7.5.0",
+    "react-dom": "^18",
+    "react-hook-form": "^7.51.0",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^5.3.0",
+    "react-multi-date-picker": "^4.5.2",
+    "react-router-dom": "^7.0.1",
+    "react-time-picker": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/js-cookie": "^3.0.6",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.20",
+    "daisyui": "^4.7.3",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.3",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5"
+  }
+}
