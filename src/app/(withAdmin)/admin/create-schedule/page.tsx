@@ -80,15 +80,15 @@ export default function CreateSchedulePage() {
           name = "IELTS";
           break;
         case "67337c880794d577cd982b76": // Pearson PTE
-          testType = "Paper-Based"; // Adjust as needed
+          testType = "Computer-Based"; // Adjust as needed
           name = "Pearson PTE";
           break;
         case "67337c880794d577cd982b77": // GRE
-          testType = "Paper-Based"; // Adjust as needed
+          testType = "Computer-Based"; // Adjust as needed
           name = "GRE";
           break;
         case "67337c880794d577cd982b78": // TOEFL
-          testType = "Paper-Based"; // Adjust as needed
+          testType = "Computer-Based"; // Adjust as needed
           name = "TOEFL";
           break;
         default:

@@ -1,8 +1,6 @@
-"use client";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import toast from "react-hot-toast";
 import { AiOutlineEllipsis } from "react-icons/ai";
 
 interface Booking {
@@ -13,6 +11,7 @@ interface Booking {
   attendance?: string;
   name?: string;
   testType?: string;
+  testSystem?: string;
 }
 
 const Table = ({ userId }: { userId: string }) => {
@@ -36,11 +35,15 @@ const Table = ({ userId }: { userId: string }) => {
     fetchBookings();
   }, [userId]);
 
-  const isPast24Hours = (bookingDate: string, startTime: string): boolean => {
-    const bookingDateTime = new Date(`${bookingDate}T${startTime}`);
-    const currentTime = new Date();
-    const timeDifference = bookingDateTime.getTime() - currentTime.getTime();
-    return timeDifference > 24 * 60 * 60 * 1000; // Check if it's more than 24 hours from now
+  // Correctly format date to '19 December, 2024'
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+
+    const day = date.getDate();
+    const month = date.toLocaleString("en-US", { month: "long" });
+    const year = date.getFullYear();
+
+    return `${day} ${month},${year}`;
   };
 
   return (
@@ -51,7 +54,8 @@ const Table = ({ userId }: { userId: string }) => {
           <th></th>
           <th>Name</th>
           <th>Test Type</th>
-          <th>Date</th>
+          <th>Test System</th>
+          <th>Exam Date</th>
           <th>Start Time</th>
           <th>Status</th>
           <th>Action</th>
@@ -64,25 +68,15 @@ const Table = ({ userId }: { userId: string }) => {
             <td>{index + 1}</td>
             <td>{booking.name}</td>
             <td>{booking.testType}</td>
-            <td>{booking.bookingDate}</td>
+            <td>{booking.testSystem}</td>
+            <td>{formatDate(booking.bookingDate)}</td>
             <td>{booking.startTime.slice(0, 5)}</td>
             <td>{booking.status}</td>
-
             <td>
               <button
                 onClick={() => {
-                  // Redirect to the contact details page for rescheduling
-                  router.push(`/dashboard/${booking._id}`); // Use router.push for internal navigation
+                  router.push(`/dashboard/${booking._id}`);
                 }}
-                className={`px-4 py-2 font-bold rounded ${
-                  booking.status === "pending" &&
-                  isPast24Hours(booking.bookingDate, booking.startTime)
-                    ? "font-bold text-xl text-gray-900 hover:bg-black hover:text-white"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-                disabled={
-                  !(booking.status === "pending" && isPast24Hours(booking.bookingDate, booking.startTime))
-                }
               >
                 <AiOutlineEllipsis />
               </button>

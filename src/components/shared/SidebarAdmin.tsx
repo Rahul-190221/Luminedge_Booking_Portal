@@ -12,7 +12,7 @@ import {
 import { TbBell, TbMoneybag, TbReport } from "react-icons/tb";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/utils/actions/logout";
-
+import { IoMailOutline, IoSettingsOutline } from "react-icons/io5"; // Import the icons
 const SidebarAdmin = () => {
   const pathname = usePathname();
   //console.log(pathname);
@@ -125,6 +125,33 @@ const SidebarAdmin = () => {
             <span className="inline">All Users</span>
           </Link>
         </li>
+          {/* Email Menu Item */}
+  <li
+    className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+      pathname === "/admin/email"
+        ? "bg-[#FACE39] text-black font-bold rounded-full"
+        : ""
+    }`}
+  >
+    <Link href="/admin/email" className="flex items-center px-4 py-3">
+      <IoMailOutline className="h-5 w-5 mr-2" />
+      <span className="inline">Email</span>
+    </Link>
+  </li>
+  
+  {/* Settings Menu Item */}
+  <li
+    className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+      pathname === "/admin/settings"
+        ? "bg-[#FACE39] text-black font-bold rounded-full"
+        : ""
+    }`}
+  >
+    <Link href="/admin/settings" className="flex items-center px-4 py-3">
+      <IoSettingsOutline className="h-5 w-5 mr-2" />
+      <span className="inline">Setting</span>
+    </Link>
+  </li>
         <li
           className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
             pathname === "/admin/notifications"

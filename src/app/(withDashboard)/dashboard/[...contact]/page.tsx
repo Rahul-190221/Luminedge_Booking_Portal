@@ -29,7 +29,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
         );
         toast.success("Booking rescheduled successfully!");
 // Redirect after successful operation
-router.push("/dashboard");
+router.push("/dashboard/mockType");
 } catch (error) {
   console.error("Error rescheduling booking:", error);
  
@@ -68,7 +68,7 @@ router.push("/dashboard");
       {/* Header Section */}
       <div className="text-center">
         <h1 className="text-2xl font-semibold">
-          If you want to reschedule, contact us
+          If you want to reschedule, contact  with us. 
         </h1>
       </div>
 
@@ -99,7 +99,7 @@ router.push("/dashboard");
           <p>info@luminedge.com.au</p>
         </div>
       </div>
-
+<p>Rescheduling an exam is only allowed if it is done at least 24 hours before the exam's start time.</p>
       {/* Reschedule Button Section */}
       <button
         onClick={() => {
@@ -116,8 +116,8 @@ router.push("/dashboard");
               <div className="flex justify-center space-x-2">
                 <button
                   onClick={() => {
-                    onRescheduleBooking(user._id); // Call reschedule function with user ID
-                    toast.dismiss(t.id); // Dismiss the toast
+                    onRescheduleBooking(user._id);
+                    toast.dismiss(t.id); // Dismiss immediately
                   }}
                   disabled={isProcessing}
                   className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
@@ -132,7 +132,8 @@ router.push("/dashboard");
                 </button>
               </div>
             </div>
-          ));
+          ), { duration: 2000 }); // Global dismissal time in milliseconds
+          
         }}
         className="px-6 py-3 bg-[#FACE39] text-white font-semibold rounded-lg hover:bg-yellow-500 transition duration-200"
       >

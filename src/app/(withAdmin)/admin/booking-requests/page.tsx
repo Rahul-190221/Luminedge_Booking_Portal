@@ -32,13 +32,22 @@ function BookingRequestsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [bookingsPerPage, setBookingsPerPage] = useState<number>(10);
-  const [filter, setFilter] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [scheduleType, setScheduleType] = useState<
-    "current" | "past" | "upcoming"
-  >("current");
-  const [testNameFilter, setTestNameFilter] = useState<string>("");
-  const [dateFilter, setDateFilter] = useState<string>("");
+  // State to hold the generic filter value
+const [filter, setFilter] = useState<string>("");
+
+// State to manage sorting order
+const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+// State to track the schedule type (current, past, or upcoming schedules)
+const [scheduleType, setScheduleType] = useState<"current" | "past" | "upcoming">("current");
+
+// State to filter bookings by test name
+const [testNameFilter, setTestNameFilter] = useState<string>("");
+
+// State to filter bookings by a specific date
+const [dateFilter, setDateFilter] = useState<string>("");
+
+
   const [totalBookings, setTotalBookings] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [newAttendanceValues, setNewAttendanceValues] = useState<{
@@ -151,26 +160,41 @@ function BookingRequestsPage() {
     indexOfFirstBooking,
     indexOfLastBooking
   );
+// Handles generic filter change
+function handleFilterChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  const value = e.target.value.trim(); // Trim to avoid unintended spaces
+  setFilter(value); // Update the filter state
+  console.log("Filter updated to:", value); // Debugging log (optional)
+}
 
-  function handleFilterChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setFilter(e.target.value);
-  }
+// Handles sort order change with proper type safety
+function handleSortOrderChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  const sortOrder = e.target.value as "asc" | "desc"; // Cast to "asc" | "desc"
+  setSortOrder(sortOrder); // Update the sortOrder state
+  console.log("Sort order updated to:", sortOrder); // Debugging log (optional)
+}
 
-  function handleSortOrderChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setSortOrder(e.target.value as "asc" | "desc");
-  }
+// Handles schedule type change with proper type safety
+function handleScheduleTypeChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  const scheduleType = e.target.value as "current" | "past" | "upcoming"; // Cast to specific types
+  setScheduleType(scheduleType); // Update the scheduleType state
+  console.log("Schedule type updated to:", scheduleType); // Debugging log (optional)
+}
 
-  function handleScheduleTypeChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setScheduleType(e.target.value as "current" | "past" | "upcoming");
-  }
+// Handles test name filter change
+function handleTestNameFilterChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  const testName = e.target.value.trim(); // Trim to clean up the input
+  setTestNameFilter(testName); // Update the testNameFilter state
+  console.log("Test name filter updated to:", testName); // Debugging log (optional)
+}
 
-  function handleTestNameFilterChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setTestNameFilter(e.target.value);
-  }
+// Handles date filter change for an input field
+function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
+  const date = e.target.value; // Retrieve the selected date
+  setDateFilter(date); // Update the dateFilter state
+  console.log("Date filter updated to:", date); // Debugging log (optional)
+}
 
-  function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setDateFilter(e.target.value);
-  }
 
   function handleDownloadClick(booking: any) {
     setBookingToDownload(booking);
@@ -305,14 +329,16 @@ function BookingRequestsPage() {
       );
 
       // Send notification
-      // await fetch(`https://luminedge-mock-test-booking-server.vercel.app/api/v1/notifications/send`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     userId,
-      //     message: "Your booking has been accepted.",
-      //   }),
-      // });
+      await fetch(`https://luminedge-mock-test-booking-server.vercel.app/api/v1/notifications/send`, {
+        method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({
+           userId,
+           message: "Your booking has been accepted.",
+         }),
+       });
+ 
+      
 
       toast.success("Attendance updated successfully!");
     } catch (error) {
@@ -323,23 +349,23 @@ function BookingRequestsPage() {
 
   // Filter and sort bookings
   const filteredBookings = bookings
-    .filter((booking) => {
-      // Filter by selected test name
-      const matchesTestName =
-        testNameFilter === "" || booking.testType === testNameFilter;
-      // Filter by selected date
-      const matchesDate =
-        dateFilter === "" || booking.bookingDate === dateFilter;
-      return matchesTestName && matchesDate;
-    })
-    .sort((a, b) => {
-      // Implement sorting logic based on sortOrder
-      if (sortOrder === "asc") {
-        return a.bookingDate.localeCompare(b.bookingDate);
-      } else {
-        return b.bookingDate.localeCompare(a.bookingDate);
-      }
-    });
+  .filter((booking) => {
+    const matchesTestName =
+      testNameFilter === "" || booking.testType.toLowerCase() === testNameFilter.toLowerCase();
+    const matchesDate =
+      dateFilter === "" || booking.bookingDate === dateFilter;
+    return matchesTestName && matchesDate;
+  })
+  .sort((a, b) => {
+    const dateA = new Date(a.bookingDate);
+    const dateB = new Date(b.bookingDate);
+
+    if (sortOrder === "asc") {
+      return dateA.getTime() - dateB.getTime();
+    } else {
+      return dateB.getTime() - dateA.getTime();
+    }
+  });
 
   async function confirmDownload() {
     if (bookingToDownload) {
@@ -421,32 +447,51 @@ function BookingRequestsPage() {
       <h1 className="text-2xl font-bold mb-4">Booking Requests</h1>
 
       <div className="flex justify-start gap-5 items-center mb-4">
-        <select
-          value={testNameFilter}
-          onChange={handleTestNameFilterChange}
-          className="px-2 py-1 border rounded"
-        >
-          <option value="">All Test Names</option>
-          <option value="IELTS">IELTS</option>
-          <option value="GRE">GRE</option>
-          <option value="TOEFL">TOEFL</option>
-          <option value="Pearson">Pearson</option>
-        </select>
-        <input
-          type="date"
-          value={dateFilter}
-          onChange={handleDateFilterChange}
-          className="px-2 py-1 border rounded"
-        />
-        <select
-          value={sortOrder}
-          onChange={handleSortOrderChange}
-          className="px-2 py-1 border rounded"
-        >
-          <option value="asc">Ascending</option>
-          <option value="desc">Descending</option>
-        </select>
-      </div>
+  {/* Test Name Filter */}
+  <label>
+    <span className="block text-sm font-medium text-gray-700">Test Name</span>
+    <select
+      value={testNameFilter}
+      onChange={handleTestNameFilterChange}
+      className="px-2 py-1 border rounded"
+      aria-label="Filter by Test Name"
+    >
+      <option value="">All Test Names</option>
+      <option value="IELTS">IELTS</option>
+      <option value="GRE">GRE</option>
+      <option value="TOEFL">TOEFL</option>
+      <option value="Pearson">Pearson</option>
+    </select>
+  </label>
+  
+  {/* Booking Date Filter */}
+  <label>
+    <span className="block text-sm font-medium text-gray-700">Booking Date</span>
+    <input
+      type="date"
+      value={dateFilter}
+      onChange={handleDateFilterChange}
+      className="px-2 py-1 border rounded"
+      aria-label="Filter by Date"
+    />
+  </label>
+  
+  {/* Sort Order Filter */}
+  <label>
+    <span className="block text-sm font-medium text-gray-700">Sort Order</span>
+    <select
+      value={sortOrder}
+      onChange={handleSortOrderChange}
+      className="px-2 py-1 border rounded"
+      aria-label="Sort Order"
+    >
+      <option value="asc">Ascending</option>
+      <option value="desc">Descending</option>
+    </select>
+  </label>
+</div>
+
+
 
       <div className="overflow-x-auto">
         <table className="table-auto w-full border-collapse">

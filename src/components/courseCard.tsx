@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Course } from "@/app/types";
 import { FaLongArrowAltRight } from "react-icons/fa";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const CourseCard = ({
   mockType,
@@ -12,57 +12,68 @@ const CourseCard = ({
   mockType: string;
   course: Course;
 }) => {
-  // Define the URLs for each course with the updated TOEFL link
+  const router = useRouter(); // For navigation
+
   const courseLinks: Record<string, string> = {
+    IELTS: "https://luminedge.com.bd/ielts/",
     "Pearson PTE": "https://luminedge.com.bd/pte/",
-    "GRE": "https://luminedge.com.bd/gre/",
-    "TOEFL": "https://luminedge.com.bd/best-toefl-coaching-in-dhaka/", // Updated URL
+    GRE: "https://luminedge.com.bd/gre/",
+    TOEFL: "https://luminedge.com.bd/best-toefl-coaching-in-dhaka/",
+  };
+
+  const handleCardClick = () => {
+    console.log("Course name:", course.name); // Debugging
+    console.log("Mock Type:", mockType); // Debugging
+
+    if (mockType === course.name) {
+      // Navigate to booking page if mockType matches course name
+      router.push(`/dashboard/booking/${course._id}`);
+    } else {
+      // Navigate to the course URL in the same tab
+      const courseLink = courseLinks[course.name.trim()];
+      console.log("Course Link:", courseLink); // Debugging
+
+      if (courseLink) {
+        window.location.href = courseLink; // Open the external link in the same tab
+      } else {
+        console.error("Course link not found for:", course.name); // Error logging
+      }
+    }
   };
 
   return (
-    <div className="card bg-base-100 w-[280px] h-[300px] shadow-xl rounded-lg text-white hover:text-black cursor-pointer">
+    <div
+      onClick={handleCardClick}
+      className="card bg-base-100 w-[280px] h-[300px] shadow-xl rounded-lg text-white hover:text-black cursor-pointer"
+    >
       <figure>
         <Image
-          src={course.image || "/default-image.jpg"} // Fallback image
+          src={course.image || "/default-image.jpg"}
           alt={course.name}
           width={308}
           height={268}
           className="rounded-t-lg"
         />
       </figure>
-      {course.name === mockType ? (
-        // Show "Book Now" link if mockType matches course name
-        <Link href={`/dashboard/booking/${course._id}`}>
-          <div className="card-body bg-black text-gray-400 hover:text-black hover:bg-[#FACE39] rounded-b-lg">
-            <p className="text-xs">
-              Very different from conventional <br />
-              agency, this one is easier, easier to learn, and easy to remember.
-            </p>
-            <div className="card-actions justify-start">
-              <div className="flex items-center gap-2 mt-3">
+      <div className="card-body bg-black text-gray-400 hover:text-black hover:bg-[#FACE39] rounded-b-lg">
+        <p className="text-xs">
+          Very different from conventional <br />
+          agency, this one is easier, easier to learn, and easy to remember.
+        </p>
+        <div className="card-actions justify-start">
+          <div className="flex items-center gap-2 mt-3">
+            {mockType === course.name ? (
+              <>
                 Book Now <FaLongArrowAltRight />
-              </div>
-            </div>
-          </div>
-        </Link>
-      ) : (
-        // Show "Learn More" link if mockType does not match course name
-        <div className="card-body bg-black text-gray-400 hover:text-black hover:bg-[#FACE39] rounded-b-lg">
-          <p className="text-xs">
-            Very different from conventional <br />
-            agency, this one is easier, easier to learn, and easy to remember.
-          </p>
-          <div className="card-actions justify-start">
-            <a
-              href={courseLinks[course.name] || "#"} // Dynamically fetch the course URL
-              rel="noopener noreferrer" // Ensure security
-              className="flex items-center gap-2 mt-3 text-white hover:text-black"
-            >
-              Learn More <FaLongArrowAltRight />
-            </a>
+              </>
+            ) : (
+              <>
+                Learn More <FaLongArrowAltRight />
+              </>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
