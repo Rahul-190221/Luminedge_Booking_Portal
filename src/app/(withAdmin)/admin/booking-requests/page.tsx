@@ -94,7 +94,7 @@ const [dateFilter, setDateFilter] = useState<string>("");
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+}, [fetchBookings]); // Adds fetchBookings as a dependency
 
   useEffect(() => {
     if (selectedBooking) {

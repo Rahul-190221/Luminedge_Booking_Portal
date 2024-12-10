@@ -99,7 +99,8 @@ router.push("/dashboard/mockType");
           <p>info@luminedge.com.au</p>
         </div>
       </div>
-<p>Rescheduling an exam is only allowed if it is done at least 24 hours before the exam's start time.</p>
+      <p>Rescheduling an exam is only allowed if it is done at least 24 hours before the exam&apos;s start time.</p>
+
       {/* Reschedule Button Section */}
       <button
         onClick={() => {
