@@ -202,7 +202,7 @@ const RegisterPage = () => {
     <div className="form-control my-1">
       <label className="label">
         <span className="label-text text-gray-600 ml-2 font-semibold whitespace-nowrap text-sm sm:text-base">
-          First Name
+          First Name*
         </span>
       </label>
       <input
@@ -222,7 +222,7 @@ const RegisterPage = () => {
     <div className="form-control my-1">
       <label className="label">
         <span className="label-text text-gray-600 ml-2 font-semibold whitespace-nowrap text-sm sm:text-base">
-          Last Name
+          Last Name*
         </span>
       </label>
       <input
@@ -263,7 +263,7 @@ const RegisterPage = () => {
   <div className="form-control my-1">
     <label className="label">
       <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
-        Passport / NID Number
+        Passport / NID Number*
       </span>
     </label>
     <input
@@ -301,7 +301,7 @@ const RegisterPage = () => {
   <div className="form-control my-1">
     <label className="label">
       <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
-        Money Receipt Number
+        Money Receipt Number*
       </span>
     </label>
     <input

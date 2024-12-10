@@ -15,11 +15,13 @@ export interface User {
   createdAt: string;
   mock?: string;
   mockType?: string;
+  passportNumber?:string;
   transactionId?: string;
   totalMock?: number;
-
+  contactNo?:number;
   isDeleted: boolean;
-  testType?: string; // New field for test type
+  testType?: string;
+  testSystem?: string; // New field for test type
 }
 
 const TableAdmin = () => {
@@ -36,6 +38,7 @@ const TableAdmin = () => {
   const [actionFilter, setActionFilter] = useState<string>("all"); // Holds the selected action filter
   const [searchTerm, setSearchTerm] = useState<string>(""); // State for search term
   const [testType, setTestType] = useState<string>(""); // State for test type
+  const [testSystem, settestSystem] = useState<string>(""); // State for test type
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -147,6 +150,8 @@ const TableAdmin = () => {
     setTransactionId(user.transactionId || ""); // Initialize transaction ID with existing value
     setTestType(user.testType || ""); // Initialize test type with existing value
     setIsModalOpen(true);
+    settestSystem(user.testSystem || "");
+   
     console.log("Selected User Mock Number:", user.mock);
   };
 
@@ -237,7 +242,7 @@ const TableAdmin = () => {
         <thead>
           <tr className="bg-gray-200">
             <th className="px-4 py-2 text-left">Name</th>
-            <th className="px-4 py-2 text-left">Date</th>
+            <th className="px-4 py-2 text-left">Enrollment Date</th>
             <th className="px-4 py-2 text-left">Status</th>
             <th className="px-4 py-2 text-left">Action</th>
           </tr>
@@ -328,14 +333,24 @@ const TableAdmin = () => {
               <strong>Email:</strong> {selectedUser.email}
             </p>
             <p>
+              <strong>Phone Number:</strong> {selectedUser.contactNo}
+            </p>
+            <p>
               <strong>Mock Type:</strong> {selectedUser?.mockType}
             </p>
             <p>
               <strong>Test Type:</strong> {selectedUser?.testType}
             </p>
             <p>
+              <strong>Passport Number:</strong> {selectedUser?.passportNumber}
+            </p>
+            <p>
               <strong>Purchased:</strong> {selectedUser?.totalMock}
             </p>
+            <p>
+  <strong>Booked: </strong> 
+  {(Number(selectedUser?.totalMock ?? 0) - Number(selectedUser?.mock ?? 0)) || 'N/A'}
+</p>
 
             <p>
               <strong>Remaining:</strong> {selectedUser?.mock}

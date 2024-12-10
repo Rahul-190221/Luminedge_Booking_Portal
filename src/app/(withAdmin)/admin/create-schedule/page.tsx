@@ -11,6 +11,7 @@ interface TimeSlot {
   startTime: string;
   endTime: string;
   slot: number;
+  totalSlot:number;
 }
 
 export default function CreateSchedulePage() {
@@ -35,7 +36,7 @@ export default function CreateSchedulePage() {
         ...prev.timeSlots,
         [date]: [
           ...(prev.timeSlots[date] || []),
-          { startTime: "09:00", endTime: "10:00", slot: 20 }, // Default time slot values
+          { startTime: "09:00", endTime: "10:00", totalSlot:20,slot: 20 }, // Default time slot values
         ],
       },
     }));
@@ -237,7 +238,7 @@ export default function CreateSchedulePage() {
                       />
                     </div>
                   </div>
-
+ 
                   {/* Slot Selection */}
                   <div>
                     <label

@@ -173,7 +173,7 @@ const LoginPage = () => {
             </h1>
             <div className="form-control mt-4 mb-3">
               <label className="label">
-                <span className="label-text font-bold ml-2">Email</span>
+                <span className="label-text font-bold ml-2">Email*</span>
               </label>
               <input
                 type="email"
@@ -186,7 +186,7 @@ const LoginPage = () => {
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-bold ml-2">Password</span>
+                <span className="label-text font-bold ml-2">Password*</span>
               </label>
               <div className="relative">
                 <input

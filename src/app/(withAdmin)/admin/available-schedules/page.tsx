@@ -35,14 +35,33 @@ function AvailableSchedulesPage() {
     fetchSchedules();
   }, []);
 
-  const fetchSchedules = async () => {
-    const response = await fetch(
-      `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/get-schedules`,
-      { next: { revalidate: 0 } }
-    );
-    const data = await response.json();
-    setSchedules(data);
-  };
+  // const fetchSchedules = async () => {
+  //   const response = await fetch(
+  //     `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/get-schedules`,
+  //     { next: { revalidate: 0 } }
+  //   );
+  //   const data = await response.json();
+  //   setSchedules(data);
+  // };
+const fetchSchedules = async () => {
+  const response = await fetch(
+    `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/get-schedules`,
+    { next: { revalidate: 0 } }
+  );
+  const data = await response.json();
+
+  // Add `initialSlot` to each schedule if not already defined
+  const updatedSchedules = data.map((schedule: any) => ({
+    ...schedule,
+    initialSlot:
+      schedule.initialSlot ||
+      (schedule.timeSlots && schedule.timeSlots.length > 0
+        ? schedule.timeSlots[0].slot
+        : null), // Use the first slot as the initial value
+  }));
+
+  setSchedules(updatedSchedules);
+};
 
   const deleteSchedule = async (id: string) => {
     try {
@@ -166,38 +185,53 @@ function AvailableSchedulesPage() {
           <tr className="bg-gray-200">
             <th className="px-4 py-2 text-left">Name</th>
             <th className="px-4 py-2 text-left">Test Type</th>
-            <th className="px-4 py-2 text-left">Start Date</th>
+            <th className="px-4 py-2 text-left">Exam Date</th>
+            <th className="px-4 py-2 text-left">Total Slots</th>
             <th className="px-4 py-2 text-left">Status</th>
-            <th className="px-4 py-2 text-left">Time Slots</th>
             <th className="px-4 py-2 text-left">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {currentSchedules.map((schedule: any) => (
-            <tr key={schedule.id} className="border-b">
-              <td className="px-4 py-2">{schedule.name}</td>
-              <td className="px-4 py-2">{schedule.testType}</td>
-              <td className="px-4 py-2">{schedule.startDate}</td>
-              <td className="px-4 py-2">{schedule.status}</td>
-              <td className="px-4 py-2">
-                <select className="px-2 py-1 border rounded">
-                  {schedule.timeSlots.map((slot: any) => (
-                    <option key={slot.slotId} value={slot.slotId}>
-                      {slot.startTime} - {slot.endTime} (Slot: {slot.slot})
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td className="px-4 py-2 flex space-x-2">
-                <button
-                  onClick={() => deleteSchedule(schedule._id)}
-                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          ))}
+        {currentSchedules.map((schedule: any) => (
+  <tr key={schedule.id} className="border-b">
+    <td className="px-4 py-2">{schedule.name}</td>
+    <td className="px-4 py-2">{schedule.testType}</td>
+    <td className="px-4 py-2">{schedule.startDate}</td>
+    <td className="px-4 py-2">
+  {/* Safely display the first slot number or fallback */}
+  {schedule.timeSlots && schedule.timeSlots.length > 0 ? (
+    schedule.fixedSlot ? (
+      // Display fixed slot value if it is marked as fixed
+      `Slot: ${schedule.timeSlots[0].slot} (Fixed)`
+    ) : (
+      // Display regular slot value if not fixed
+      `Slot: ${schedule.timeSlots[0].slot}`
+    )
+  ) : (
+    "No slots available"
+  )}
+</td>
+
+    <td className="px-4 py-2">
+      <select className="px-2 py-1 border rounded">
+        {schedule.timeSlots.map((slot: any) => (
+          <option key={slot.slotId} value={slot.slotId}>
+            {slot.startTime} - {slot.endTime} (Slot: {slot.slot})
+          </option>
+        ))}
+      </select>
+    </td>
+    <td className="px-4 py-2 flex space-x-2">
+      <button
+        onClick={() => deleteSchedule(schedule.id)}
+        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+      >
+        Delete
+      </button>
+    </td>
+  </tr>
+))}
+
         </tbody>
       </table>
 
