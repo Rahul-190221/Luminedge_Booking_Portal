@@ -11,7 +11,7 @@ import Cookies from "js-cookie";
 import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { signIn } from "next-auth/react";
-import britishLogo from '@/assets/british-logos.webp'; // Adjust path based on your folder structure
+import britishLogo from '../../assets/british-logos.webp'; // Adjust path based on your folder structure
 
 export type FormValues = {
   email: string;
