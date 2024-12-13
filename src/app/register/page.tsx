@@ -8,7 +8,7 @@ import { useForm } from "react-hook-form";
 import { registerUser } from "../utils/actions/registerUser";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import britishLogo from '@/assets/british-logos.webp'; // Adjust path based on your folder structure
+import britishLogo from '../../assets/british-logos.webp'; // Adjust path based on your folder structure
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 export type UserData = {
