@@ -2,15 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FcGoogle } from "react-icons/fc";
+// import { FcGoogle } from "react-icons/fc";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { useForm } from "react-hook-form";
 import { registerUser } from "../utils/actions/registerUser";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import britishLogo from '../../assets/british-logos.webp'; // Adjust path based on your folder structure
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+// import { signIn } from "next-auth/react";
 export type UserData = {
   firstName: string;
   lastName: string;
@@ -33,7 +32,7 @@ export type formatData = {
   result: Array<any>;
   isDeleted: boolean;
 };
-
+const britishLogo = '/assets/british-logos.webp';
 const RegisterPage = () => {
   const {
     register,
@@ -136,10 +135,12 @@ const RegisterPage = () => {
           <p className="text-sm">
                 The most premium exam venue awarded by 
                 <Image
-                  src={britishLogo} // Use the imported image here
-                  alt="British Logo"
-                  className="inline-block ml-2 h-10 w-auto" // Increased height to 10
-                />
+              src={britishLogo} // Use the imported image here
+              width={100} // Add width property
+              height={40} // Add height property
+
+              className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+              alt={""}                />
                 </p>
           <p className="text-sm mt-10 lg:mt-40 ">
             If you have already an account <br className="hidden lg:block" />
@@ -192,10 +193,12 @@ const RegisterPage = () => {
             <p className="text-sm">
                 The most premium exam venue awarded by 
                 <Image
-                  src={britishLogo} // Use the imported image here
-                  alt="British Logo"
-                  className="inline-block ml-2 h-10 w-auto" // Increased height to 10
-                />
+              src={britishLogo} // Use the imported image here
+              width={100} // Add width property
+              height={40} // Add height property
+
+              className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+              alt={""}                />
                 </p>
           </div>
           <h1 className="text-2xl md:text-3xl text-amber-500 font-bold mt-4">

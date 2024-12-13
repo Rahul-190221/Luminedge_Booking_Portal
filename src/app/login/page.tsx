@@ -8,24 +8,21 @@ import { useRouter } from "next/navigation";
 import { getUserIdFromToken } from "../helpers/jwt";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
-import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
-import { FcGoogle } from "react-icons/fc";
-import { signIn } from "next-auth/react";
-import britishLogo from '../../assets/british-logos.webp'; // Adjust path based on your folder structure
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 export type FormValues = {
   email: string;
   password: string;
 };
-
+const britishLogo = '/assets/british-logos.webp';
 const LoginPage = () => {
   const [user, setUser] = useState<any>(null); // Store user details here
-  const [isLoading, setIsLoading] = useState<boolean>(false); // To manage loading state
+  const [, setIsLoading] = useState<boolean>(false); // To manage loading state
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: {},
   } = useForm<FormValues>();
   const router = useRouter();
 
@@ -34,9 +31,8 @@ const LoginPage = () => {
     const checkUserRole = async () => {
       const token = localStorage.getItem("accessToken");
       if (token) {
-        const userData = await getUserIdFromToken(); // Get user details from token
+        const userData = getUserIdFromToken(); // Get user details from token
         console.log(userData);
-        setUser(userData); // Store user data
       }
     };
 
@@ -66,7 +62,7 @@ const LoginPage = () => {
         Cookies.set("accessToken", response.accessToken, { expires: 10 }); // Expires in 10 days
         localStorage.setItem("accessToken", response.accessToken);
 
-        const userData = await getUserIdFromToken(); // Get user details from token
+        const userData = getUserIdFromToken(); // Get user details from token
         setUser(userData); // Store the user details in the state
       } else {
         toast.error("Invalid email or password");
@@ -97,6 +93,8 @@ const LoginPage = () => {
                 <path
                   className="cls-1"
                   d="M95.25,38.17c31.55,0,57.15,25.71,57.15,57.3,0,18.05-8.22,34.64-22.62,45.47-21.49,16.26-30.17,34.23-33.17,49.34h-2.72c-2.98-15.11-11.68-33.08-33.19-49.34-14.36-10.83-22.62-27.42-22.62-45.47,0-31.59,25.64-57.3,57.17-57.3M95.25,0C42.64,0,0,42.75,0,95.47c0,31.25,14.72,58.56,37.8,75.98,10.62,8.04,19.38,18.38,19.38,32.67v24.33h76.16v-24.33c0-14.29,8.74-24.63,19.35-32.67,23.1-17.41,37.8-44.72,37.8-75.98C190.49,42.75,147.86,0,95.25,0h0Z"
+                  width={50} // Add appropriate width
+                  height={50} // Add appropriate height
                 />
                 <rect
                   className="cls-1"
@@ -120,10 +118,12 @@ const LoginPage = () => {
           <p className="text-sm">
                 The most premium exam venue awarded by 
                 <Image
-                  src={britishLogo} // Use the imported image here
-                  alt="British Logo"
-                  className="inline-block ml-2 h-10 w-auto" // Increased height to 10
-                />
+              src={britishLogo} // Use the imported image here
+              width={100} // Add width property
+              height={40} // Add height property
+
+              className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+              alt={""}                />
                 </p>
 
           <p className="text-sm mt-28 ">
@@ -175,13 +175,15 @@ const LoginPage = () => {
                 Welcome to{" "}
                 <span className="text-amber-400 font-bold">Luminedge</span>
               </h1>
-                <p className="text-sm">
+              <p className="text-sm">
                 The most premium exam venue awarded by 
                 <Image
-                  src={britishLogo} // Use the imported image here
-                  alt="British Logo"
-                  className="inline-block ml-2 h-10 w-auto" // Increased height to 10
-                />
+              src={britishLogo} // Use the imported image here
+              width={100} // Add width property
+              height={40} // Add height property
+
+              className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+              alt={""}                />
                 </p>
             </div>
             <h1 className="  text-2xl md:text-3xl font-bold mt-6 lg:mt-10">
