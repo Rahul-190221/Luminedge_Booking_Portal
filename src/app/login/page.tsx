@@ -127,7 +127,7 @@ const LoginPage = () => {
                 </p>
 
           <p className="text-sm mt-28 ">
-            If you don't have an account <br />
+            If you don&apos;t have an account <br />
             you can{" "}
             <Link className="text-[#FACE39] font-bold px-2" href="/register">
               Sign up here
