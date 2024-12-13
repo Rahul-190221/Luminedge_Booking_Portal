@@ -115,7 +115,7 @@ const [dateFilter, setDateFilter] = useState<string>("");
     }
   }, [selectedBooking, totalBookings]);
 
-  async function fetchBookings() {
+  async function fetchBookings(): Promise<void> {
     try {
       const response = await fetch(
         `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/bookings`

@@ -120,16 +120,14 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     }
   }, [value]);
 
-  const handleSlotSelect = (
-    slotId: string,
+  function handleSlotSelect(slotId: string,
     scheduleId: string,
-    testType: string
-  ) => {
+    testType: string) {
     console.log(slotId, testType);
     setSelectedSlotId(slotId);
     setScheduleId(scheduleId);
     setTestType(testType);
-  };const handleProceed = async () => {
+  }const handleProceed = async () => {
     // Check if the test system is selected
     if (!testSystem) {
       setShowTestSystemError(true); // Show error message

@@ -56,7 +56,7 @@ const LoginPage = () => {
     }
   }, [user]);
 
-  const onSubmit = async (data: FormValues) => {
+  async function onSubmit(data: FormValues) {
     setIsLoading(true); // Set loading state while logging in
     try {
       const response = await loginUser(data); // loginUser should return accessToken
@@ -77,7 +77,7 @@ const LoginPage = () => {
     } finally {
       setIsLoading(false); // Reset loading state
     }
-  };
+  }
 
   return (
     <div className="my-8 px-4 md:px-8 lg:px-10">

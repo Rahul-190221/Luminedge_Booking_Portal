@@ -50,7 +50,7 @@ const DashboardPage = () => {
 
       fetchAttendance();
     }
-  }, [userId]);
+  }, [userId, userAttendance]);
 
   if (!userData || !userData.user) {
     return (
