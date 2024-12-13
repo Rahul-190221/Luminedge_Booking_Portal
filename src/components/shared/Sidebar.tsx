@@ -35,9 +35,9 @@ const Sidebar = () => {
         ) : (
           <div className="flex border-r border-gray-200 gap-4 items-center">
             <FaBars className="h-6 w-6" />
-            <h1 className="text-2xl font-bold border px-2 py-1 rounded-lg shadow-md text-amber-400">
+            {/* <h1 className="text-2xl font-bold border px-2 py-1 rounded-lg shadow-md text-amber-400">
               Luminedge
-            </h1>
+            </h1> */}
           </div>
         )}
       </button>
@@ -109,7 +109,18 @@ const Sidebar = () => {
               <span className="inline">Courses</span>
             </Link>
           </li>
-
+ {/* Terms and Conditions link */}
+ <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
+            <Link
+              href="/dashboard/terms"
+              className={`flex items-center px-4 py-3 ${
+              pathname === "/dashboard/terms" ? "bg-[#FACE39] text-black font-bold" : ""
+              }`}
+            >
+              <IoSettingsOutline className="h-5 w-5 mr-2" />
+              <span className="inline">Terms and Conditions</span>
+            </Link>
+            </li>
           {/* Logout button */}
           <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
             <button onClick={() => logout()} className="flex items-center px-4 py-3">

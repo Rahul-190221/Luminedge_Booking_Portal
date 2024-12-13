@@ -193,7 +193,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       );
   
       toast((t) => {
-        setTimeout(() => toast.dismiss(t.id), 1000); // Auto-dismiss after 1 second
+        setTimeout(() => toast.dismiss(t.id), 3000); // Auto-dismiss after 1 second
         return <p>Slot booked successfully!</p>;
       });
       router.push(`/dashboard`);

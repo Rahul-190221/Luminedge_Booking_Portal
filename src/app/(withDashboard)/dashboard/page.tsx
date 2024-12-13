@@ -70,9 +70,7 @@ const DashboardPage = () => {
           Welcome, {userData.user.name}!
         </h2>
         <p className="text-sm mb-4">
-          You have completed{" "}
-          <span className="font-semibold">{userData.user.completedTests}</span>{" "}
-          tests this week. Start a new goal to improve your results!
+         To the Luminedge Mock Test Booking Portal! This platform is designed to streamline your test preparation journey, allowing you to view the details of your booked mock test and stay informed about important terms and conditions.
         </p>
         <Link href="/dashboard/mockType">
           <button className="bg-white text-black font-medium rounded-md px-4 py-2 hover:bg-gray-200 transition-all">

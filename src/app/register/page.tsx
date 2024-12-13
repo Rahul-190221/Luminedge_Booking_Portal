@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { registerUser } from "../utils/actions/registerUser";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import britishLogo from '@/assets/british-logos.webp'; // Adjust path based on your folder structure
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 export type UserData = {
@@ -132,7 +133,14 @@ const RegisterPage = () => {
           <h1 className=" font-bold text-5xl py-3">
             Welcome to <br /> Luminedge.
           </h1>
-          <p className="text-sm">The most premium exam venue awarded by </p>
+          <p className="text-sm">
+                The most premium exam venue awarded by 
+                <Image
+                  src={britishLogo} // Use the imported image here
+                  alt="British Logo"
+                  className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+                />
+                </p>
           <p className="text-sm mt-10 lg:mt-40 ">
             If you have already an account <br className="hidden lg:block" />
             you can{" "}
@@ -181,7 +189,14 @@ const RegisterPage = () => {
               Welcome to{" "}
               <span className="text-amber-400 font-bold">Luminedge</span>
             </h1>
-            <p className="text-xs">The most premium exam venue awarded by </p>
+            <p className="text-sm">
+                The most premium exam venue awarded by 
+                <Image
+                  src={britishLogo} // Use the imported image here
+                  alt="British Logo"
+                  className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+                />
+                </p>
           </div>
           <h1 className="text-2xl md:text-3xl text-amber-500 font-bold mt-4">
   Sign Up
@@ -278,7 +293,25 @@ const RegisterPage = () => {
       <p className="text-red-500 text-sm">{errors.passportNumber.message}</p>
     )}
   </div>
-
+{/* Money Receipt Number */}
+<div className="form-control my-1">
+    <label className="label">
+      <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
+        Money Receipt Number*
+      </span>
+    </label>
+    <input
+      type="text"
+      {...register("transactionId", {
+        required: "Transaction ID is required",
+      })}
+      placeholder=""
+      className="input bg-gray-100 h-[40px] w-full text-sm sm:text-base"
+    />
+    {errors.transactionId && (
+      <p className="text-red-500 text-sm">{errors.transactionId.message}</p>
+    )}
+  </div>
   {/* Email */}
   <div className="form-control my-1">
     <label className="label">
@@ -297,25 +330,7 @@ const RegisterPage = () => {
     )}
   </div>
 
-  {/* Money Receipt Number */}
-  <div className="form-control my-1">
-    <label className="label">
-      <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
-        Money Receipt Number*
-      </span>
-    </label>
-    <input
-      type="text"
-      {...register("transactionId", {
-        required: "Transaction ID is required",
-      })}
-      placeholder=""
-      className="input bg-gray-100 h-[40px] w-full text-sm sm:text-base"
-    />
-    {errors.transactionId && (
-      <p className="text-red-500 text-sm">{errors.transactionId.message}</p>
-    )}
-  </div>
+  
 
   <div className="grid md:grid-cols-2 gap-4">
     {/* Password Field */}

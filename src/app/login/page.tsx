@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 import { FaEye, FaEyeSlash, FaGoogle } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { signIn } from "next-auth/react";
+import britishLogo from '@/assets/british-logos.webp'; // Adjust path based on your folder structure
 
 export type FormValues = {
   email: string;
@@ -116,11 +117,19 @@ const LoginPage = () => {
           <h1 className=" font-bold text-3xl md:text-4xl lg:text-5xl py-3">
             Welcome to <br /> Luminedge.
           </h1>
-          <p className="text-sm">The most premium exam venue awarded by </p>
+          <p className="text-sm">
+                The most premium exam venue awarded by 
+                <Image
+                  src={britishLogo} // Use the imported image here
+                  alt="British Logo"
+                  className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+                />
+                </p>
+
           <p className="text-sm mt-28 ">
-            If you already have an account <br />
+            If you don't have an account <br />
             you can{" "}
-            <Link className="text-[#FACE39] font-bold px-2" href="/login">
+            <Link className="text-[#FACE39] font-bold px-2" href="/register">
               Sign up here
             </Link>
           </p>
@@ -166,7 +175,14 @@ const LoginPage = () => {
                 Welcome to{" "}
                 <span className="text-amber-400 font-bold">Luminedge</span>
               </h1>
-              <p className="text-xs">The most premium exam venue awarded by </p>
+                <p className="text-sm">
+                The most premium exam venue awarded by 
+                <Image
+                  src={britishLogo} // Use the imported image here
+                  alt="British Logo"
+                  className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+                />
+                </p>
             </div>
             <h1 className="  text-2xl md:text-3xl font-bold mt-6 lg:mt-10">
               Sign in
