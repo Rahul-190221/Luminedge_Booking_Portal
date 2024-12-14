@@ -177,7 +177,7 @@ const updatedSchedules = data.map((schedule: any) => ({
             <th className="px-4 py-2 text-left">Name</th>
             <th className="px-4 py-2 text-left">Test Type</th>
             <th className="px-4 py-2 text-left">Exam Date</th>
-            <th className="px-4 py-2 text-left">Total Slots</th>
+            <th className="px-4 py-2 text-left">Availabe Slots</th>
             <th className="px-4 py-2 text-left">Status</th>
             <th className="px-4 py-2 text-left">Actions</th>
           </tr>

@@ -147,37 +147,39 @@ const TermsPage = () => {
                 </div>
             </div>
 
-            {/* Header Section */}
-            <div className="w-full max-w-5xl bg-transparent  p-6">
-                <h1 className="text-xl font-semibold" style={{ color: "#face39" }}>
-                    {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
-                </h1>
+           {/* Emergency Contact Information */}
+     <div className="w-full max-w-5xl bg-transparent  p-6">
+        <h1 className="text-xl font-semibold text-center" style={{ color: "#face39" }}>
+          {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
+        </h1>
+        <p className="text-center mt-1 mb-4">
+          In case of any emergency or if you need to communicate with us regarding your mock test, please contact:
+        </p>
+        {/* Contact Info Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+          <div className="p-4 border rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold mb-2">Address</h2>
+            <p>
+              Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi, Dhaka,
+              Bangladesh, 1205
+            </p>
+          </div>
 
-                {/* Contact Info Section */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-                    <div className="p-4 border rounded-lg shadow-md" style={{ boxShadow: "0 4px 6px -1px rgba(250, 206, 57, 0.1), 0 2px 4px -1px rgba(250, 206, 57, 0.06)" }}>
-                        <h2 className="text-lg font-semibold mb-2">Address</h2>
-                        <p>
-                            Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi, Dhaka,
-                            Bangladesh, 1205
-                        </p>
-                    </div>
+          <div className="p-4 border rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold mb-2">Telephone</h2>
+            <p>01400-403474</p>
+            <p>01400-403475</p>
+            <p>01400-403485</p>
+            <p>01400-403493</p>
+            <p>01400-403494</p>
+          </div>
 
-                    <div className="p-4 border rounded-lg shadow-md" style={{ boxShadow: "0 4px 6px -1px rgba(250, 206, 57, 0.1), 0 2px 4px -1px rgba(250, 206, 57, 0.06)" }}>
-                        <h2 className="text-lg font-semibold mb-2">Telephone</h2>
-                        <p>01400-403474</p>
-                        <p>01400-403475</p>
-                        <p>01400-403485</p>
-                        <p>01400-403493</p>
-                        <p>01400-403494</p>
-                    </div>
-
-                    <div className="p-4 border rounded-lg shadow-md" style={{ boxShadow: "0 4px 6px -1px rgba(250, 206, 57, 0.1), 0 2px 4px -1px rgba(250, 206, 57, 0.06)" }}>
-                        <h2 className="text-lg font-semibold mb-2">E-mail</h2>
-                        <p>info@luminedge.com.au</p>
-                    </div>
-                </div>
-            </div>
+          <div className="p-4 border rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold mb-2">E-mail</h2>
+            <p>info@luminedge.com.au</p>
+          </div>
+        </div>
+      </div>
         </div>
     );
 };

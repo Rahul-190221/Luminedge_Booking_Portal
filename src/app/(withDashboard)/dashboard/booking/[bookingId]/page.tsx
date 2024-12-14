@@ -171,7 +171,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   
       // Check if the slot's start time is less than 24 hours from now
       if (timeDifferenceInHours < 24) {
-        toast.error("Booking is not allowed within 24 hours of the slot's start time.");
+        toast.error("Bookings cannot be made less than 24 hours before.");
         return;
       }
   
@@ -190,9 +190,8 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         }
       );
   
-      toast((t) => {
-        setTimeout(() => toast.dismiss(t.id), 3000); // Auto-dismiss after 1 second
-        return <p>Slot booked successfully!</p>;
+      toast.success("New slot booked successfully!", {
+        duration: 3000, // Auto-dismiss after 3 seconds
       });
       router.push(`/dashboard`);
     } catch (error: any) {
@@ -256,7 +255,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
           setShowTestSystemError(false); // Reset error on selection
         }}
       >
-        <option value="" disabled selected>
+        <option value="" disabled>
           Select Test System
         </option>
         <option value="Academic">Academic</option>
