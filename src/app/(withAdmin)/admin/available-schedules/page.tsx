@@ -35,33 +35,24 @@ function AvailableSchedulesPage() {
     fetchSchedules();
   }, []);
 
-  // const fetchSchedules = async () => {
-  //   const response = await fetch(
-  //     `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/get-schedules`,
-  //     { next: { revalidate: 0 } }
-  //   );
-  //   const data = await response.json();
-  //   setSchedules(data);
-  // };
-const fetchSchedules = async () => {
-  const response = await fetch(
-    `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/get-schedules`,
-    { next: { revalidate: 0 } }
-  );
-  const data = await response.json();
+  const fetchSchedules = async () => {
+    const response = await fetch(
+      `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/get-schedules`,
+      { next: { revalidate: 0 } }
+    );
+    const data = await response.json();
+// Add `initialSlot` to each schedule if not already defined
+const updatedSchedules = data.map((schedule: any) => ({
+  ...schedule,
+  initialSlot:
+    schedule.initialSlot ||
+    (schedule.timeSlots && schedule.timeSlots.length > 0
+      ? schedule.timeSlots[0].slot
+      : null), // Use the first slot as the initial value
+}));
 
-  // Add `initialSlot` to each schedule if not already defined
-  const updatedSchedules = data.map((schedule: any) => ({
-    ...schedule,
-    initialSlot:
-      schedule.initialSlot ||
-      (schedule.timeSlots && schedule.timeSlots.length > 0
-        ? schedule.timeSlots[0].slot
-        : null), // Use the first slot as the initial value
-  }));
-
-  setSchedules(updatedSchedules);
-};
+    setSchedules(data);
+  };
 
   const deleteSchedule = async (id: string) => {
     try {
@@ -79,7 +70,6 @@ const fetchSchedules = async () => {
       console.error("Error deleting schedule:", error);
     }
   };
-
   const filteredSchedules = React.useMemo(() => {
     const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
 
@@ -140,6 +130,7 @@ const fetchSchedules = async () => {
     indexOfLastSchedule
   );
 
+
   return (
     <div>
       <div className="my-4 flex space-x-4">
@@ -198,19 +189,13 @@ const fetchSchedules = async () => {
     <td className="px-4 py-2">{schedule.testType}</td>
     <td className="px-4 py-2">{schedule.startDate}</td>
     <td className="px-4 py-2">
-  {/* Safely display the first slot number or fallback */}
-  {schedule.timeSlots && schedule.timeSlots.length > 0 ? (
-    schedule.fixedSlot ? (
-      // Display fixed slot value if it is marked as fixed
-      `Slot: ${schedule.timeSlots[0].slot} (Fixed)`
-    ) : (
-      // Display regular slot value if not fixed
-      `Slot: ${schedule.timeSlots[0].slot}`
-    )
-  ) : (
-    "No slots available"
-  )}
-</td>
+      {/* Safely display the last slot number or fallback */}
+      {schedule.timeSlots && schedule.timeSlots.length > 0 ? (
+      `Slot: ${schedule.timeSlots[schedule.timeSlots.length - 1].slot}`
+      ) : (
+      "No slots available"
+      )}
+    </td>
 
     <td className="px-4 py-2">
       <select className="px-2 py-1 border rounded">
@@ -221,17 +206,16 @@ const fetchSchedules = async () => {
         ))}
       </select>
     </td>
-    <td className="px-4 py-2 flex space-x-2">
-      <button
-        onClick={() => deleteSchedule(schedule.id)}
-        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-      >
-        Delete
-      </button>
-    </td>
-  </tr>
-))}
-
+              <td className="px-4 py-2 flex space-x-2">
+                <button
+                  onClick={() => deleteSchedule(schedule._id)}
+                  className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
 

@@ -57,7 +57,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
     
 
       {/* Test Details */}
-      <div className="w-full max-w-5xl bg-white rounded-lg shadow-md border p-6" style={{ borderColor: "#00000f", boxShadow: "0 4px 6px -1px rgba(250, 206, 57, 0.1), 0 2px 4px -1px rgba(250, 206, 57, 0.06)" }}>
+      <div className="w-full max-w-5xl bg-transparent  p-6">
         <h1 className="text-3xl text-[#FACE39] text-center mb-6">
           Thank you for booking your mock test with Luminedge!
         </h1>
@@ -158,7 +158,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
       </div>
 
       {/* Key Reminders */}
-      <div className="w-full max-w-5xl bg-white rounded-lg shadow-md border p-6" style={{ borderColor: "#00000f", boxShadow: "0 4px 6px -1px rgba(250, 206, 57, 0.1), 0 2px 4px -1px rgba(250, 206, 57, 0.06)" }}>
+      <div className="w-full max-w-5xl bg-transparent  p-6">
         <h2 className="text-2xl font-semibold mb-4">Key Reminders</h2>
         <ul className="list-disc list-inside ml-6 space-y-4">
           <li>Make sure the details you provided during booking (name, ID, etc.) match exactly with your identification documents.</li>
@@ -169,7 +169,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
       <p><strong>Good luck with your mock test! Thank you once again for choosing Luminedge to help you achieve your goals.</strong></p>
       
       {/* Emergency Contact Information */}
-      <div className="w-full max-w-5xl bg-white rounded-lg shadow-md border p-6" style={{ borderColor: "#00000f", boxShadow: "0 4px 6px -1px rgba(250, 206, 57, 0.1), 0 2px 4px -1px rgba(250, 206, 57, 0.06)" }}>
+      <div className="w-full max-w-5xl bg-transparent  p-6">
         <h1 className="text-xl font-semibold text-center" style={{ color: "#face39" }}>
           {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
         </h1>

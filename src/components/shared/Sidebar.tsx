@@ -29,7 +29,7 @@ const Sidebar = () => {
   return (
     <div className="flex">
       {/* Toggle button for mobile view */}
-      <button onClick={toggleSidebar} className="p-2 md:hidden z-60">
+      <button onClick={toggleSidebar} className="p-2 md:hidden z-50">
         {isOpen ? (
           <FaTimes className="h-6 w-6" />
         ) : (
@@ -109,8 +109,8 @@ const Sidebar = () => {
               <span className="inline">Courses</span>
             </Link>
           </li>
- {/* Terms and Conditions link */}
- <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
+         {/* Terms and Conditions link */}
+          <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
             <Link
               href="/dashboard/terms"
               className={`flex items-center px-4 py-3 ${

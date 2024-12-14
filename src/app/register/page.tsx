@@ -32,7 +32,7 @@ export type formatData = {
   result: Array<any>;
   isDeleted: boolean;
 };
-const britishLogo = '/assets/british-logos.webp';
+const britishLogo = '/assets/british-logos.png';
 const RegisterPage = () => {
   const {
     register,
@@ -133,7 +133,7 @@ const RegisterPage = () => {
             Welcome to <br /> Luminedge.
           </h1>
           <p className="text-sm">
-                The most premium exam venue awarded by 
+                The most premium exam venue awarded by <br />
                 <Image
               src={britishLogo} // Use the imported image here
               width={100} // Add width property
@@ -191,7 +191,7 @@ const RegisterPage = () => {
               <span className="text-amber-400 font-bold">Luminedge</span>
             </h1>
             <p className="text-sm">
-                The most premium exam venue awarded by 
+                The most premium exam venue awarded by <br />
                 <Image
               src={britishLogo} // Use the imported image here
               width={100} // Add width property

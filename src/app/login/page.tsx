@@ -14,7 +14,7 @@ export type FormValues = {
   email: string;
   password: string;
 };
-const britishLogo = '/assets/british-logos.webp';
+const britishLogo = '/assets/british-logos.png';
 const LoginPage = () => {
   const [user, setUser] = useState<any>(null); // Store user details here
   const [, setIsLoading] = useState<boolean>(false); // To manage loading state
@@ -116,7 +116,7 @@ const LoginPage = () => {
             Welcome to <br /> Luminedge.
           </h1>
           <p className="text-sm">
-                The most premium exam venue awarded by 
+                The most premium exam venue awarded by <br />
                 <Image
               src={britishLogo} // Use the imported image here
               width={100} // Add width property
@@ -176,7 +176,7 @@ const LoginPage = () => {
                 <span className="text-amber-400 font-bold">Luminedge</span>
               </h1>
               <p className="text-sm">
-                The most premium exam venue awarded by 
+                The most premium exam venue awarded by <br />
                 <Image
               src={britishLogo} // Use the imported image here
               width={100} // Add width property

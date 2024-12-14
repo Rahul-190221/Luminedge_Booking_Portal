@@ -24,7 +24,7 @@ const TermsPage = () => {
     return (
         <div className="flex flex-col items-center w-full max-w-screen-xl mx-auto space-y-6 px-4 sm:px-8 md:px-12 font-montserrat">
             {/* Terms and Conditions Section */}
-            <div className="text-left w-full max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md border" style={{ borderColor: "#00000f", boxShadow: "0 4px 6px -1px rgba(250, 206, 57, 0.1), 0 2px 4px -1px rgba(250, 206, 57, 0.06)" }}>
+            <div className="w-full max-w-5xl bg-transparent  p-6">
                 <h1
                     className="text-3xl font-semibold mb-6 text-center"
                     style={{
@@ -148,7 +148,7 @@ const TermsPage = () => {
             </div>
 
             {/* Header Section */}
-            <div className="flex flex-col items-center w-full max-w-screen-xl mx-auto space-y-6 px-4 sm:px-8 md:px-12 text-center border rounded-lg shadow-md p-4" style={{ borderColor: "#00000f", boxShadow: "0 4px 6px -1px rgba(250, 206, 57, 0.1), 0 2px 4px -1px rgba(250, 206, 57, 0.06)" }}>
+            <div className="w-full max-w-5xl bg-transparent  p-6">
                 <h1 className="text-xl font-semibold" style={{ color: "#face39" }}>
                     {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
                 </h1>
