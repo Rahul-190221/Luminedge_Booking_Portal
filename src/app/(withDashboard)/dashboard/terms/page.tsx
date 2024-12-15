@@ -146,9 +146,9 @@ const TermsPage = () => {
                     </p>
                 </div>
             </div>
-
-           {/* Emergency Contact Information */}
-     <div className="w-full max-w-5xl bg-transparent  p-6">
+           
+           {/* Emergency Contact Information */}         
+     <div className="w-full max-w-5xl bg-transparent  p-2">
         <h1 className="text-xl font-semibold text-center" style={{ color: "#face39" }}>
           {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
         </h1>

@@ -14,7 +14,7 @@ export type FormValues = {
   email: string;
   password: string;
 };
-const britishLogo = '/assets/british-logos.png';
+const britishLogo = '/assets/british-logos.svg';
 const LoginPage = () => {
   const [user, setUser] = useState<any>(null); // Store user details here
   const [, setIsLoading] = useState<boolean>(false); // To manage loading state
@@ -112,21 +112,21 @@ const LoginPage = () => {
               </g>
             </g>
           </svg>
-          <h1 className=" font-bold text-3xl md:text-4xl lg:text-5xl py-3">
+          <h1 className=" font-bold text-5xl py-3">
             Welcome to <br /> Luminedge.
           </h1>
-          <p className="text-sm">
-                The most premium exam venue awarded by <br />
-                <Image
-              src={britishLogo} // Use the imported image here
-              width={100} // Add width property
-              height={40} // Add height property
-
-              className="inline-block ml-2 h-10 w-auto" // Increased height to 10
-              alt={""}                />
-                </p>
-
-          <p className="text-sm mt-28 ">
+          <div className="text-lg mt-2 lg:mt-2.5 text-xl lg:text-2xl">
+          The most premium exam venue awarded by <br /> 
+          <span className="block h-2"></span> {/* Add this line to create space */}
+          <Image
+            src={britishLogo} // Use the imported image here
+            width={90} // Add width property
+            height={35} // Add height property
+            className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+            alt={""}
+          />
+        </div>
+        <p className="text-lg mt-4 lg:mt-40 ">
             If you don&apos;t have an account <br />
             you can{" "}
             <Link className="text-[#FACE39] font-bold px-2" href="/register">
@@ -135,7 +135,7 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <div className="card shadow-lg card-body w-full lg:w-[80%] mx-auto">
+        <div className="card shadow-lg card-body w-full lg:w-[80%] mx-auto mt-10">
           <form onSubmit={handleSubmit(onSubmit)} className="">
             {/* Show logo on mobile */}
             <div className="lg:hidden  mb-6  pb-4  ">
@@ -179,9 +179,8 @@ const LoginPage = () => {
                 The most premium exam venue awarded by <br />
                 <Image
               src={britishLogo} // Use the imported image here
-              width={100} // Add width property
-              height={40} // Add height property
-
+              width={90} // Add width property
+              height={35} // Add height property
               className="inline-block ml-2 h-10 w-auto" // Increased height to 10
               alt={""}                />
                 </p>

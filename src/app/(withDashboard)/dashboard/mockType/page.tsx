@@ -49,7 +49,7 @@ const CoursesPage = () => {
             />
           ))
         ) : (
-          <p>No user data available. Please wait for Approval. </p>
+            <p className="text-semi-bold text-xl">No user data available. Please wait for Approval.</p>
         )}
       </div>
     </div>

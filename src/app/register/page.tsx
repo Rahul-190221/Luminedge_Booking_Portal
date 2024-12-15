@@ -32,7 +32,7 @@ export type formatData = {
   result: Array<any>;
   isDeleted: boolean;
 };
-const britishLogo = '/assets/british-logos.png';
+const britishLogo = '/assets/british-logos.svg';
 const RegisterPage = () => {
   const {
     register,
@@ -98,11 +98,11 @@ const RegisterPage = () => {
     <div className="my-10 px-4 md:px-8 lg:px-10 ">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="hidden lg:block w-full lg:w-[80%] h-[70%] m-auto">
-          <svg
+        <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 609.58 304.79"
-            width="130"
-            height="75"
+            width="150"
+            height="100"
           >
             <defs>
               <style>{`.cls-1 { fill: #00000f; stroke-width: 0px; }`}</style>
@@ -112,6 +112,8 @@ const RegisterPage = () => {
                 <path
                   className="cls-1"
                   d="M95.25,38.17c31.55,0,57.15,25.71,57.15,57.3,0,18.05-8.22,34.64-22.62,45.47-21.49,16.26-30.17,34.23-33.17,49.34h-2.72c-2.98-15.11-11.68-33.08-33.19-49.34-14.36-10.83-22.62-27.42-22.62-45.47,0-31.59,25.64-57.3,57.17-57.3M95.25,0C42.64,0,0,42.75,0,95.47c0,31.25,14.72,58.56,37.8,75.98,10.62,8.04,19.38,18.38,19.38,32.67v24.33h76.16v-24.33c0-14.29,8.74-24.63,19.35-32.67,23.1-17.41,37.8-44.72,37.8-75.98C190.49,42.75,147.86,0,95.25,0h0Z"
+                  width={50} // Add appropriate width
+                  height={50} // Add appropriate height
                 />
                 <rect
                   className="cls-1"
@@ -132,23 +134,25 @@ const RegisterPage = () => {
           <h1 className=" font-bold text-5xl py-3">
             Welcome to <br /> Luminedge.
           </h1>
-          <p className="text-sm">
-                The most premium exam venue awarded by <br />
-                <Image
-              src={britishLogo} // Use the imported image here
-              width={100} // Add width property
-              height={40} // Add height property
+        <div className="text-lg mt-2 lg:mt-2.5 text-xl lg:text-2xl">
+          The most premium exam venue awarded by <br /> 
+          <span className="block h-2"></span> {/* Add this line to create space */}
+          <Image
+            src={britishLogo} // Use the imported image here
+            width={90} // Add width property
+            height={35} // Add height property
+            className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+            alt={""}
+          />
+        </div>
 
-              className="inline-block ml-2 h-10 w-auto" // Increased height to 10
-              alt={""}                />
-                </p>
-          <p className="text-sm mt-10 lg:mt-40 ">
+            <p className="text-lg mt-5 lg:mt-40 ">
             If you have already an account <br className="hidden lg:block" />
             you can{" "}
             <Link className="text-[#ffd23c] font-bold px-2" href="/login">
               Sign in here
             </Link>
-          </p>
+            </p>
         </div>
 
         <div className="card shadow-lg card-body w-full lg:w-[80%] mx-auto">
@@ -194,8 +198,8 @@ const RegisterPage = () => {
                 The most premium exam venue awarded by <br />
                 <Image
               src={britishLogo} // Use the imported image here
-              width={100} // Add width property
-              height={40} // Add height property
+              width={90} // Add width property
+              height={35} // Add height property
 
               className="inline-block ml-2 h-10 w-auto" // Increased height to 10
               alt={""}                />

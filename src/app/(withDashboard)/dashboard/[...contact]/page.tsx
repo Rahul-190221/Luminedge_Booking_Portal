@@ -78,11 +78,22 @@ const proceedWithNewBooking = async (newBookingDetails: any) => {
       newBookingDetails
     );
 
-    toast.success("New slot booked successfully!");
+    toast.success("New slot booked successfully!", {
+      duration: 3000 // Auto-dismiss after 3 seconds
+    });
+
     router.push("/dashboard"); // Redirect to dashboard after booking
   } catch (error) {
     console.error("Now. please book new slot.", error);
-    toast.error("Please book new slot now.");
+    toast((t) => {
+      setTimeout(() => toast.dismiss(t.id), 5000); // Auto-dismiss after 5 seconds
+      return (
+        <div className="flex items-center">
+          <span className="text-red-500 mr-2">⚠️</span>
+          <p>Please book new slot first.</p>
+        </div>
+      );
+    });
   }
 };
 
@@ -161,49 +172,50 @@ const handleConfirmation = async (newBookingDetails: any) => {
             <li className="mb-2"><span className="font-semibold">Rescheduling is not allowed within 24 hours of the test date.</span></li>
             <li className="mb-2">If you fail to attend your test on the scheduled date, it will be considered as taken, and no rescheduling or refunds will be possible.</li>
           </ul>
-          <div className="flex justify-center mt-4 sm:mt-6">
+         <div className="flex justify-center mt-4 sm:mt-6">
             <button
               onClick={() => {
-                // Redirect to choose a new slot
-                router.push("/dashboard/mockType");
+              // Redirect to choose a new slot
+              router.push("/dashboard/mockType");
 
-                // Simulate user booking a new slot and proceeding
-                toast((t) => (
-                  <div>
-                    <p className="mb-2">
-                      If you wish to reschedule your slot, please click &apos;Confirm&apos; and proceed to book a new slot.
-                    </p>
-                    <div className="flex justify-center space-x-2">
-                      <button
-                        onClick={() => {
-                          const newBookingDetails = {
-                            userId: user?._id,
-                            newSlot: "2024-12-20T15:30", // Example new slot data
-                          };
+              // Simulate user booking a new slot and proceeding
+              toast((t) => (
+                <div>
+                <p className="mb-2">
+                If you wish to delete and reschedule your slot, please click 'Confirm' and proceed to book a new slot.
+                </p>
+                <div className="flex justify-center space-x-2">
+                  <button
+                  onClick={() => {
+                    const newBookingDetails = {
+                    userId: user?._id,
+                    newSlot: "2024-12-20T15:30", // Example new slot data
+                    };
 
-                          handleConfirmation(newBookingDetails);
-                          toast.dismiss(t.id); // Dismiss toast
-                        }}
-                        disabled={isProcessing}
-                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                      >
-                        {isProcessing ? "Processing..." : "Confirm"}
-                      </button>
-                      <button
-                        onClick={() => toast.dismiss(t.id)}
-                        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ), { duration: Infinity });
+                    handleConfirmation(newBookingDetails);
+                    toast.dismiss(t.id); // Dismiss toast
+                  }}
+                  disabled={isProcessing}
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                  {isProcessing ? "Processing..." : "Confirm"}
+                  </button>
+                  <button
+                  onClick={() => toast.dismiss(t.id)}
+                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                  Cancel
+                  </button>
+                </div>
+                </div>
+              ), { duration: Infinity });
               }}
               className="px-4 sm:px-6 py-2 sm:py-3 bg-[#FACE39] text-white font-semibold rounded-lg hover:bg-yellow-500 transition duration-200"
+              disabled={!isPast24Hours("2024-12-19", "15:30")} // Example booking date and time
             >
               Reschedule
             </button>
-          </div>
+            </div>
         </div>
         {/* Key Reminders */}
         <div className="w-full max-w-5xl bg-transparent p-4 sm:p-6">

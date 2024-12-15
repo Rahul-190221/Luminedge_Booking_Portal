@@ -190,8 +190,13 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         }
       );
   
+      // Dismiss any existing toasts
+      toast.dismiss();
+
+      // Show the success message
       toast.success("New slot booked successfully!", {
         duration: 3000, // Auto-dismiss after 3 seconds
+        position: "top-center", // Ensure it appears correctly on mobile devices
       });
       router.push(`/dashboard`);
     } catch (error: any) {

@@ -201,7 +201,7 @@ const updatedSchedules = data.map((schedule: any) => ({
       <select className="px-2 py-1 border rounded">
         {schedule.timeSlots.map((slot: any) => (
           <option key={slot.slotId} value={slot.slotId}>
-            {slot.startTime} - {slot.endTime} (Slot: {slot.slot})
+            {slot.startTime} - {slot.endTime} 
           </option>
         ))}
       </select>
