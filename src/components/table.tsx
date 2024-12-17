@@ -45,7 +45,12 @@ const Table = ({ userId }: { userId: string }) => {
 
     return `${day} ${month},${year}`;
   };
-
+  const isPast24Hours = (bookingDate: string, startTime: string): boolean => {
+    const bookingDateTime = new Date(`${bookingDate}T${startTime}`);
+    const currentTime = new Date();
+    const timeDifference = bookingDateTime.getTime() - currentTime.getTime();
+    return timeDifference <= 0 || timeDifference > 24 * 60 * 60 * 1000; // Check if it's past or more than 24 hours
+  };
   return (
     <table className="table">
       {/* head */}
@@ -74,11 +79,23 @@ const Table = ({ userId }: { userId: string }) => {
             <td>{booking.status}</td>
             <td>
               <button
-                onClick={() => {
-                  router.push(`/dashboard/${booking._id}`);
-                }}
+              onClick={() => {
+                router.push(`/dashboard/${booking._id}`);
+              }}
+              className={`px-4 py-2 font-bold rounded ${
+                booking.status === "pending" &&
+                isPast24Hours(booking.bookingDate, booking.startTime)
+                ? "font-bold text-xl text-gray-900 hover:bg-black hover:text-white"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+              disabled={
+                !(
+                booking.status === "pending" &&
+                isPast24Hours(booking.bookingDate, booking.startTime)
+                )
+              }
               >
-                <AiOutlineEllipsis />
+              <AiOutlineEllipsis />
               </button>
             </td>
           </tr>
