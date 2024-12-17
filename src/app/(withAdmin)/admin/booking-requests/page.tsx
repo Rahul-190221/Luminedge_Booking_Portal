@@ -239,18 +239,10 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
         fetch(`https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/${userId}`),
         fetch(`https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookingMock/${userId}`)
       ]);
-      
-      if (!userResponse.ok) {
-        throw new Error(`Failed to fetch user data: ${userResponse.statusText}`);
-      }
-  
+
       const userData = await userResponse.json();
-  
-      let bookingMockData = null;
-      if (bookingMockResponse.ok) {
-        bookingMockData = await bookingMockResponse.json();
-      }
-  
+      const bookingMockData = await bookingMockResponse.json();
+
       const {
         name,
         email,
@@ -258,13 +250,13 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
         transactionId,
         passportNumber,
         testType,
+        testSystem,
         totalMock,
         mock,
-        attendance
       } = userData.user;
-     
-      const testSystem = getTestSystem(bookingMockData);
-      
+
+      const { testSystem: bookingTestSystem } = bookingMockData;
+
       setUserDetails((prev) => ({
         ...prev,
         [userId]: {
@@ -277,15 +269,10 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
           testSystem,
           totalMock,
           mock,
-          attendance,
         },
       }));
     } catch (error) {
-      console.error("Error fetching user and bookingMock data:", error);
-    }
-
-    function getTestSystem(bookingMockData: any) {
-      return bookingMockData?.bookingMock?.testSystem || "N/A";
+      console.error("Error fetching user data:", error);
     }
   }
 
@@ -419,15 +406,17 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
             `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/attendance/${userId}`
           );
           const attendanceValue = attendanceResponse.data.attendance || "N/A"; // Get attendance value
-            const bookingMockResponse = await fetch(
-              `https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookingMock/${userId}`
-            );
-            const bookingMockData = await bookingMockResponse.json();
-
-            return [
-              bookingMockData.bookingMock?.testSystem || "N/A",
-              // Add other fields from bookingMockData.bookingMock as necessary
-            ];
+          return [
+            user?.name || "N/A",
+            user?.email || "N/A",
+            user?.contactNo || "N/A",
+            user?.transactionId || "N/A",
+            user?.passportNumber || "N/A",
+            user?.testType || "N/A",
+            user?.testSystem || "N/A",
+            user?.totalMock || "N/A",
+            attendanceValue, // Add attendance value to the table data
+          ];
         })
       );
 
@@ -444,16 +433,12 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
             "Test System",
             "Purchased",
             "Attend",
-            "Attendance",
           ],
         ], // Table headers
         body: tableData, // Table data
         startY: 40, // Positioning the table below the metadata
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [220, 220, 220], textColor: 0 },
-        tableWidth: 'auto', // Adjust table width to fit the page
-        margin: { left: 10, right: 10 }, // Add margins to fit the table within the page
-        pageBreak: 'auto', // Automatically add page breaks if the table is too long
       });
 
       // Save the PDF
@@ -523,8 +508,6 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
   </label>
 </div>
 
-
-
       <div className="overflow-x-auto">
         <table className="table-auto w-full border-collapse">
           <thead>
@@ -560,13 +543,13 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
                     onClick={() => handleDownloadClick(booking)}
                     className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
                   >
-                  See Details
+                   See Details
                   </button>
                   <button
                     onClick={() => seeBookingDetails(booking)}
                     className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
                   >
-                   Attendance
+              Attendance
                   </button>
                 </td>
               </tr>
@@ -584,14 +567,19 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
             >
               &times;
             </button>
-            <h2 className="text-xl font-bold mb-4">Attendance</h2>
-            
+            <h2 className="text-xl font-bold mb-4">Booking Details</h2>
             <table className="table-auto w-full border-collapse">
               <thead>
                 <tr className="bg-gray-200">
                   <th className="px-4 py-2 text-left">Name</th>
                   <th className="px-4 py-2 text-left">Email</th>
-
+                  <th className="px-4 py-2 text-left">Phone</th>
+                  <th className="px-4 py-2 text-left">Transaction ID</th>
+                  <th className="px-4 py-2 text-left">Passport Number</th>
+                  <th className="px-4 py-2 text-left">Test Type</th>
+                  <th className="px-4 py-2 text-left">Test System</th>
+                  <th className="px-4 py-2 text-left">Purchased</th>
+                  <th className="px-4 py-2 text-left">Attend</th>
                   <th className="px-4 text-left">Exam Date</th>
                   <th className="px-4 text-left">Attendance</th>
                 </tr>
@@ -604,6 +592,28 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
                     </td>
                     <td className="px-4">
                       {userDetails[userId]?.email || "Loading..."}
+                    </td>
+                    <td className="px-4">
+                      {userDetails[userId]?.contactNo || "Loading..."}
+                    </td>
+
+                    <td className="px-4">
+                      {userDetails[userId]?.transactionId || "Loading..."}
+                    </td>
+                    <td className="px-4">
+                      {userDetails[userId]?.passportNumber || "Loading..."}
+                    </td>
+                    <td className="px-4">
+                      {userDetails[userId]?.testType || "Loading..."}
+                    </td>
+                    <td className="px-4">
+                      {userDetails[userId]?.testSystem || "Loading..."}
+                    </td>
+                    <td className="px-4">
+                      {userDetails[userId]?.totalMock || "Loading..."}
+                    </td>
+                    <td className="px-4">
+                      {userDetails[userId]?.mock || "Loading..."}
                     </td>
                     <td className="px-4">
                       {selectedBooking.bookingDate || "Loading..."}
@@ -718,7 +728,7 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
         </div>
       )}
 
-{isDownloadPreviewOpen && bookingToDownload && (
+      {isDownloadPreviewOpen && bookingToDownload && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white p-4 rounded shadow-lg relative">
             <button
@@ -751,8 +761,6 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
                   <th className="px-4 py-2 text-left">Test System</th>
                   <th className="px-4 py-2 text-left">Purchased </th>
                   <th className="px-4 py-2 text-left">Attend</th>
-                  <th className="px-4 py-2 text-left">Attendance</th>
-
                 </tr>
               </thead>
               <tbody>
@@ -777,7 +785,7 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
                       {userDetails[userId]?.testType || "Loading..."}
                     </td>
                     <td className="px-4 py-2">
-                      {userDetails[userId]?.testSystem || "N/A"}
+                      {userDetails[userId]?.testSystem || "Loading..."}
                     </td>
                     <td className="px-4 py-2">
                       {userDetails[userId]?.totalMock || "Loading..."}
@@ -785,10 +793,6 @@ function handleDateFilterChange(e: React.ChangeEvent<HTMLInputElement>) {
                   <td className="px-4 py-2">
                     {userDetails[userId]?.mock || "Loading..."}
                   </td>
-                    <td className="px-4 py-2">
-                      {attendanceValues[userId] || "Loading..."}
-                    </td>
-                  {/* Placeholder removed */}
                   </tr>
                 ))}
               </tbody>
