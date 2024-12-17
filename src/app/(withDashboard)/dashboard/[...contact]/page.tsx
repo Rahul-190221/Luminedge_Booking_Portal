@@ -182,7 +182,7 @@ const handleConfirmation = async (newBookingDetails: any) => {
               toast((t) => (
                 <div>
                 <p className="mb-2">
-                If you wish to delete and reschedule your slot, please click 'Confirm' and proceed to book a new slot.
+                If you wish to delete and reschedule your slot, please click &apos;Confirm&apos; and proceed to book a new slot.
                 </p>
                 <div className="flex justify-center space-x-2">
                   <button
