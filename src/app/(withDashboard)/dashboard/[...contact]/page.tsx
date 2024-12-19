@@ -172,50 +172,51 @@ const handleConfirmation = async (newBookingDetails: any) => {
             <li className="mb-2"><span className="font-semibold">Rescheduling is not allowed within 24 hours of the test date.</span></li>
             <li className="mb-2">If you fail to attend your test on the scheduled date, it will be considered as taken, and no rescheduling or refunds will be possible.</li>
           </ul>
-         <div className="flex justify-center mt-4 sm:mt-6">
+          <div className="flex justify-center mt-4 sm:mt-6">
+  <button
+    onClick={() => {
+      // Redirect to choose a new slot
+      router.push("/dashboard/mockType");
+
+      // Simulate user booking a new slot and proceeding
+      toast((t) => (
+        <div>
+          <p className="mb-2">
+            If you wish to delete and reschedule your slot, please click &apos;Confirm&apos; and proceed to book a new slot.
+          </p>
+          <div className="flex justify-center space-x-2">
             <button
               onClick={() => {
-              // Redirect to choose a new slot
-              router.push("/dashboard/mockType");
+                const newBookingDetails = {
+                  userId: user?._id,
+                  newSlot: "2024-12-20T15:30", // Example new slot data
+                };
 
-              // Simulate user booking a new slot and proceeding
-              toast((t) => (
-                <div>
-                <p className="mb-2">
-                If you wish to delete and reschedule your slot, please click &apos;Confirm&apos; and proceed to book a new slot.
-                </p>
-                <div className="flex justify-center space-x-2">
-                  <button
-                  onClick={() => {
-                    const newBookingDetails = {
-                    userId: user?._id,
-                    newSlot: "2024-12-20T15:30", // Example new slot data
-                    };
-
-                    handleConfirmation(newBookingDetails);
-                    toast.dismiss(t.id); // Dismiss toast
-                  }}
-                  disabled={isProcessing}
-                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                  >
-                  {isProcessing ? "Processing..." : "Confirm"}
-                  </button>
-                  <button
-                  onClick={() => toast.dismiss(t.id)}
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                  >
-                  Cancel
-                  </button>
-                </div>
-                </div>
-              ), { duration: Infinity });
+                handleConfirmation(newBookingDetails);
+                toast.dismiss(t.id); // Dismiss toast
               }}
-              className="px-4 sm:px-6 py-2 sm:py-3 bg-[#FACE39] text-white font-semibold rounded-lg hover:bg-yellow-500 transition duration-200"
-              disabled={!isPast24Hours("2024-12-19", "15:30")} // Example booking date and time
+              disabled={isProcessing}
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
             >
-              Reschedule
+              {isProcessing ? "Processing..." : "Confirm"}
             </button>
-            </div>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ));
+    }}
+    className="px-4 sm:px-6 py-2 sm:py-3 bg-[#FACE39] text-white font-semibold rounded-lg hover:bg-yellow-500 transition duration-200"
+    disabled={!isPast24Hours(user.bookingDate, user.startTime)} // Check if more than 24 hours remain
+  >
+    Reschedule
+  </button>
+</div>
+
         </div>
         {/* Key Reminders */}
         <div className="w-full max-w-5xl bg-transparent p-4 sm:p-6">
