@@ -172,7 +172,7 @@ const handleConfirmation = async (newBookingDetails: any) => {
             <li className="mb-2"><span className="font-semibold">Rescheduling is not allowed within 24 hours of the test date.</span></li>
             <li className="mb-2">If you fail to attend your test on the scheduled date, it will be considered as taken, and no rescheduling or refunds will be possible.</li>
           </ul>
-          <div className="flex justify-center mt-4 sm:mt-6">
+        <div className="flex justify-center mt-4 sm:mt-6">
   <button
     onClick={() => {
       // Redirect to choose a new slot
@@ -195,7 +195,7 @@ const handleConfirmation = async (newBookingDetails: any) => {
                 handleConfirmation(newBookingDetails);
                 toast.dismiss(t.id); // Dismiss toast
               }}
-              disabled={isProcessing}
+              // disabled={isProcessing}
               className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
             >
               {isProcessing ? "Processing..." : "Confirm"}
