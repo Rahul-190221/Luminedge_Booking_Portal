@@ -23,16 +23,16 @@ type Booking = {
 
 const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
   const { id: scheduleId } = params || {};
-  if (!scheduleId) {
-    return <div>No Schedule ID provided.</div>;
-  }
 
+  // Ensure hooks are called unconditionally
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [attendance, setAttendance] = useState<{ [key: string]: string }>({});
 
   const fetchBookingsAndUsers = useCallback(async () => {
+    if (!scheduleId) return; // Add an early return instead of conditional hook call
+
     try {
       setLoading(true);
 
@@ -134,8 +134,8 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
   const confirmDownload = () => {
     const doc = new jsPDF({
-      orientation: "landscape", // Landscape for a wider layout
-      format: "a4", // A3 size for a larger page
+      orientation: "landscape",
+      format: "a4",
     });
 
     const tableData = users.map((user, index) => [
@@ -146,7 +146,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       user?.transactionId || "N/A",
       user?.passportNumber || "N/A",
       bookings.find((booking) => booking.userId.includes(user._id))?.testType ||
-      "N/A",
+        "N/A",
       bookings.find((booking) => booking.userId.includes(user._id))
         ?.testSystem || "N/A",
       user?.totalMock || "N/A",
@@ -154,7 +154,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       attendance[user._id] || "N/A",
     ]);
 
-    doc.text("Booking Requests", 14, 20); // Title with some spacing
+    doc.text("Booking Requests", 14, 20);
 
     autoTable(doc, {
       head: [
@@ -173,22 +173,25 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
         ],
       ],
       body: tableData,
-      theme: "grid", // Grid for clear table borders
+      theme: "grid",
       styles: {
-        fontSize: 10, // Adjust font size for better readability
+        fontSize: 10,
       },
-      margin: { top: 30 }, // Top margin for spacing
-      tableWidth: "auto", // Adjust table width dynamically
+      margin: { top: 30 },
+      tableWidth: "auto",
       columnStyles: {
-        0: { cellWidth: 10 }, // Column 1 (List) width
-        1: { cellWidth: 30 }, // Column 2 (User Name) width
-        2: { cellWidth: 50 }, // Column 3 (Email) width
-        // Adjust other column widths as needed
+        0: { cellWidth: 10 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 50 },
       },
     });
 
     doc.save("booking_requests.pdf");
   };
+
+  if (!scheduleId) {
+    return <div>No Schedule ID provided.</div>;
+  }
 
   return (
     <div>
@@ -236,15 +239,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
                     }
                   </td>
                   <td className="px-4 py-2">{user?.totalMock || "N/A"}</td>
-                  <td className="px-4 py-2">
-                    {
-                      bookings.filter(
-                        (booking) =>
-                          booking.userId.includes(user._id) && (booking.attendance == "absent" || booking.attendance == "present")
-                      ).length || "N/A"
-                    }
-                  </td>
-                  {/* <td className="px-4 py-2">{user?.attendance || "N/A"}</td> */}
+                  <td className="px-4 py-2">{user?.mock || "N/A"}</td>
                   <td className="px-4 py-2">
                     <select
                       className="px-2 py-1 border rounded"
