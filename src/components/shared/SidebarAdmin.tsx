@@ -97,7 +97,7 @@ const SidebarAdmin = () => {
             <span className="inline">Available Schedules</span>
           </Link>
         </li>
-        {/*booking-requests */}
+        {/* booking-requests
         <li
           className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
             pathname === "/admin/booking-requests"
@@ -112,7 +112,7 @@ const SidebarAdmin = () => {
             <IoBagRemoveOutline className="h-5 w-5 mr-2" />
             <span className="inline">Booking Requests</span>
           </Link>
-        </li>
+        </li> */}
         <li
           className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
             pathname === "/admin/all-users"

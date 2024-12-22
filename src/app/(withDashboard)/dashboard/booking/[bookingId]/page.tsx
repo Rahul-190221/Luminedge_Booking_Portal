@@ -127,7 +127,8 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     setSelectedSlotId(slotId);
     setScheduleId(scheduleId);
     setTestType(testType);
-  }const handleProceed = async () => {
+  }
+  const handleProceed = async () => {
     // Check if the test system is selected
     if (!testSystem) {
       setShowTestSystemError(true); // Show error message

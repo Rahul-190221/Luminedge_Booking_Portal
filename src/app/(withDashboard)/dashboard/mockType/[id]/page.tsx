@@ -1,10 +1,10 @@
 "use client";
 import CourseCard from "@/components/courseCard";
-import { Course } from "../../../types";
+import { Course } from "../../../../types";
 import { getUserIdFromToken } from "@/app/helpers/jwt";
 import GetMe from "@/app/helpers/getme";
 
-const CoursesPage = () => {
+const CoursesPage = ({ params }: { params: { contact: string }}) => {
   const user = GetMe();
   console.log(user);
   const courses = [

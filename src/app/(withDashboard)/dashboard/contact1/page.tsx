@@ -8,70 +8,110 @@ import GetMe from "@/app/helpers/getme"; // Adjust the path if necessary
 
 const CoursesPage = ({ params }: { params: { contact: string } }) => {
   const user = GetMe(); // Fetch user data using GetMe
-  const { contact: bookingId } = params || {};
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768; // Check if window is available and determine if it's mobile
-  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [testType, setTestType] = useState<string>("");
-  const [testSystem, setTestSystem] = useState<string>("");
-  const [scheduleId, setScheduleId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+
   const isPast24Hours = (bookingDate: any, startTime: any) => {
     const bookingDateTime = new Date(`${bookingDate}T${startTime}`);
     const currentTime = new Date();
     const timeDifference = bookingDateTime.getTime() - currentTime.getTime();
     return timeDifference > 24 * 60 * 60 * 1000; // More than 24 hours remaining
   };
-  const deletePreviousBooking = async () => {
-    try {
-      await axios.delete(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings/${params.contact}`
-      );
-    } catch (error) {
-      console.error("Error deleting previous booking:", error);
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        toast.error("Previous booking not found.");
-      } else {
-        toast.error("An error occurred while deleting the booking.");
-      }
-    }
-  };
-
-  // Function to proceed with the new booking
-  const proceedWithNewBooking = async (newBookingDetails: any) => {
-    try {
-      // Assume `newBookingDetails` contains the details of the new slot selected by the user.
-      await axios.post(
-        "https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings",
-        newBookingDetails
-      );
-
-      toast.success("New slot booked successfully!");
-      router.push(`/dashboard/mockType/${params.contact}`); // Redirect to dashboard after booking
-    } catch (error) {
-      console.error("Error booking new slot:", error);
-      toast.error("Please book a new slot");
-    }
-  };
-
-  // Function to handle confirmation and processing logic
-  const handleConfirmation = async (newBookingDetails: any) => {
-    setIsProcessing(true);
-    try {
-      // Perform deletion and booking in parallel
-      await Promise.all([
-        deletePreviousBooking(),
-        proceedWithNewBooking(newBookingDetails),
-      ]);
-    } catch (error) {
-      console.error("Error during booking process:", error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   
+  // // Function to handle booking reschedule
+  // const onRescheduleBooking = async (userId: string) => {
+  //   if (!userId) {
+  //     toast.error("User ID not found.");
+  //     return;
+  //   }
+
+  //   try {
+  //     setIsProcessing(true);
+
+  //     // Delete the current booking
+  //     await axios.delete(
+  //       `https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings/${params.contact}`
+  //     );
+
+  //     toast((t) => {
+  //       setTimeout(() => toast.dismiss(t.id), 3000); // Auto-dismiss after 1 second
+  //       return <p>Booking rescheduled successfully!</p>;
+  //     });
+
+  //     // Redirect after successful operation
+  //     router.push("/dashboard/mockType");
+  //   } catch (error) {
+  //     if (axios.isAxiosError(error) && error.response?.status === 404) {
+  //       toast.error("Booking not found. Please try again.");
+  //     } else {
+  //       toast.error("An unexpected error occurred. Please try again.");
+  //     }
+  //     console.error("Error rescheduling booking:", error);
+  //   } finally {
+  //     setIsProcessing(false);
+  //   }
+  // };
+
+ // Function to delete the previous booking
+ const deletePreviousBooking = async () => {
+  try {
+    await axios.delete(
+      `https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings/${params.contact}`
+    );
+  } catch (error) {
+    console.error("Error deleting previous booking:", error);
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      toast.error("Previous booking not found.");
+    } else {
+      toast.error("An error occurred while deleting the booking.");
+    }
+  }
+};
+
+// Function to proceed with the new booking
+const proceedWithNewBooking = async (newBookingDetails: any) => {
+  try {
+    // Assume `newBookingDetails` contains the details of the new slot selected by the user.
+    await axios.post(
+      "https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings",
+      newBookingDetails
+    );
+
+    toast.success("New slot booked successfully!", {
+      duration: 3000 // Auto-dismiss after 3 seconds
+    });
+
+    router.push("/dashboard"); // Redirect to dashboard after booking
+  } catch (error) {
+    console.error("Now. please book new slot.", error);
+    toast((t) => {
+      setTimeout(() => toast.dismiss(t.id), 5000); // Auto-dismiss after 5 seconds
+      return (
+        <div className="flex items-center">
+          <span className="text-red-500 mr-2">⚠️</span>
+          <p>Please book new slot first.</p>
+        </div>
+      );
+    });
+  }
+};
+
+// Function to handle confirmation and processing logic
+const handleConfirmation = async (newBookingDetails: any) => {
+  setIsProcessing(true);
+  try {
+    // Perform deletion and booking in parallel
+    await Promise.all([
+      deletePreviousBooking(),
+      proceedWithNewBooking(newBookingDetails),
+    ]);
+  } catch (error) {
+    console.error("Error during booking process:", error);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   return (
     <div className="flex flex-col items-center w-full max-w-screen-xl mx-auto space-y-4 px-2 sm:px-4 md:px-8">
@@ -142,49 +182,47 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
       If you fail to attend your test on the scheduled date, it will be considered as taken, and no rescheduling or refunds will be possible.
     </li>
   </ul>
-  <div className="flex justify-center mt-6">
-        <button
-          onClick={() => {
-            // Redirect to choose a new slot
-            router.push(`/dashboard/mockType/${params.contact}`);
-
-            // Simulate user booking a new slot and proceeding
-            toast((t) => (
-              <div>
-                <p className="mb-2">
-                If you wish to delete and reschedule your slot, please click 'Confirm' and proceed to book a new slot.
-                </p>
-                <div className="flex justify-center space-x-2">
-                <button
+  <div className="flex justify-center mt-4 sm:mt-6">
+    <button
+      disabled
+      onClick={() => {
+        router.push("/dashboard/mockType");
+        toast((t) => (
+          <div>
+            <p className="mb-2">
+              If you wish to delete and reschedule your slot, please click &apos;Confirm&apos; and proceed to book a new slot.
+            </p>
+            <div className="flex justify-center space-x-2">
+              {/* <button
                 onClick={() => {
                   const newBookingDetails = {
-                    userId: "user-id-here", // Replace with actual user ID
+                    userId: user?._id,
                     newSlot: "2024-12-20T15:30", // Example new slot data
                   };
 
-                  handleConfirmation(newBookingDetails, bookingId);
-                  toast.dismiss(t.id);
+                  handleConfirmation(newBookingDetails);
+                  toast.dismiss(t.id); // Dismiss toast
                 }}
                 disabled={isProcessing}
                 className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
               >
                 {isProcessing ? "Processing..." : "Confirm"}
               </button>
-                  <button
-                    onClick={() => toast.dismiss(t.id)}
-                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ));
-          }}
-          className="px-6 py-3 bg-[#FACE39] text-white font-semibold rounded-lg hover:bg-yellow-500 transition duration-200"
-        >
-          Reschedule
-        </button>
-      </div>
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Cancel
+              </button> */}
+            </div>
+          </div>
+        ));
+      }}
+      className="px-4 sm:px-6 py-2 sm:py-3 bg-[#FACE39] text-white font-semibold rounded-lg hover:bg-yellow-500 transition duration-200"
+    >
+      Reschedule
+    </button>
+  </div>
 </div>
         {/* Key Reminders */}
         <div className="w-full max-w-5xl bg-transparent p-4 sm:p-6">

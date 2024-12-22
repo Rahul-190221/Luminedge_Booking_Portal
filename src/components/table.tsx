@@ -45,12 +45,24 @@ const Table = ({ userId }: { userId: string }) => {
 
     return `${day} ${month},${year}`;
   };
-  const isPast24Hours = (bookingDate: string, startTime: string): boolean => {
-    const bookingDateTime = new Date(`${bookingDate}T${startTime}`);
-    const currentTime = new Date();
-    const timeDifference = bookingDateTime.getTime() - currentTime.getTime();
-    return timeDifference <= 0 || timeDifference > 24 * 60 * 60 * 1000; // Check if it's past or more than 24 hours
-  };
+
+  // Check if the booking is past 24 hours
+    const isPast24Hours = (bookingDate: string, startTime: string): boolean => {
+      const bookingDateTime = new Date(`${bookingDate}T${startTime}`);
+      const currentTime = new Date();
+      const timeDifference = bookingDateTime.getTime() - currentTime.getTime();
+      return timeDifference <= 0 || timeDifference > 24 * 60 * 60 * 1000; // Check if it's past or more than 24 hours
+    };
+  
+    // Format time to '12:30 PM'
+    const formatTime = (timeString: string): string => {
+      const [hour, minute] = timeString.split(":");
+      const date = new Date();
+      date.setHours(parseInt(hour, 10), parseInt(minute, 10));
+      let formattedTime = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+      return formattedTime;
+    };
+
   return (
     <table className="table">
       {/* head */}
@@ -75,27 +87,24 @@ const Table = ({ userId }: { userId: string }) => {
             <td>{booking.testType}</td>
             <td>{booking.testSystem}</td>
             <td>{formatDate(booking.bookingDate)}</td>
-            <td>{booking.startTime.slice(0, 5)}</td>
+            <td>{formatTime(booking.startTime)}</td>
             <td>{booking.status}</td>
             <td>
               <button
-              onClick={() => {
-                router.push(`/dashboard/${booking._id}`);
-              }}
-              className={`px-4 py-2 font-bold rounded ${
-                booking.status === "pending" &&
-                isPast24Hours(booking.bookingDate, booking.startTime)
-                ? "font-bold text-xl text-gray-900 hover:bg-black hover:text-white"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-              disabled={
-                !(
-                booking.status === "pending" &&
-                isPast24Hours(booking.bookingDate, booking.startTime)
-                )
-              }
+                onClick={() => {
+                  if (
+                    booking.status === "pending" &&
+                    isPast24Hours(booking.bookingDate, booking.startTime)
+                  ) {
+                    router.push(`/dashboard/${booking._id}`);
+                  } 
+                else {
+                router.push('/dashboard/contact1');
+                }
+                }}
+                className="px-4 py-2 font-bold rounded text-gray-900 hover:bg-black hover:text-white"
               >
-              <AiOutlineEllipsis />
+                <AiOutlineEllipsis />
               </button>
             </td>
           </tr>

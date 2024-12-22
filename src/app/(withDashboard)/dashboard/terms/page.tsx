@@ -166,17 +166,18 @@ const TermsPage = () => {
           </div>
 
           <div className="p-4 border rounded-lg shadow-md">
-            <h2 className="text-lg font-semibold mb-2">Telephone</h2>
-            <p>01400-403474</p>
-            <p>01400-403475</p>
-            <p>01400-403485</p>
-            <p>01400-403493</p>
-            <p>01400-403494</p>
-          </div>
+              <h2 className="text-lg font-semibold mb-2">Telephone</h2>
+              <p>01400-403474</p>
+              <p>01400-403475</p>
+              <p>01400-403486</p>
+              <p>01400-403487</p>
+              <p> 01400-403493</p>
+              <p>01400-403494</p>
+            </div>
 
           <div className="p-4 border rounded-lg shadow-md">
             <h2 className="text-lg font-semibold mb-2">E-mail</h2>
-            <p>info@luminedge.com.au</p>
+            <p>ielts.luminedge@gmail.com</p>
           </div>
         </div>
       </div>

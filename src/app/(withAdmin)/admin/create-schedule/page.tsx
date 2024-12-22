@@ -37,6 +37,7 @@ export default function CreateSchedulePage() {
         [date]: [
           ...(prev.timeSlots[date] || []),
           { startTime: "09:00", endTime: "10:00", totalSlot:20,slot: 20 }, // Default time slot values
+          
         ],
       },
     }));
@@ -106,6 +107,7 @@ export default function CreateSchedulePage() {
           startTime: `${slot.startTime}:00`,
           endTime: `${slot.endTime}:00`,
           slot: slot.slot,
+          totalSlot: slot.totalSlot
         })),
         name: name, // Updated name field
         testSystem: "", // Updated testSystem field
@@ -264,6 +266,26 @@ export default function CreateSchedulePage() {
                       required
                     />
                   </div>
+                  {/* Total Slot Selection */}
+<div>
+  <label
+    htmlFor={`totalSlot-${dateKey}-${index}`}
+    className="block mb-2 text-sm font-medium text-gray-900"
+  >
+    Total Slot:
+  </label>
+  <input
+    type="number"
+    id={`totalSlot-${dateKey}-${index}`}
+    className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+    value={slot.totalSlot || 20} // Display the initial value or default value
+    onChange={(e) =>
+      handleTimeSlotChange(dateKey, index, "totalSlot", e.target.value)
+    }
+    min="1"
+    required
+  />
+</div>
                 </div>
               ))}
 

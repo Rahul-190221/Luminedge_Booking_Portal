@@ -49,7 +49,7 @@ const Sidebar = () => {
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-50 md:relative md:flex md:flex-col md:items-start`}
       >
         <div className="flex items-center justify-between px-4 py-2">
-          <Link href="/" className="flex items-center">
+          <Link href="" className="flex items-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 609.58 304.79"
@@ -69,70 +69,65 @@ const Sidebar = () => {
             <FaTimes className="h-8 w-8" />
           </button>
         </div>
-
         {/* Sidebar links */}
         <ul className="menu min-h-screen rounded-box px-2">
           {/* Dashboard link */}
           <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center rounded-full ${
-              pathname === "/dashboard" ? "bg-[#FACE39] text-black font-bold" : ""
-            }`}
+          className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
+            pathname === "/dashboard" ? "bg-[#FACE39] text-black font-bold" : ""
+          }`}
           >
-            <Link href="/dashboard" className="flex items-center px-4 py-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
-              <span className="inline">Dashboard</span>
-            </Link>
+          <Link href="/dashboard" className="flex items-center px-4 py-3">
+            <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            >
+            {/* SVG path */}
+            </svg>
+            <span className="inline">Dashboard</span>
+          </Link>
           </li>
 
           {/* Courses link */}
-          <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
-            <Link
-              href="/dashboard/courses"
-              className={`flex items-center px-4 py-3 ${
-                pathname === "/dashboard/courses" ? "bg-[#FACE39] text-black font-bold" : ""
-              }`}
-            >
-              <TbReport className="h-5 w-5 mr-2" />
-              <span className="inline">Courses</span>
-            </Link>
-          </li>
-         {/* Terms and Conditions link */}
-          <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
-            <Link
-              href="/dashboard/terms"
-              className={`flex items-center px-4 py-3 ${
-              pathname === "/dashboard/terms" ? "bg-[#FACE39] text-black font-bold" : ""
-              }`}
-            >
-              <IoSettingsOutline className="h-5 w-5 mr-2" />
-              <span className="inline">Terms and Conditions</span>
-            </Link>
-            </li>
-          {/* Logout button */}
-          <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
-            <button onClick={() => logout()} className="flex items-center px-4 py-3">
-              <IoLogOutOutline className="h-5 w-5 mr-2" />
-              <span className="inline">Logout</span>
-            </button>
+          <li
+          className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
+            pathname === "/dashboard/courses" ? "bg-[#FACE39] text-black font-bold" : ""
+          }`}
+          >
+          <Link href="/dashboard/courses" className="flex items-center px-4 py-3">
+            <TbReport className="h-5 w-5 mr-2" />
+            <span className="inline">Courses</span>
+          </Link>
           </li>
 
-          {/* User info */}
-          <div className="flex items-center gap-4 ml-1 py-2 px-2 transition-colors duration-300">
-            <RxAvatar className="text-2xl" />
-            <h1 className="text-lg text-amber-400 font-semibold truncate">{user && user.name}</h1>
+          {/* Terms and Conditions link */}
+          <li
+          className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
+            pathname === "/dashboard/terms" ? "bg-[#FACE39] text-black font-bold" : ""
+          }`}
+          >
+          <Link href="/dashboard/terms" className="flex items-center px-4 py-3">
+            <IoSettingsOutline className="h-5 w-5 mr-2" />
+            <span className="inline">Terms and Conditions</span>
+          </Link>
+          </li>
+
+          {/* Logout button */}
+          <li className="hover:bg-[#FACE39] hover:text-black rounded-full">
+          <button onClick={() => logout()} className="flex items-center px-4 py-3 w-full text-left">
+            <IoLogOutOutline className="h-5 w-5 mr-2" />
+            <span className="inline">Logout</span>
+          </button>
+          </li>
+          <div className="flex items-center gap-4 ml-1 py-2 px-2    transition-colors duration-300">
+            <RxAvatar className="text-2xl " />
+            <h1 className="text-lg text-amber-400 font-semibold truncate">
+              {user && user.name}
+            </h1>
+            <FaArrowDown className="text-lg text-yellow-400" />
           </div>
         </ul>
       </div>
