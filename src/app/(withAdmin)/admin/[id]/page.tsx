@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 type Booking = {
   id: string;
@@ -74,7 +74,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
       // Initialize attendance state based on bookings
       const initialAttendance: any = {};
-      filteredBookings.forEach((booking) => {
+      filteredBookings.forEach((booking: { userId: string | number; attendance: string; }) => {
         initialAttendance[booking.userId] = booking.attendance || "N/A";
       });
 
@@ -156,7 +156,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
   
     doc.text("Booking Requests", 14, 20); // Title with some spacing
   
-    doc.autoTable({
+    autoTable(doc, {
       head: [
         [
           "List",

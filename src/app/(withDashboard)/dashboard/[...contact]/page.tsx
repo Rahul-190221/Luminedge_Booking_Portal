@@ -56,7 +56,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
   };
 
   // Function to handle confirmation and processing logic
-  const handleConfirmation = async (newBookingDetails: any) => {
+  const handleConfirmation = async (newBookingDetails: any, bookingId: string) => {
     setIsProcessing(true);
     try {
       // Perform deletion and booking in parallel
