@@ -146,7 +146,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
         <button
           onClick={() => {
             // Redirect to choose a new slot
-            router.push(`/dashboard/mockType/${params.contact}`);
+            router.push(`/dashboard/mockType/`);
 
             // Simulate user booking a new slot and proceeding
             toast((t) => (
