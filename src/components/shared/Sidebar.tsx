@@ -119,13 +119,14 @@ const Sidebar = () => {
               <span className="inline">Logout</span>
             </button>
           </li>
-          <div className="flex items-center gap-2 ml-1 py-2 px-2 transition-colors duration-300 w-full">
+          {/* <div className="flex items-center gap-2 ml-1 py-2 px-2 transition-colors duration-300 w-full overflow-hidden">
   <RxAvatar className="text-2xl flex-shrink-0" />
-  <h1 className="text-lg text-amber-400 font-semibold break-words whitespace-normal w-full">
+  <h1 className="text-lg text-amber-400 font-semibold truncate w-full overflow-hidden">
     {user && user.name}
   </h1>
   <FaArrowDown className="text-lg text-yellow-400 flex-shrink-0" />
-</div>
+</div> */}
+
 
         </ul>
       </div>
