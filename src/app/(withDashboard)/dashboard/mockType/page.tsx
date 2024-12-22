@@ -6,7 +6,7 @@ import GetMe from "@/app/helpers/getme";
 
 const CoursesPage = () => {
   const user = GetMe();
-  console.log(user);
+  
   const courses = [
     {
       _id: "67337c880794d577cd982b75",
