@@ -1,10 +1,10 @@
 "use client";
 import CourseCard from "@/components/courseCard";
-import { Course } from "../../../../types";
+import { Course } from "@/app/types";
 import { getUserIdFromToken } from "@/app/helpers/jwt";
 import GetMe from "@/app/helpers/getme";
 
-const CoursesPage = ({ params }: { params: { contact: string }}) => {
+const CoursesPage = () => {
   const user = GetMe();
   console.log(user);
   const courses = [
@@ -25,7 +25,7 @@ const CoursesPage = ({ params }: { params: { contact: string }}) => {
     },
     {
       _id: "67337c880794d577cd982b78",
-      name: "TOEFL",
+      name: "TOFEL",
       image: "https://i.ibb.co.com/vjyL3QC/toefl.webp",
     },
   ];
@@ -49,7 +49,7 @@ const CoursesPage = ({ params }: { params: { contact: string }}) => {
             />
           ))
         ) : (
-            <p className="text-semi-bold text-xl">No user data available. Please wait for Approval.</p>
+          <p>No user data available. Please wait for your approval. </p>
         )}
       </div>
     </div>
