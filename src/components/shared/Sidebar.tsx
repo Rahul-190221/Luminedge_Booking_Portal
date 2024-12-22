@@ -35,9 +35,6 @@ const Sidebar = () => {
         ) : (
           <div className="flex border-r border-gray-200 gap-4 items-center">
             <FaBars className="h-6 w-6" />
-            {/* <h1 className="text-2xl font-bold border px-2 py-1 rounded-lg shadow-md text-amber-400">
-              Luminedge
-            </h1> */}
           </div>
         )}
       </button>
@@ -73,62 +70,63 @@ const Sidebar = () => {
         <ul className="menu min-h-screen rounded-box px-2">
           {/* Dashboard link */}
           <li
-          className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
-            pathname === "/dashboard" ? "bg-[#FACE39] text-black font-bold" : ""
-          }`}
+            className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
+              pathname === "/dashboard" ? "bg-[#FACE39] text-black font-bold" : ""
+            }`}
           >
-          <Link href="/dashboard" className="flex items-center px-4 py-3">
-            <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            >
-            {/* SVG path */}
-            </svg>
-            <span className="inline">Dashboard</span>
-          </Link>
+            <Link href="/dashboard" className="flex items-center px-4 py-3">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                {/* SVG path */}
+              </svg>
+              <span className="inline">Dashboard</span>
+            </Link>
           </li>
 
           {/* Courses link */}
           <li
-          className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
-            pathname === "/dashboard/courses" ? "bg-[#FACE39] text-black font-bold" : ""
-          }`}
+            className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
+              pathname === "/dashboard/courses" ? "bg-[#FACE39] text-black font-bold" : ""
+            }`}
           >
-          <Link href="/dashboard/courses" className="flex items-center px-4 py-3">
-            <TbReport className="h-5 w-5 mr-2" />
-            <span className="inline">Courses</span>
-          </Link>
+            <Link href="/dashboard/courses" className="flex items-center px-4 py-3">
+              <TbReport className="h-5 w-5 mr-2" />
+              <span className="inline">Courses</span>
+            </Link>
           </li>
 
           {/* Terms and Conditions link */}
           <li
-          className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
-            pathname === "/dashboard/terms" ? "bg-[#FACE39] text-black font-bold" : ""
-          }`}
+            className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
+              pathname === "/dashboard/terms" ? "bg-[#FACE39] text-black font-bold" : ""
+            }`}
           >
-          <Link href="/dashboard/terms" className="flex items-center px-4 py-3">
-            <IoSettingsOutline className="h-5 w-5 mr-2" />
-            <span className="inline">Terms and Conditions</span>
-          </Link>
+            <Link href="/dashboard/terms" className="flex items-center px-4 py-3">
+              <IoSettingsOutline className="h-5 w-5 mr-2" />
+              <span className="inline">Terms and Conditions</span>
+            </Link>
           </li>
 
           {/* Logout button */}
           <li className="hover:bg-[#FACE39] hover:text-black rounded-full">
-          <button onClick={() => logout()} className="flex items-center px-4 py-3 w-full text-left">
-            <IoLogOutOutline className="h-5 w-5 mr-2" />
-            <span className="inline">Logout</span>
-          </button>
+            <button onClick={() => logout()} className="flex items-center px-4 py-3 w-full text-left">
+              <IoLogOutOutline className="h-5 w-5 mr-2" />
+              <span className="inline">Logout</span>
+            </button>
           </li>
-          <div className="flex items-center gap-4 ml-1 py-2 px-2    transition-colors duration-300">
-            <RxAvatar className="text-2xl " />
-            <h1 className="text-lg text-amber-400 font-semibold truncate">
-              {user && user.name}
-            </h1>
-            <FaArrowDown className="text-lg text-yellow-400" />
-          </div>
+          <div className="flex items-center gap-2 ml-1 py-2 px-2 transition-colors duration-300 w-full">
+  <RxAvatar className="text-2xl flex-shrink-0" />
+  <h1 className="text-lg text-amber-400 font-semibold break-words whitespace-normal w-full">
+    {user && user.name}
+  </h1>
+  <FaArrowDown className="text-lg text-yellow-400 flex-shrink-0" />
+</div>
+
         </ul>
       </div>
     </div>
