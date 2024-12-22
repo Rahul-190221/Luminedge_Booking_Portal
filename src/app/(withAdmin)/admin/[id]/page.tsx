@@ -137,7 +137,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       orientation: "landscape", // Landscape for a wider layout
       format: "a4", // A3 size for a larger page
     });
-  
+
     const tableData = users.map((user, index) => [
       index + 1,
       user?.name || "N/A",
@@ -146,16 +146,16 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       user?.transactionId || "N/A",
       user?.passportNumber || "N/A",
       bookings.find((booking) => booking.userId.includes(user._id))?.testType ||
-        "N/A",
+      "N/A",
       bookings.find((booking) => booking.userId.includes(user._id))
         ?.testSystem || "N/A",
       user?.totalMock || "N/A",
       user?.mock || "N/A",
       attendance[user._id] || "N/A",
     ]);
-  
+
     doc.text("Booking Requests", 14, 20); // Title with some spacing
-  
+
     autoTable(doc, {
       head: [
         [
@@ -186,7 +186,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
         // Adjust other column widths as needed
       },
     });
-  
+
     doc.save("booking_requests.pdf");
   };
 
@@ -236,7 +236,15 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
                     }
                   </td>
                   <td className="px-4 py-2">{user?.totalMock || "N/A"}</td>
-                  <td className="px-4 py-2">{user?.mock || "N/A"}</td>
+                  <td className="px-4 py-2">
+                    {
+                      bookings.filter(
+                        (booking) =>
+                          booking.userId.includes(user._id) && (booking.attendance == "absent" || booking.attendance == "present")
+                      ).length || "N/A"
+                    }
+                  </td>
+                  {/* <td className="px-4 py-2">{user?.attendance || "N/A"}</td> */}
                   <td className="px-4 py-2">
                     <select
                       className="px-2 py-1 border rounded"
