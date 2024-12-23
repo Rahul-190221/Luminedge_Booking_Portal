@@ -278,10 +278,8 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
                 )?.testSystem || "N/A"}
               </td>
               <td className="px-4 py-2">{user?.totalMock || "N/A"}</td>
-                
-              <td className="px-4 py-2">
-                {bookings.filter((booking) => booking.userId.includes(user._id)).length}
-              </td>
+              <td className="px-4 py-2">{user?.mock || "N/A"}</td>
+              
               <td className="px-4 py-2">
                 <select
                   className="px-2 py-1 border rounded"

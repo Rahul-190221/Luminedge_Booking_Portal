@@ -40,11 +40,23 @@ const DonutChart = ({ completedCount, totalCount }: DonutChartProps) => {
   };
 
   return (
-    <div className="flex flex-col items-center">
-      <div style={{ width: "150px", height: "150px" }}>
+    <div
+      className="flex flex-col items-center justify-center"
+      style={{
+        width: "150px",
+        height: "150px", // Ensure all divs have the same size
+      }}
+    >
+      <div style={{ width: "100px", height: "100px" }}>
         <Doughnut data={data} options={options} />
       </div>
-      <div className="text-lg font-semibold text-primary mt-2">
+      <div
+        className="text-lg font-semibold mt-2"
+        style={{
+          color: "#00000f", // Consistent text color
+          textAlign: "center", // Center align text
+        }}
+      >
         {safeCompletedCount > 0 ? `${safeCompletedCount} Requests` : "No Data"}
       </div>
     </div>
