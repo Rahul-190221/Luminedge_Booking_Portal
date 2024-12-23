@@ -14,6 +14,8 @@ export default function RootLayout({
         <title>Luminedge Booking Portal</title>
         <meta name="description" content="Your page description here." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Add the favicon */}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </head>
       <body>
         <div className="min-h-screen w-[100%] mx-auto">{children}</div>
