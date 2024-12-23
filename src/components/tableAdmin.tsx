@@ -252,7 +252,13 @@ const TableAdmin = () => {
           {currentUsers.map((user: User) => (
             <tr key={user._id} className="border-b">
               <td className="px-4 py-2">{user.name}</td>
-              <td className="px-4 py-2">{user.createdAt.slice(0, 10)}</td>
+                <td className="px-4 py-2">
+                  {new Date(user.createdAt).toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </td>
               <td className="px-4 py-2">
                 <select
                   value={user.status}

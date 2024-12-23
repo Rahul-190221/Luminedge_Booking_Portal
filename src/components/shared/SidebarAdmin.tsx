@@ -128,12 +128,12 @@ const SidebarAdmin = () => {
           {/* Email Menu Item */}
   <li
     className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-      pathname === "/admin/email"
+      pathname === ""
         ? "bg-[#FACE39] text-black font-bold rounded-full"
         : ""
     }`}
   >
-    <Link href="/admin/email" className="flex items-center px-4 py-3">
+    <Link href="" className="flex items-center px-4 py-3">
       <IoMailOutline className="h-5 w-5 mr-2" />
       <span className="inline">Email</span>
     </Link>
