@@ -253,11 +253,11 @@ const TableAdmin = () => {
             <tr key={user._id} className="border-b">
               <td className="px-4 py-2">{user.name}</td>
                 <td className="px-4 py-2">
-                  {new Date(user.createdAt).toLocaleDateString("en-GB", {
-                    day: "2-digit",
+                  {new Date(user.createdAt).toLocaleDateString("en-US", {
                     month: "long",
+                    day: "2-digit",
                     year: "numeric",
-                  })}
+                  }).replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
                 </td>
               <td className="px-4 py-2">
                 <select
