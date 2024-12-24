@@ -65,7 +65,7 @@ const ResetPasswordPage = ({
                 {...register("newPassword", {
                   required: "New password is required",
                   minLength: {
-                    value: 6,
+                    value: 8,
                     message: "Password must be at least 6 characters",
                   },
                 })}
@@ -98,7 +98,7 @@ const ResetPasswordPage = ({
               {...register("confirmPassword", {
                 required: "Confirm password is required",
                 minLength: {
-                  value: 6,
+                  value: 8,
                   message: "Password must be at least 6 characters",
                 },
               })}
