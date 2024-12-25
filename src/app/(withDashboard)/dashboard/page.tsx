@@ -9,8 +9,8 @@ import Link from "next/link";
 const DashboardPage = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [userData, setUserData] = useState<any>(null);
-  //{attendance:4}
   const [userAttendance, setUserAttendance] = useState<any>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -35,13 +35,11 @@ const DashboardPage = () => {
   useEffect(() => {
     if (userId) {
       const fetchAttendance = async () => {
-        console.log(userId);
         try {
           const response = await axios.get(
             `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/attendance/${userId}`
           );
           setUserAttendance(response.data); // {attendance:4}
-          console.log(userAttendance);
         } catch (error) {
           console.error("Error fetching attendance:", error);
           setUserAttendance(null);
@@ -50,7 +48,7 @@ const DashboardPage = () => {
 
       fetchAttendance();
     }
-  }, [userId, userAttendance]);
+  }, [userId]); // Only run this effect when userId changes
 
   if (!userData || !userData.user) {
     return (
