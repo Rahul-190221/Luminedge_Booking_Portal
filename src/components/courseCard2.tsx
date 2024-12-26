@@ -20,6 +20,13 @@ interface CourseCard2Props {
 const CourseCard2 = ({ course, isRegistered, onClick }: CourseCard2Props) => {
   const fallbackImage = "/default-image.jpg"; // Default fallback image
 
+  const courseDescriptions: Record<string, string> = {
+    IELTS: "Book Your IELTS Test with Confidence – Convenient, Reliable, and Trusted by Thousands.",
+    "Pearson PTE": "Book Your PTE Mock Test – Practice, Prepare, and Excel!",
+    GRE: "Book Your GRE General Mock Test – Ace Your Preparation!",
+    TOEFL: "Book Your TOEFL iBT Mock Test – Get Ready to Succeed!",
+  };
+
   return (
     <div
       className="card bg-base-100 w-[280px] h-[300px] shadow-xl rounded-lg text-white hover:text-black cursor-pointer"
@@ -35,8 +42,8 @@ const CourseCard2 = ({ course, isRegistered, onClick }: CourseCard2Props) => {
       </figure>
       <div className="card-body bg-black text-gray-400 hover:text-black hover:bg-[#FACE39] rounded-b-lg">
         <p className="text-xs">
-          Very different from conventional <br />
-          agency, this one is easier, easier to learn, and easy to remember.
+          {courseDescriptions[course.name] ||
+            "Very different from conventional agency, this one is easier, easier to learn, and easy to remember."}
         </p>
         <div className="card-actions justify-start">
           {isRegistered ? (

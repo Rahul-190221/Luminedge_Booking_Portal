@@ -278,7 +278,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
                 )?.testSystem || "N/A"}
               </td>
               <td className="px-4 py-2">{user?.totalMock || "N/A"}</td>
-              <td className="px-4 py-2">{user?.mock || "N/A"}</td>
+              <td className="px-4 py-2">{attendance[user._id] || "N/A"}</td>
               
               <td className="px-4 py-2">
                 <select

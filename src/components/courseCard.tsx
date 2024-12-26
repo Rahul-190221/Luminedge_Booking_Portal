@@ -18,7 +18,14 @@ const CourseCard = ({
     IELTS: "https://luminedge.com.bd/ielts/",
     "Pearson PTE": "https://luminedge.com.bd/pte/",
     GRE: "https://luminedge.com.bd/gre/",
-    TOEFL: "https://luminedge.com.bd/best-toefl-coaching-in-dhaka/",
+    TOFEL: "https://luminedge.com.bd/best-toefl-coaching-in-dhaka/",
+  };
+
+  const courseDescriptions: Record<string, string> = {
+    IELTS: "Book Your IELTS Test with Confidence – Convenient, Reliable, and Trusted by Thousands.",
+    "Pearson PTE": "Book Your PTE Mock Test – Practice, Prepare, and Excel!",
+    GRE: "Book Your GRE General Mock Test – Ace Your Preparation!",
+    TOFEL: "Book Your TOEFL iBT Mock Test – Get Ready to Succeed!",
   };
 
   const handleCardClick = () => {
@@ -57,8 +64,7 @@ const CourseCard = ({
       </figure>
       <div className="card-body bg-black text-gray-400 hover:text-black hover:bg-[#FACE39] rounded-b-lg">
         <p className="text-xs">
-          Very different from conventional <br />
-          agency, this one is easier, easier to learn, and easy to remember.
+          {courseDescriptions[course.name]}
         </p>
         <div className="card-actions justify-start">
           <div className="flex items-center gap-2 mt-3">

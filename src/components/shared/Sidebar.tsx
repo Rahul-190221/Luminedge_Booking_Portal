@@ -16,6 +16,7 @@ import GetMe from "@/app/helpers/getme";
 import { RxAvatar } from "react-icons/rx";
 import { FaArrowDown } from "react-icons/fa";
 import { IoMailOutline, IoSettingsOutline } from "react-icons/io5"; // Import the icons
+import { AiOutlineHome } from "react-icons/ai"; // Import Home icon
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -75,15 +76,7 @@ const Sidebar = () => {
             }`}
           >
             <Link href="/dashboard" className="flex items-center px-4 py-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                {/* SVG path */}
-              </svg>
+              <AiOutlineHome className="h-5 w-5 mr-2" />
               <span className="inline">Dashboard</span>
             </Link>
           </li>

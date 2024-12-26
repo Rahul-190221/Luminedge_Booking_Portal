@@ -75,6 +75,14 @@ const DashboardPage = () => {
             Book Now
           </button>
         </Link>
+        <br />
+        <h4> 📢 Mock Test Validity
+        </h4>
+        <ul className="list-disc pl-5 text-1.5xl ">
+          <li>Validity of Purchased & Course Mock Test(s): 6 months*</li>
+          <li>Validity of FREE Mock Test(s): 10 days*</li>
+        </ul>
+        N.B:  Validity begins from the date mentioned on the Money Receipt (MR).
       </div>
 
       {/* Stats Section */}
