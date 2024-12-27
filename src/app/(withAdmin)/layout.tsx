@@ -20,13 +20,17 @@ export default function DashboardLayout({
   //   return router.push("/login");
   // }
   return (
-    <div className="min-h-screen my-2">
-      <div className="flex justify-around">
-        <div className="w-[20%] justify-start">
+    // Add the sidebar component to the layout
+    <div className="min-h-screen w-full flex flex-col md:flex-row">
+      {/* Sidebar */}
+      <div className="w-full md:w-1/5 bg-gray-100 md:min-h-screen p-4">
           <SidebarAdmin />
-        </div>
-        <div className="w-[80%]  rounded-box ml-2">{children}</div>
-      </div>
-    </div>
-  );
+          </div>
+
+{/* Main Content */}
+<div className="flex-1 w-full md:w-4/5 p-4">
+  <div className=" p-6">{children}</div>
+</div>
+</div>
+);
 }

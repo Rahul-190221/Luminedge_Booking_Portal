@@ -188,112 +188,126 @@ const TableAdmin = () => {
 
   return (
     <>
-      <div className="flex gap-4 py-4">
+      <div className="flex flex-col sm:flex-row gap-4 py-4">
         {/* Search Bar */}
-        <div className="mb-4">
-          <label htmlFor="search" className="mr-2">
-            Search by Name:
+        <div className="mb-4 w-full sm:w-auto">
+          <label
+        htmlFor="search"
+        className="mr-2 block text-xs sm:text-sm md:text-base mb-1 sm:mb-0"
+          >
+        Search by Name:
           </label>
           <input
-            type="text"
-            id="search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-2 py-1 border rounded"
+        type="text"
+        id="search"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="px-2 py-1 border rounded w-full text-xs sm:text-sm md:text-base"
           />
         </div>
-        {/* Filter by Status and Action */}
-        <div className="mb-4">
-          <label htmlFor="statusFilter" className="mr-2">
-            Filter by Status:
+        
+        {/* Filter by Status */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center mb-4 w-full sm:w-auto">
+          <label
+        htmlFor="statusFilter"
+        className="mb-1 sm:mb-0 w-full sm:w-auto sm:mr-2 text-xs sm:text-sm md:text-base"
+          >
+        Filter by Status:
           </label>
           <select
-            id="statusFilter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-2 py-1 border rounded"
+        id="statusFilter"
+        value={statusFilter}
+        onChange={(e) => setStatusFilter(e.target.value)}
+        className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
           >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="checked">Checked</option>
-            <option value="completed">Completed</option>
+        <option value="all">All</option>
+        <option value="active">Active</option>
+        <option value="checked">Checked</option>
+        <option value="completed">Completed</option>
           </select>
         </div>
 
-        <div className="mb-4">
-          <label htmlFor="actionFilter" className="mr-2">
-            Active:
+        {/* Filter by Action */}
+        <div className="mb-4 w-full sm:w-auto">
+          <label
+        htmlFor="actionFilter"
+        className="mr-2 block text-xs sm:text-sm md:text-base mb-1 sm:mb-0"
+          >
+        Active:
           </label>
           <select
-            id="actionFilter"
-            value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
-            className="px-2 py-1 border rounded"
+        id="actionFilter"
+        value={actionFilter}
+        onChange={(e) => setActionFilter(e.target.value)}
+        className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
           >
-            <option value="all">All</option>
-            <option value="blocked">Blocked</option>
-            <option value="unblocked">Unblocked</option>
+        <option value="all">All</option>
+        <option value="blocked">Blocked</option>
+        <option value="unblocked">Unblocked</option>
           </select>
         </div>
       </div>
+      <div className="mb-4"></div>
 
-      <table className="table-auto w-full border-collapse">
-        {/* Table Head */}
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="px-4 py-2 text-left">Name</th>
-            <th className="px-4 py-2 text-left">Enrollment Date</th>
-            <th className="px-4 py-2 text-left">Status</th>
-            <th className="px-4 py-2 text-left">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {/* Row Mapping */}
-          {currentUsers.map((user: User) => (
-            <tr key={user._id} className="border-b">
-              <td className="px-4 py-2">{user.name}</td>
-                <td className="px-4 py-2">
+      <div className="overflow-x-auto">
+        <table className="table-auto w-full border-collapse">
+          {/* Table Head */}
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Enrollment Date</th>
+              <th className="px-4 py-2 text-left">Status</th>
+              <th className="px-4 py-2 text-left">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Row Mapping */}
+            {currentUsers.map((user: User) => (
+              <tr key={user._id} className="border-b">
+                <td className="px-4 py-2 break-words">{user.name}</td>
+                <td className="px-4 py-2 break-words">
                   {new Date(user.createdAt).toLocaleDateString("en-US", {
                     month: "long",
                     day: "2-digit",
                     year: "numeric",
                   }).replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
                 </td>
-              <td className="px-4 py-2">
-                <select
-                  value={user.status}
-                  onChange={(e) => onChangeStatus(user._id, e.target.value)}
-                  className="px-2 py-1 border rounded"
-                >
-                  <option value="active">Active</option>
-                  <option value="checked">Checked</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </td>
-              <td className="px-4 py-2 flex space-x-2">
-                <button
-                  onClick={() => onToggleBlockUser(user._id)}
-                  className={`px-4 py-1 w-24 text-center ${
-                    user.isDeleted ? "bg-red-500" : "bg-yellow-500"
-                  } text-white rounded hover:bg-opacity-80 flex items-center justify-center`}
-                >
-                  {user.isDeleted ? "Unblock" : "Block"}
-                </button>
-                <button
-                  onClick={() => onViewDetails(user)}
-                  className="px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center"
-                >
-                  <AiOutlineEye className="mr-2" /> View
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                <td className="px-4 py-2 break-words">
+                  <select
+                    value={user.status}
+                    onChange={(e) => onChangeStatus(user._id, e.target.value)}
+                    className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
+                  >
+                    <option value="active">Active</option>
+                    <option value="checked">Checked</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </td>
+                <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 break-words">
+                  <button
+                    onClick={() => onToggleBlockUser(user._id)}
+                    className={`px-4 py-1 w-full sm:w-24 text-center ${
+                      user.isDeleted ? "bg-red-500" : "bg-yellow-500"
+                    } text-white rounded hover:bg-opacity-80 flex items-center justify-center`}
+                  >
+                    {user.isDeleted ? "Unblock" : "Block"}
+                  </button>
+                  <button
+                    onClick={() => onViewDetails(user)}
+                    className="px-4 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center"
+                  >
+                    <AiOutlineEye className="mr-2" /> View
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* Pagination Controls */}
-      <div className="flex justify-between items-center mt-4">
-        <div>
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-4">
+        <div className="mb-4 sm:mb-0">
           <label htmlFor="usersPerPage" className="mr-2">
             Users per page:
           </label>
@@ -301,14 +315,14 @@ const TableAdmin = () => {
             id="usersPerPage"
             value={usersPerPage}
             onChange={(e) => setUsersPerPage(Number(e.target.value))}
-            className="px-2 py-1 border rounded"
+            className="px-2 py-1 border rounded w-full sm:w-auto"
           >
             <option value={5}>5</option>
             <option value={10}>10</option>
             <option value={20}>20</option>
           </select>
         </div>
-        <div>
+        <div className="flex space-x-2">
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
@@ -330,7 +344,7 @@ const TableAdmin = () => {
       {/* Modal for User Details */}
       {isModalOpen && selectedUser && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-700 bg-opacity-50 z-50">
-          <div className="bg-white p-5 rounded-lg shadow-lg w-1/2">
+          <div className="bg-white p-5 rounded-lg shadow-lg w-full sm:w-1/2">
             <h2 className="text-xl font-bold mb-4">User Details</h2>
             <p>
               <strong>Name:</strong> {selectedUser.name}
@@ -354,10 +368,9 @@ const TableAdmin = () => {
               <strong>Purchased:</strong> {selectedUser?.totalMock}
             </p>
             <p>
-  <strong>Booked: </strong> 
-  {(Number(selectedUser?.totalMock ?? 0) - Number(selectedUser?.mock ?? 0)) || 'N/A'}
-</p>
-
+              <strong>Booked: </strong> 
+              {(Number(selectedUser?.totalMock ?? 0) - Number(selectedUser?.mock ?? 0)) || 'N/A'}
+            </p>
             <p>
               <strong>Remaining:</strong> {selectedUser?.mock}
             </p>

@@ -11,7 +11,7 @@ interface TimeSlot {
   startTime: string;
   endTime: string;
   slot: number;
-  totalSlot:number;
+  totalSlot: number;
 }
 
 export default function CreateSchedulePage() {
@@ -36,8 +36,7 @@ export default function CreateSchedulePage() {
         ...prev.timeSlots,
         [date]: [
           ...(prev.timeSlots[date] || []),
-          { startTime: "09:00", endTime: "10:00", totalSlot:20,slot: 20 }, // Default time slot values
-          
+          { startTime: "09:00", endTime: "10:00", totalSlot: 20, slot: 20 }, // Default time slot values
         ],
       },
     }));
@@ -107,7 +106,7 @@ export default function CreateSchedulePage() {
           startTime: `${slot.startTime}:00`,
           endTime: `${slot.endTime}:00`,
           slot: slot.slot,
-          totalSlot: slot.totalSlot
+          totalSlot: slot.totalSlot,
         })),
         name: name, // Updated name field
         testSystem: "", // Updated testSystem field
@@ -134,7 +133,7 @@ export default function CreateSchedulePage() {
   }, [pathname]);
 
   return (
-    <div className=" p-6 max-w-[80%] shadow-lg rounded-lg ">
+    <div className="p-6 max-w-full sm:max-w-[80%] shadow-lg rounded-lg">
       <h1 className="text-2xl font-bold mb-6">Create Test Schedule</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Course ID */}
@@ -183,7 +182,7 @@ export default function CreateSchedulePage() {
               {(formData.timeSlots[dateKey] || []).map((slot, index) => (
                 <div
                   key={index}
-                  className=" w-[100%] mx-auto grid grid-cols-3 gap-4 mb-4"
+                  className="w-full mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"
                 >
                   {/* Start Time */}
                   <div>
@@ -198,7 +197,7 @@ export default function CreateSchedulePage() {
                       <input
                         type="time"
                         id={`start-time-${dateKey}-${index}`}
-                        className="bg-gray-50  border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                        className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                         value={slot.startTime}
                         onChange={(e) =>
                           handleTimeSlotChange(
@@ -240,7 +239,7 @@ export default function CreateSchedulePage() {
                       />
                     </div>
                   </div>
- 
+
                   {/* Slot Selection */}
                   <div>
                     <label
@@ -267,25 +266,30 @@ export default function CreateSchedulePage() {
                     />
                   </div>
                   {/* Total Slot Selection */}
-<div>
-  <label
-    htmlFor={`totalSlot-${dateKey}-${index}`}
-    className="block mb-2 text-sm font-medium text-gray-900"
-  >
-    Total Slot:
-  </label>
-  <input
-    type="number"
-    id={`totalSlot-${dateKey}-${index}`}
-    className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-    value={slot.totalSlot || 20} // Display the initial value or default value
-    onChange={(e) =>
-      handleTimeSlotChange(dateKey, index, "totalSlot", e.target.value)
-    }
-    min="1"
-    required
-  />
-</div>
+                  <div>
+                    <label
+                      htmlFor={`totalSlot-${dateKey}-${index}`}
+                      className="block mb-2 text-sm font-medium text-gray-900"
+                    >
+                      Total Slot:
+                    </label>
+                    <input
+                      type="number"
+                      id={`totalSlot-${dateKey}-${index}`}
+                      className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                      value={slot.totalSlot || 20} // Display the initial value or default value
+                      onChange={(e) =>
+                        handleTimeSlotChange(
+                          dateKey,
+                          index,
+                          "totalSlot",
+                          e.target.value
+                        )
+                      }
+                      min="1"
+                      required
+                    />
+                  </div>
                 </div>
               ))}
 

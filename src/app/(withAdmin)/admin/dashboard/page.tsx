@@ -8,13 +8,12 @@ import "react-datepicker/dist/react-datepicker.css";
 
 const DashboardPage = () => {
   const [users, setUsers] = useState([]); // All users from the API
-  const [dailyRequests, setDailyRequests] = useState<number>(0); // Daily booking request count
-  const [monthlyRequests, setMonthlyRequests] = useState<number>(0); // Monthly booking request count
-  const [overallSchedule, setOverallSchedule] = useState<any[]>([]); // Overall schedule data
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date()); // Default to today
+  const [dailyRequests, setDailyRequests] = useState<number>(0);
+  const [monthlyRequests, setMonthlyRequests] = useState<number>(0);
+  const [overallSchedule, setOverallSchedule] = useState<any[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   useEffect(() => {
-    // Fetch users from the API
     const fetchUsers = async () => {
       try {
         const response = await axios.get(
@@ -22,201 +21,124 @@ const DashboardPage = () => {
         );
         const fetchedUsers = response.data.users || [];
         setUsers(fetchedUsers);
-
-        // Initial Calculations
-        calculateDailyRequests(fetchedUsers, new Date()); // Calculate daily requests
-        calculateMonthlyRequests(fetchedUsers); // Calculate monthly requests
-        calculateOverallSchedule(fetchedUsers); // Calculate overall schedule
+        calculateDailyRequests(fetchedUsers, new Date());
+        calculateMonthlyRequests(fetchedUsers);
+        calculateOverallSchedule(fetchedUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
       }
     };
-
     fetchUsers();
   }, []);
 
-  // Calculate daily booking requests for the selected date
   const calculateDailyRequests = (users: any[], date: Date | null) => {
-    if (!date) {
-      setDailyRequests(0);
-      return;
-    }
-
-    // Format the selected date to YYYY-MM-DD
-    const formattedDate = new Date(date).toISOString().split("T")[0];
-    console.log(`Filtering users for date: ${formattedDate}`); // Debugging
-
-    // Filter users where createdAt matches the selected date
-    const dailyCount = users.filter((user: any) => {
-      try {
-        const userDate = new Date(user.createdAt).toISOString().split("T")[0];
-        return userDate === formattedDate;
-      } catch (error) {
-        console.error(`Error parsing createdAt for user:`, user, error);
-        return false;
-      }
+    const formattedDate = date?.toISOString().split("T")[0];
+    const count = users.filter((user: any) => {
+      return new Date(user.createdAt).toISOString().split("T")[0] === formattedDate;
     }).length;
-
-    console.log(`Daily Count for ${formattedDate}: ${dailyCount}`); // Debugging
-    setDailyRequests(dailyCount);
+    setDailyRequests(count);
   };
 
-  // Calculate monthly booking requests for the current month
   const calculateMonthlyRequests = (users: any[]) => {
-    const currentMonth = new Date().toISOString().slice(0, 7); // Format month as YYYY-MM
-    console.log(`Filtering users for month: ${currentMonth}`); // Debugging
-
-    const monthlyCount = users.filter((user: any) => {
-      const userMonth = new Date(user.createdAt).toISOString().slice(0, 7);
-      return userMonth === currentMonth;
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const count = users.filter((user: any) => {
+      return new Date(user.createdAt).toISOString().slice(0, 7) === currentMonth;
     }).length;
-
-    console.log(`Monthly Count for ${currentMonth}: ${monthlyCount}`); // Debugging
-    setMonthlyRequests(monthlyCount);
+    setMonthlyRequests(count);
   };
-  const handleMonthChange = (date: Date | null) => {
-    console.log(`Selected Month: ${date}`); // Debugging
-    setSelectedDate(date);
-  
-    if (date) {
-      // Format the selected month as YYYY-MM
-      const formattedMonth = date.toISOString().slice(0, 7);
-  
-      // Filter users for the selected month
-      const monthlyCount = users.filter((user: any) => {
-        const userMonth = new Date(user.createdAt).toISOString().slice(0, 7);
-        return userMonth === formattedMonth;
-      }).length;
-  
-      console.log(`Monthly Count for ${formattedMonth}: ${monthlyCount}`); // Debugging
-      setMonthlyRequests(monthlyCount);
-    }
-  };
-  
 
-  // Calculate overall schedule data by month
   const calculateOverallSchedule = (users: any[]) => {
     const schedule = users.reduce((acc: any, user: any) => {
-      const userMonth = new Date(user.createdAt).toISOString().slice(0, 7); // Extract YYYY-MM
-      acc[userMonth] = (acc[userMonth] || 0) + 1; // Count users by month
+      const month = new Date(user.createdAt).toISOString().slice(0, 7);
+      acc[month] = (acc[month] || 0) + 1;
       return acc;
     }, {});
-
-    // Convert to an array of { month, count }
-    const scheduleArray = Object.entries(schedule).map(([month, count]) => ({
-      month,
-      count,
-    }));
-
-    console.log("Overall Schedule:", scheduleArray); // Debugging
-    setOverallSchedule(scheduleArray);
+    setOverallSchedule(Object.entries(schedule).map(([month, count]) => ({ month, count })));
   };
 
-  // Handle date picker changes for daily requests
   const handleDateChange = (date: Date | null) => {
-    console.log(`Selected Date: ${date}`); // Debugging
     setSelectedDate(date);
-
-    if (date) {
-      calculateDailyRequests(users, date);
-    }
+    calculateDailyRequests(users, date);
   };
 
-  // Get the current month name dynamically
-  const currentMonthName = new Date().toLocaleString("default", {
-    month: "long",
-  });
+  const handleMonthChange = (date: Date | null) => {
+    setSelectedDate(date);
+    const formattedMonth = date?.toISOString().slice(0, 7);
+    const count = users.filter((user: any) => {
+      return new Date(user.createdAt).toISOString().slice(0, 7) === formattedMonth;
+    }).length;
+    setMonthlyRequests(count);
+  };
+
+  const currentMonthName = new Date().toLocaleString("default", { month: "long" });
 
   return (
-    <div className="max-w-[90%] mx-auto">
-      <h1 className="text-2xl text-start my-4">Overview</h1>
-      <div className="stats shadow grid grid-cols-2 gap-2">
-  {/* Daily Booking Requests Donut Chart */}
-  <div className="stat place-items-center text-black">
-    <div className="stat-title" style={{ color: "#00000f" }}>
-      Booking Requests by Date
-    </div>
-    <DonutChart
-      completedCount={dailyRequests}
-      totalCount={dailyRequests || 1} // Ensure chart renders even if count is 0
-    />
-    <div className="mt-4">
-      <label
-        htmlFor="datePicker"
-        className="block mb-1 text-sm font-medium"
-        style={{ color: "#00000f" }}
-      >
-        Select Date:
-      </label>
-      <DatePicker
-        id="datePicker"
-        selected={selectedDate}
-        onChange={handleDateChange}
-        className="border px-2 py-1 rounded"
-        placeholderText="Select a date"
-        showPopperArrow={false}
-      />
-    </div>
-  </div>
+    <div className="flex flex-col mx-auto gap-3 max-w-7xl">
+      <h1 className="text-2xl font-semibold">Overview</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {/* Daily Booking Requests */}
+        <div className="stat bg-white shadow-md rounded-lg p-3 text-center">
+            <div className="stat-title text-gray-900 font-medium mb-2 text-center sm:text-left">
+            Booking Requests by Date
+            </div>
+          <DonutChart completedCount={dailyRequests} totalCount={dailyRequests || 1} />
+          <div className="mt-4">
+            <label
+              htmlFor="datePicker"
+              className="block text-sm font-medium text-gray-900 mb-2"
+            >
+              Select Date:
+            </label>
+            <DatePicker
+              id="datePicker"
+              selected={selectedDate}
+              onChange={handleDateChange}
+              className="border px-3 py-2 rounded w-full sm:w-auto"
+              placeholderText="Select a date"
+            />
+          </div>
+        </div>
 
-  {/* Monthly Booking Requests Donut Chart */}
-  <div className="stat place-items-center text-black">
-    <div className="stat-title" style={{ color: "#00000f" }}>
-      {currentMonthName} Booking Requests
-    </div>
-    <DonutChart
-      completedCount={monthlyRequests}
-      totalCount={monthlyRequests || 1} // Ensure chart renders even if count is 0
-    />
-    <div className="mt-4">
-      <label
-        htmlFor="monthPicker"
-        className="block mb-1 text-sm font-medium"
-        style={{ color: "#00000f" }}
-      >
-        Select Month:
-      </label>
-      <DatePicker
-        id="monthPicker"
-        selected={selectedDate}
-        onChange={(date) => handleMonthChange(date)} // Update data when month changes
-        dateFormat="MMMM, yyyy" // Month and year in full text
-        showMonthYearPicker // Enables month picker
-        className="border px-2 py-1 rounded"
-        placeholderText="Select a month"
-      />
-    </div>
-  </div>
+        {/* Monthly Booking Requests */}
+        <div className="stat bg-white shadow-md rounded-lg p-3 text-center">
+            <div className="stat-title text-gray-900 font-medium mb-2 text-center sm:text-left">
+              {currentMonthName} Booking Requests
+            </div>
+          <DonutChart completedCount={monthlyRequests} totalCount={monthlyRequests || 1} />
+          <div className="mt-4">
+            <label
+              htmlFor="monthPicker"
+              className="block text-sm font-medium text-gray-900 mb-2"
+            >
+              Select Month:
+            </label>
+            <DatePicker
+              id="monthPicker"
+              selected={selectedDate}
+              onChange={handleMonthChange}
+              dateFormat="MMMM, yyyy"
+              showMonthYearPicker
+              className="border px-3 py-2 rounded w-full sm:w-auto"
+              placeholderText="Select a month"
+            />
+          </div>
+        </div>
 
-  {/* Overall Schedule Donut Chart */}
-  <div className="stat place-items-center text-black">
-    <div className="stat-title" style={{ color: "#00000f" }}>
-      Total Booking
-    </div>
-    <DonutChart
-      completedCount={overallSchedule.reduce((acc, item) => acc + item.count, 0)}
-      totalCount={overallSchedule.reduce((acc, item) => acc + item.count, 1)} // Ensure chart renders even if count is 0
-    />
-  </div>
+        {/* Total Booking */}
+        <div className="stat bg-white shadow-md rounded-lg p-3 text-center">
+          <div className="stat-title text-gray-900 font-medium mb-2">Total Booking</div>
+          <DonutChart
+            completedCount={overallSchedule.reduce((acc, item) => acc + item.count, 0)}
+            totalCount={overallSchedule.reduce((acc, item) => acc + item.count, 1)}
+          />
+        </div>
+      </div>
 
-  {/* <div className="stat place-items-center text-black">
-    <div className="stat-title" style={{ color: "#00000f" }}>
-      Total Schedules
-    </div>
-    <div className="stat-value" style={{ color: "#00000f" }}>
-      {overallSchedule.length}
-    </div>
-  
-  </div> */}
-</div>
-
-      
-
-      <div className="overflow-x-auto mt-8">
-        <h1 className="text-2xl text-start my-4">
+      <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4 md:p-6">
+        <h1 className="text-xl md:text-1.5xl font-semibold mb-4">
           Students Waiting for Approval
         </h1>
-        <TableAdmin/>
+        <TableAdmin />
       </div>
     </div>
   );

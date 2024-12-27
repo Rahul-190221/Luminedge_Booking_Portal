@@ -22,7 +22,7 @@ const TermsPage = () => {
     }, []);
 
     return (
-        <div className="flex flex-col items-center w-full max-w-screen-xl mx-auto space-y-6 px-4 sm:px-8 md:px-12 font-montserrat">
+        <div className="flex flex-col items-center w-full max-w-screen-xl mx-auto space-y-6 font-montserrat">
             {/* Terms and Conditions Section */}
             <div className="w-full max-w-5xl bg-transparent  p-6">
                 <h1
@@ -176,8 +176,9 @@ const TermsPage = () => {
             </div>
 
           <div className="p-4 border rounded-lg shadow-md">
-            <h2 className="text-lg font-semibold mb-2">E-mail</h2>
-            <p>ielts.luminedge@gmail.com</p>
+            
+          <h2 className="text-lg font-semibold mb-2">E-mail</h2>
+              <p className="break-words">ielts.luminedge@gmail.com</p>
           </div>
         </div>
       </div>

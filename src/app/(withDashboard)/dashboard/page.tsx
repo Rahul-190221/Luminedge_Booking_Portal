@@ -59,31 +59,33 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="flex flex-col mx-auto gap-6 p-4 max-w-7xl">
-      <h1 className="text-3xl font-semibold text-gray-800">Dashboard</h1>
+    <div className="flex flex-col mx-auto gap-3 max-w-7xl">
+    <h1 className="text-3xl font-semibold text-gray-800">Dashboard</h1>
+{/* Welcome Card */}
+      <div className="bg-gradient-to-r from-yellow-400 to-[#FACE39] rounded-lg shadow-md text-white p-4">
+      <h2 className="text-2xl font-bold mb-2">
+        Welcome, {userData.user.name}!
+      </h2>
+      <p className="text-sm md:text-base lg:text-lg mb-4 font-montserrat">
+        You’ve logged in to the Luminedge Mock Test Booking Portal! This platform is designed to streamline your test preparation journey, allowing you to view the details of your booked mock test and stay informed about important terms and conditions.
+      </p>
+      <Link href="/dashboard/mockType">
+        <button className="bg-white text-black font-medium rounded-md px-4 py-2 hover:bg-gray-200 transition-all">
+          Book Now
+        </button>
+      </Link>
+      <br />
+      <h4> 📢 Mock Test Validity
+      </h4>
+      <ul className="list-disc pl-5 text-sm md:text-base lg:text-lg">
+        <li>Validity of Purchased & Course Mock Test(s): 6 months*</li>
+        <li>Validity of FREE Mock Test(s): 10 days*</li>
+      </ul>
+      <p className="text-xs md:text-sm lg:text-base">
+        N.B: Validity begins from the date mentioned on the Money Receipt (MR).
+      </p>
+    </div>
 
-      {/* Welcome Card */}
-      <div className="bg-gradient-to-r from-yellow-400 to-[#FACE39] p-6 rounded-lg shadow-md text-white">
-        <h2 className="text-2xl font-bold mb-2">
-          Welcome, {userData.user.name}!
-        </h2>
-        <p className="text-sm md:text-base lg:text-lg mb-4 font-montserrat">
-          You’ve logged in to the Luminedge Mock Test Booking Portal! This platform is designed to streamline your test preparation journey, allowing you to view the details of your booked mock test and stay informed about important terms and conditions.
-        </p>
-        <Link href="/dashboard/mockType">
-          <button className="bg-white text-black font-medium rounded-md px-4 py-2 hover:bg-gray-200 transition-all">
-            Book Now
-          </button>
-        </Link>
-        <br />
-        <h4> 📢 Mock Test Validity
-        </h4>
-        <ul className="list-disc pl-5 text-1.5xl ">
-          <li>Validity of Purchased & Course Mock Test(s): 6 months*</li>
-          <li>Validity of FREE Mock Test(s): 10 days*</li>
-        </ul>
-        N.B:  Validity begins from the date mentioned on the Money Receipt (MR).
-      </div>
 
       {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

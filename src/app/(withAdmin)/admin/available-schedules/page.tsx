@@ -152,11 +152,11 @@ function AvailableSchedulesPage() {
 
   return (
     <div>
-      <div className="my-4 flex space-x-4">
+      <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
         <select
           value={testTypeFilter}
           onChange={(e) => setTestTypeFilter(e.target.value)}
-          className="px-2 py-1 border rounded"
+          className="px-2 py-1 border rounded w-full sm:w-auto"
         >
           <option value="">All Test Types</option>
           <option value="GRE">GRE</option>
@@ -167,7 +167,7 @@ function AvailableSchedulesPage() {
         <select
           value={dateSortOrder}
           onChange={(e) => setDateSortOrder(e.target.value)}
-          className="px-2 py-1 border rounded"
+          className="px-2 py-1 border rounded w-full sm:w-auto"
         >
           <option value="ascending">Start Date Ascending</option>
           <option value="descending">Start Date Descending</option>
@@ -175,7 +175,7 @@ function AvailableSchedulesPage() {
         <select
           value={dateFilter}
           onChange={(e) => setDateFilter(e.target.value)}
-          className="px-2 py-1 border rounded"
+          className="px-2 py-1 border rounded w-full sm:w-auto"
         >
           <option value="all">All Schedules</option>
           <option value="completed">Completed</option>
@@ -186,99 +186,97 @@ function AvailableSchedulesPage() {
           type="date"
           value={startDateFilter}
           onChange={(e) => setStartDateFilter(e.target.value)}
-          className="px-2 py-1 border rounded"
+          className="px-2 py-1 border rounded w-full sm:w-auto"
         />
       </div>
-      <table className="table-auto w-full border-collapse">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="px-4 py-2 text-left">Name</th>
-            <th className="px-4 py-2 text-left">Test Type</th>
-            <th className="px-4 py-2 text-left">Exam Date</th>
-            <th className="px-4 py-2 text-left">Exam Time</th>
-            <th className="px-4 py-2 text-left">Total Seats</th>
-            <th className="px-4 py-2 text-left">Available Seats</th>
-            <th className="px-4 py-2 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentSchedules.map((schedule) => (
-            <tr key={schedule.id} className="border-b">
-              <td className="px-4 py-2">{schedule.name}</td>
-              <td className="px-4 py-2">{schedule.testType}</td>
-              <td className="px-4 py-2">
-                {new Date(schedule.startDate).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "2-digit",
-                  year: "numeric",
-                }).replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
-              </td>
-
-
-              <td className="px-4 py-2">
-                {schedule.timeSlots.map((slot) => (
-                  <div key={slot.slotId}>
-                    {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
-                  </div>
-                ))}
-              </td>
-              <td className="px-4 py-2">
-                {schedule.timeSlots[0]?.totalSlot || "N/A"}
-              </td>
-              <td className="px-4 py-2">
-                {schedule.timeSlots[0]?.slot || "N/A"}
-              </td>
-              <td className="px-4 py-2 flex space-x-2">
-                {schedule && (
-                  <button
-                    onClick={() => router.push(`/admin/${schedule?._id}`)}
-                    className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                  >
-                    View Bookings
-                  </button>
-                )}
-                <button
-                  onClick={() =>
-                    toast(
-                      (t) => (
-                        <div className="bg-gray-100 p-4 rounded shadow-lg text-black">
-                          <p className="text-sm">
-                            Are you sure you want to delete this schedule?
-                          </p>
-                          <div className="mt-4 flex justify-center gap-4">
-                            <button
-                              className="px-4 py-2 bg-green-500 hover:bg-green-700 text-white font-bold rounded-lg"
-                              onClick={() => {
-                                deleteSchedule(schedule._id);
-                                toast.dismiss(t.id);
-                              }}
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              className="px-4 py-2 bg-red-500 hover:bg-red-700 text-white font-semibold rounded-lg"
-                              onClick={() => toast.dismiss(t.id)}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ),
-                      { id: `delete-${schedule._id}`, duration: 5000 }
-                    )
-                  }
-                  className="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
-                >
-                  Delete
-                </button>
-
-
-              </td>
+      <div className="overflow-x-auto">
+        <table className="table-auto w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Test Type</th>
+              <th className="px-4 py-2 text-left">Exam Date</th>
+              <th className="px-4 py-2 text-left">Exam Time</th>
+              <th className="px-4 py-2 text-left">Total Seats</th>
+              <th className="px-4 py-2 text-left">Available Seats</th>
+              <th className="px-4 py-2 text-left">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex justify-between items-center mt-4">
+          </thead>
+          <tbody>
+            {currentSchedules.map((schedule) => (
+              <tr key={schedule.id} className="border-b">
+                <td className="px-4 py-2">{schedule.name}</td>
+                <td className="px-4 py-2">{schedule.testType}</td>
+                <td className="px-4 py-2">
+                  {new Date(schedule.startDate).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "2-digit",
+                    year: "numeric",
+                  }).replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
+                </td>
+                <td className="px-4 py-2">
+                  {schedule.timeSlots.map((slot) => (
+                    <div key={slot.slotId}>
+                      {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                    </div>
+                  ))}
+                </td>
+                <td className="px-4 py-2">
+                  {schedule.timeSlots[0]?.totalSlot || "N/A"}
+                </td>
+                <td className="px-4 py-2">
+                  {schedule.timeSlots[0]?.slot || "N/A"}
+                </td>
+                <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                  {schedule && (
+                    <button
+                      onClick={() => router.push(`/admin/${schedule?._id}`)}
+                      className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                    >
+                      View Bookings
+                    </button>
+                  )}
+                  <button
+                    onClick={() =>
+                      toast(
+                        (t) => (
+                          <div className="bg-gray-100 p-4 rounded shadow-lg text-black">
+                            <p className="text-sm">
+                              Are you sure you want to delete this schedule?
+                            </p>
+                            <div className="mt-4 flex justify-center gap-4">
+                              <button
+                                className="px-4 py-2 bg-green-500 hover:bg-green-700 text-white font-bold rounded-lg"
+                                onClick={() => {
+                                  deleteSchedule(schedule._id);
+                                  toast.dismiss(t.id);
+                                }}
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                className="px-4 py-2 bg-red-500 hover:bg-red-700 text-white font-semibold rounded-lg"
+                                onClick={() => toast.dismiss(t.id)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ),
+                        { id: `delete-${schedule._id}`, duration: 5000 }
+                      )
+                    }
+                    className="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-4 space-y-4 sm:space-y-0">
         <div>
           <label htmlFor="schedulesPerPage" className="mr-2">
             Schedules per page:
@@ -294,7 +292,7 @@ function AvailableSchedulesPage() {
             <option value={20}>20</option>
           </select>
         </div>
-        <div>
+        <div className="flex space-x-2">
           <button
             onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
@@ -315,5 +313,4 @@ function AvailableSchedulesPage() {
     </div>
   );
 }
-
 export default AvailableSchedulesPage;
