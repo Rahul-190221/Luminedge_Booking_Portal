@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import axios from "axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -27,6 +28,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [attendance, setAttendance] = useState<{ [key: string]: string }>({});
+  const [userAttendance, setUserAttendance] = useState<{ [key: string]: number | null }>({});
 
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
@@ -34,13 +36,10 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
     try {
       setLoading(true);
 
-      const bookingsResponse = await fetch(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/bookings`
+      const bookingsResponse = await axios.get(
+        `http://localhost:5000/api/v1/admin/bookings`
       );
-      if (!bookingsResponse.ok) {
-        throw new Error("Failed to fetch bookings");
-      }
-      const bookingsData = await bookingsResponse.json();
+      const bookingsData = bookingsResponse.data;
 
       const filteredBookings = bookingsData.bookings.filter(
         (booking: Booking) => booking.scheduleId === scheduleId
@@ -48,32 +47,52 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
       const userIds = Array.from(
         new Set(
-          filteredBookings.map((booking: { userId: any }) =>
+          filteredBookings.flatMap((booking: { userId: any }) =>
             Array.isArray(booking.userId) ? booking.userId : [booking.userId]
-          ).flat()
+          )
         )
       );
 
-      const usersResponse = await fetch(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/users`
+      const usersResponse = await axios.get(
+        `http://localhost:5000/api/v1/admin/users`
       );
-      if (!usersResponse.ok) {
-        throw new Error("Failed to fetch user data");
-      }
-      const usersData = await usersResponse.json();
+      const usersData = usersResponse.data;
 
       const matchedUsers = usersData?.users?.filter((user: any) =>
         userIds.includes(user?._id)
       );
 
-      const initialAttendance: any = {};
-      filteredBookings.forEach((booking: { userId: string | number; attendance: string; }) => {
-        initialAttendance[booking.userId] = booking.attendance || "N/A";
+      const initialAttendance: { [key: string]: string } = {};
+      filteredBookings.forEach((booking: { userId: any[] | string; attendance: string }) => {
+        if (Array.isArray(booking.userId)) {
+          booking.userId.forEach((id) => {
+            initialAttendance[id] = booking.attendance || "N/A";
+          });
+        } else {
+          initialAttendance[booking.userId] = booking.attendance || "N/A";
+        }
       });
 
       setBookings(filteredBookings);
       setUsers(matchedUsers);
       setAttendance(initialAttendance);
+
+      // Fetch individual user attendance
+      const attendanceData: Record<string, number | null> = {};
+      await Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const response = await axios.get(
+              `http://localhost:5000/api/v1/user/attendance/${userId}`
+            );
+            attendanceData[userId as string] = response.data.attendance || 0;
+          } catch (error) {
+            console.error(`Error fetching attendance for user ${userId}:`, error);
+            attendanceData[userId as string] = null;
+          }
+        })
+      );
+      setUserAttendance(attendanceData);
     } catch (error) {
       toast.error("Error fetching data. Please try again.");
       console.error(error);
@@ -95,22 +114,17 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
       const status = attendanceValue === "present" ? "completed" : "missed";
 
-      const response = await fetch(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/bookings/${scheduleId}`,
+      const response = await axios.put(
+        `http://localhost:5000/api/v1/user/bookings/${scheduleId}`,
         {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId,
-            attendance: attendanceValue,
-            status,
-          }),
+          userId,
+          attendance: attendanceValue,
+          status,
         }
       );
 
-      if (!response.ok) {
-        const responseData = await response.json();
-        throw new Error(responseData.message || "Failed to update attendance");
+      if (response.status !== 200) {
+        throw new Error(response.data.message || "Failed to update attendance");
       }
 
       setAttendance((prev) => ({
@@ -133,10 +147,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
     const bookingToDownload = bookings[0];
 
-    const doc = new jsPDF({
-      orientation: "landscape",
-      format: "a4",
-    });
+    const doc = new jsPDF({ orientation: "landscape", format: "a4" });
 
     doc.setFontSize(12);
     doc.text("Booking Details", 10, 15);
@@ -174,23 +185,14 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
         bookings.find((booking) => booking.userId.includes(user._id))?.testType || "N/A",
         bookings.find((booking) => booking.userId.includes(user._id))?.testSystem || "N/A",
         user?.totalMock || "N/A",
-        user?.mock || "N/A",
+        userAttendance[user._id] !== null ? userAttendance[user._id] : "N/A",
         attendance[user._id] || "N/A",
       ]),
       theme: "grid",
-      styles: {
-        fontSize: 10,
-      },
-      headStyles: {
-        fillColor: "#face39",
-      },
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: "#face39" },
       margin: { top: 35 },
       tableWidth: "auto",
-      columnStyles: {
-        0: { cellWidth: 10 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 50 },
-      },
     });
 
     const currentDate = new Date().toISOString().split("T")[0];
@@ -252,7 +254,9 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
                       {bookings.find((booking) => booking.userId.includes(user._id))?.testSystem || "N/A"}
                     </td>
                     <td className="px-4 py-2 text-sm">{user?.totalMock || "N/A"}</td>
-                    <td className="px-4 py-2 text-sm">{attendance[user._id] || "N/A"}</td>
+                    <td className="px-4 py-2 text-sm">
+                      {userAttendance[user._id] !== null ? userAttendance[user._id] : "N/A"}
+                    </td>
                     <td className="px-4 py-2">
                       <select
                         className="px-2 py-1 border rounded text-sm"
@@ -271,14 +275,14 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
               </tbody>
             </table>
           </div>
-            <div className="mt-10 sm:mt-0">
+          <div className="mt-10 sm:mt-0">
             <button
               onClick={confirmDownload}
               className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 w-full sm:w-auto"
             >
               Download as PDF
             </button>
-            </div>
+          </div>
         </div>
       )}
     </div>

@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import {
-  IoBagRemoveOutline,
-  IoWalletOutline,
-  IoCloudDownloadOutline,
+
   IoLogOutOutline,
 } from "react-icons/io5";
 import { TbMoneybag, TbReport } from "react-icons/tb";
@@ -13,10 +11,10 @@ import { FaBars, FaTimes } from "react-icons/fa";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/utils/actions/logout";
 import GetMe from "@/app/helpers/getme";
-import { RxAvatar } from "react-icons/rx";
-import { FaArrowDown } from "react-icons/fa";
+
 import { IoMailOutline, IoSettingsOutline } from "react-icons/io5"; // Import the icons
-import { AiOutlineHome } from "react-icons/ai"; // Import Home icon
+
+import { IoHomeOutline } from "react-icons/io5"; // Import Home icon
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -94,7 +92,7 @@ const Sidebar = () => {
             }`}
           >
             <Link href="/dashboard" className="flex items-center px-4 py-3">
-              <AiOutlineHome className="h-5 w-5 mr-2" />
+            <IoHomeOutline className="h-5 w-5 mr-2" />
               <span className="inline">Dashboard</span>
             </Link>
           </li>
