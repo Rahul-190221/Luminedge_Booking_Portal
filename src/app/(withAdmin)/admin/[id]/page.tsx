@@ -37,7 +37,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       setLoading(true);
 
       const bookingsResponse = await axios.get(
-        `http://localhost:5000/api/v1/admin/bookings`
+        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/bookings`
       );
       const bookingsData = bookingsResponse.data;
 
@@ -54,7 +54,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       );
 
       const usersResponse = await axios.get(
-        `http://localhost:5000/api/v1/admin/users`
+        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/users`
       );
       const usersData = usersResponse.data;
 
@@ -83,7 +83,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
         userIds.map(async (userId) => {
           try {
             const response = await axios.get(
-              `http://localhost:5000/api/v1/user/attendance/${userId}`
+              `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/attendance/${userId}`
             );
             attendanceData[userId as string] = response.data.attendance || 0;
           } catch (error) {
@@ -115,7 +115,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       const status = attendanceValue === "present" ? "completed" : "missed";
 
       const response = await axios.put(
-        `http://localhost:5000/api/v1/user/bookings/${scheduleId}`,
+        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/bookings/${scheduleId}`,
         {
           userId,
           attendance: attendanceValue,
