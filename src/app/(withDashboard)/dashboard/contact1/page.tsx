@@ -31,7 +31,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
 
   //     // Delete the current booking
   //     await axios.delete(
-  //       `https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings/${params.contact}`
+  //       `https://luminedge-server.vercel.app/api/v1/bookings/${params.contact}`
   //     );
 
   //     toast((t) => {
@@ -57,7 +57,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
  const deletePreviousBooking = async () => {
   try {
     await axios.delete(
-      `https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings/${params.contact}`
+      `https://luminedge-server.vercel.app/api/v1/bookings/${params.contact}`
     );
   } catch (error) {
     console.error("Error deleting previous booking:", error);
@@ -74,7 +74,7 @@ const proceedWithNewBooking = async (newBookingDetails: any) => {
   try {
     // Assume `newBookingDetails` contains the details of the new slot selected by the user.
     await axios.post(
-      "https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings",
+      "https://luminedge-server.vercel.app/api/v1/bookings",
       newBookingDetails
     );
 
@@ -263,8 +263,8 @@ const handleConfirmation = async (newBookingDetails: any) => {
             </div>
 
             <div className="p-4 border rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold mb-2">E-mail</h2>
-              <p>ielts.luminedge@gmail.com</p>
+                <p className="break-words">ielts.luminedge@gmail.com</p>
+
             </div>
           </div>
         </div>

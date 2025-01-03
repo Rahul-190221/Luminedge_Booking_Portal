@@ -36,7 +36,7 @@ function AvailableSchedulesPage() {
   const fetchSchedules = async () => {
     try {
       const response = await fetch(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/get-schedules`
+        `https://luminedge-server.vercel.app/api/v1/admin/get-schedules`
       );
       const data = await response.json();
       setSchedules(data);
@@ -53,7 +53,7 @@ function AvailableSchedulesPage() {
   const deleteSchedule = async (id: string) => {
     try {
       const response = await fetch(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/delete-schedule/${id}`,
+        `https://luminedge-server.vercel.app/api/v1/admin/delete-schedule/${id}`,
         {
           method: "DELETE",
           headers: {

@@ -26,7 +26,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
   const deletePreviousBooking = async () => {
     try {
       await axios.delete(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings/${params.contact}`
+        `https://luminedge-server.vercel.app/api/v1/bookings/${params.contact}`
       );
     } catch (error) {
       console.error("Error deleting previous booking:", error);
@@ -43,7 +43,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
     try {
       // Assume `newBookingDetails` contains the details of the new slot selected by the user.
       await axios.post(
-        "https://luminedge-mock-test-booking-server.vercel.app/api/v1/bookings",
+        "https://luminedge-server.vercel.app/api/v1/bookings",
         newBookingDetails
       );
 

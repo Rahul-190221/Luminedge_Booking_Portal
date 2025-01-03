@@ -2,7 +2,7 @@
 export const createSchedules = async (formData: FormData) => {
   console.log(formData);
   const res = await fetch(  
-    `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/create-schedule`,
+    `https://luminedge-server.vercel.app/api/v1/admin/create-schedule`,
     {
       method: "POST",
       headers: {

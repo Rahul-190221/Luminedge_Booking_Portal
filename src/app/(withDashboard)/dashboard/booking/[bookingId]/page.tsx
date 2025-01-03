@@ -81,7 +81,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     try {
       const formattedDate = selectedDate.toLocaleDateString("en-CA");
       const response = await axios.get(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/schedule/${formattedDate}/${params.bookingId}`
+        `https://luminedge-server.vercel.app/api/v1/schedule/${formattedDate}/${params.bookingId}`
       );
       setScheduleData(response.data.schedules);
       console.log(response.data.schedules);
@@ -98,7 +98,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
       try {
         const response = await axios.get(
-          `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/status/${id}`
+          `https://luminedge-server.vercel.app/api/v1/user/status/${id}`
         );
         const data = response.data;
         console.log(data.user.status); //undefined
@@ -179,7 +179,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       // Proceed with booking if all conditions are met
       console.log(selectedSlotId, userId, scheduleId, testType, testSystem);
       const response = await axios.post(
-        `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/book-slot`,
+        `https://luminedge-server.vercel.app/api/v1/user/book-slot`,
         {
           slotId: selectedSlotId,
           userId,

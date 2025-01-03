@@ -5,7 +5,7 @@ export const fetchAllUsers = async () => {
 
   try {
     const response = await fetch(
-      `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/all`,
+      `https://luminedge-server.vercel.app/api/v1/user/all`,
       {
         method: "GET",
         cache: "no-store",

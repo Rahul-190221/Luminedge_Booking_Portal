@@ -17,7 +17,7 @@ const DashboardPage = () => {
     const fetchUsers = async () => {
       try {
         const response = await axios.get(
-          `https://luminedge-mock-test-booking-server.vercel.app/api/v1/admin/users`
+          `https://luminedge-server.vercel.app/api/v1/admin/users`
         );
         const fetchedUsers = response.data.users || [];
         setUsers(fetchedUsers);

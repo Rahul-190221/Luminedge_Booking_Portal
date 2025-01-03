@@ -23,7 +23,7 @@ const Table = ({ userId }: { userId: string }) => {
     const fetchBookings = async () => {
       try {
         const response = await axios.get(
-          `https://luminedge-mock-test-booking-server.vercel.app/api/v1/user/bookings/${userId}`
+          `https://luminedge-server.vercel.app/api/v1/user/bookings/${userId}`
         );
         console.log("Bookings:", response.data.bookings);
         setBookings(response.data.bookings);
