@@ -128,94 +128,156 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     setScheduleId(scheduleId);
     setTestType(testType);
   }
+  // const handleProceed = async () => {
+  //   // Check if the test system is selected
+  //   if (!testSystem) {
+  //     setShowTestSystemError(true); // Show error message
+  //     return;
+  //   }
+  
+  //   // Hide error if test system is selected
+  //   setShowTestSystemError(false);
+  
+  //   // Check if the user status is 'completed'
+  //   if (userStatus !== "completed") {
+  //     toast.error("Booking is only available for users with completed status.");
+  //     return;
+  //   }
+  
+  //   if (!selectedSlotId || !scheduleId) {
+  //     toast.error("Please select a slot to proceed.");
+  //     return;
+  //   }
+  
+  //   try {
+  //     // Find the selected schedule and slot details
+  //     const selectedSchedule = scheduleData.find((schedule) => schedule._id === scheduleId);
+  //     const selectedSlot = selectedSchedule?.timeSlots.find(
+  //       (slot) => slot.slotId === selectedSlotId
+  //     );
+  
+  //     if (!selectedSlot) {
+  //       toast.error("Slot details could not be retrieved. Please try again.");
+  //       return;
+  //     }
+  
+  //     // Get slot start time and current time
+  //     const slotStartDateTime = new Date(
+  //       `${(value as Date).toLocaleDateString("en-CA")}T${selectedSlot.startTime}`
+  //     );
+  //     const currentDateTime = new Date();
+  
+  //     // Calculate the time difference in hours
+  //     const timeDifferenceInHours = (slotStartDateTime.getTime() - currentDateTime.getTime()) / (1000 * 60 * 60);
+  
+  //     // Check if the slot's start time is less than 24 hours from now
+  //     if (timeDifferenceInHours < 24) {
+  //       toast.error("Bookings cannot be made less than 24 hours before.");
+  //       return;
+  //     }
+  
+  //     // Proceed with booking if all conditions are met
+  //     console.log(selectedSlotId, userId, scheduleId, testType, testSystem);
+  //     const response = await axios.post(
+  //       `https://luminedge-server.vercel.app/api/v1/user/book-slot`,
+  //       {
+  //         slotId: selectedSlotId,
+  //         userId,
+  //         scheduleId,
+  //         status: "pending",
+  //         name: courseName,
+  //         testType: testType,
+  //         testSystem: testSystem,
+  //       }
+  //     );
+  
+  //     // Dismiss any existing toasts
+  //     toast.dismiss();
+
+  //     // Show the success message
+  //     toast.success("New slot booked successfully!", {
+  //       duration: 3000, // Auto-dismiss after 3 seconds
+  //       position: "top-center", // Ensure it appears correctly on mobile devices
+  //     });
+  //     router.push(`/dashboard`);
+  //   } catch (error: any) {
+  //     console.error("Error booking slot:", error);
+  
+  //     const errorMessage = error.response?.data?.message || "An unexpected error occurred.";
+  
+  //     // Handle already booked tests with a specific message
+  //     if (errorMessage.includes("already booked")) {
+  //       toast.error("You already have booked a test for the selected date.");
+  //     } else {
+  //       toast.error(errorMessage);
+  //     }
+  //   }
+  // };
+  
+
+  // Determine if the dropdowns should be enabled
+  
   const handleProceed = async () => {
-    // Check if the test system is selected
-    if (!testSystem) {
-      setShowTestSystemError(true); // Show error message
+    // Validate Test System only if course is IELTS
+    if (courseName === "IELTS" && !testSystem) {
+      toast.error("Please select a test system.");
       return;
     }
   
-    // Hide error if test system is selected
-    setShowTestSystemError(false);
-  
-    // Check if the user status is 'completed'
+    // Check if user status is "completed"
     if (userStatus !== "completed") {
       toast.error("Booking is only available for users with completed status.");
       return;
     }
   
+    // Ensure a slot is selected
     if (!selectedSlotId || !scheduleId) {
       toast.error("Please select a slot to proceed.");
       return;
     }
   
     try {
-      // Find the selected schedule and slot details
-      const selectedSchedule = scheduleData.find((schedule) => schedule._id === scheduleId);
-      const selectedSlot = selectedSchedule?.timeSlots.find(
-        (slot) => slot.slotId === selectedSlotId
-      );
+      const selectedSchedule = scheduleData.find((s) => s._id === scheduleId);
+      const selectedSlot = selectedSchedule?.timeSlots.find((slot) => slot.slotId === selectedSlotId);
   
       if (!selectedSlot) {
         toast.error("Slot details could not be retrieved. Please try again.");
         return;
       }
   
-      // Get slot start time and current time
       const slotStartDateTime = new Date(
         `${(value as Date).toLocaleDateString("en-CA")}T${selectedSlot.startTime}`
       );
       const currentDateTime = new Date();
+      const timeDifferenceInHours =
+        (slotStartDateTime.getTime() - currentDateTime.getTime()) / (1000 * 60 * 60);
   
-      // Calculate the time difference in hours
-      const timeDifferenceInHours = (slotStartDateTime.getTime() - currentDateTime.getTime()) / (1000 * 60 * 60);
-  
-      // Check if the slot's start time is less than 24 hours from now
       if (timeDifferenceInHours < 24) {
-        toast.error("Bookings cannot be made less than 24 hours before.");
+        toast.error("Bookings cannot be made less than 24 hours before.");
         return;
       }
   
-      // Proceed with booking if all conditions are met
-      console.log(selectedSlotId, userId, scheduleId, testType, testSystem);
-      const response = await axios.post(
-        `https://luminedge-server.vercel.app/api/v1/user/book-slot`,
-        {
-          slotId: selectedSlotId,
-          userId,
-          scheduleId,
-          status: "pending",
-          name: courseName,
-          testType: testType,
-          testSystem: testSystem,
-        }
-      );
-  
-      // Dismiss any existing toasts
-      toast.dismiss();
-
-      // Show the success message
-      toast.success("New slot booked successfully!", {
-        duration: 3000, // Auto-dismiss after 3 seconds
-        position: "top-center", // Ensure it appears correctly on mobile devices
+      // Proceed with booking
+      await axios.post(`https://luminedge-server.vercel.app/api/v1/user/book-slot`, {
+        slotId: selectedSlotId,
+        userId,
+        scheduleId,
+        status: "pending",
+        name: courseName,
+        testType,
+        testSystem: courseName === "IELTS" ? testSystem : null, // Include Test System only for IELTS
       });
+  
+      toast.success("New slot booked successfully!");
       router.push(`/dashboard`);
     } catch (error: any) {
-      console.error("Error booking slot:", error);
-  
       const errorMessage = error.response?.data?.message || "An unexpected error occurred.";
-  
-      // Handle already booked tests with a specific message
-      if (errorMessage.includes("already booked")) {
-        toast.error("You already have booked a test for the selected date.");
-      } else {
-        toast.error(errorMessage);
-      }
+      toast.error(errorMessage.includes("already booked")
+        ? "You already have booked a test for the selected date."
+        : errorMessage);
     }
   };
   
-
-  // Determine if the dropdowns should be enabled
   const isDropdownEnabled = courseName === "IELTS";
 
   // Determine if the button should be enabled
@@ -240,13 +302,13 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         className="select select-bordered bg-[#FACE39] text-black w-full"
         value={userTestType || " "}
         // onChange={(e) => setTestType(e.target.value)}
-        disabled={!isDropdownEnabled} // Disable if course is not IELTS
+        // disabled={!isDropdownEnabled} // Disable if course is not IELTS
       >
         <option value="Paper Based"> {userTestType || "Paper Based"}</option>
       </select>
     </div>
 
-    <div className="w-full flex flex-col items-start">
+    {/* <div className="w-full flex flex-col items-start">
       <label htmlFor="testSystem" className="block mb-2 font-medium">
         Test System
       </label>
@@ -270,7 +332,28 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       {showTestSystemError && (
         <p className="text-red-500 text-sm mt-1">Test System is required.</p>
       )}
-    </div>
+    </div> */}
+
+{courseName === "IELTS" && (
+  <div className="w-full flex flex-col items-start">
+    <label htmlFor="testSystem" className="block mb-2 font-medium">
+      Test System
+    </label>
+    <select
+      id="testSystem"
+      className="select select-bordered bg-[#FACE39] text-black w-full"
+      value={testSystem || ""}
+      onChange={(e) => setTestSystem(e.target.value)}
+    >
+      <option value="" disabled>
+        Select Test System
+      </option>
+      <option value="Academic">Academic</option>
+      <option value="General Training">General Training</option>
+    </select>
+  </div>
+)}
+
   </div>
 
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mx-auto">

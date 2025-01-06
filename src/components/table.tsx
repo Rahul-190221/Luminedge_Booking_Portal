@@ -85,7 +85,7 @@ const Table = ({ userId }: { userId: string }) => {
             <td>{index + 1}</td>
             <td>{booking.name}</td>
             <td>{booking.testType}</td>
-            <td>{booking.testSystem}</td>
+            <td>{booking.testSystem || "N/A"}</td>
             <td>{formatDate(booking.bookingDate)}</td>
             <td>{formatTime(booking.startTime)}</td>
             <td>{booking.status}</td>

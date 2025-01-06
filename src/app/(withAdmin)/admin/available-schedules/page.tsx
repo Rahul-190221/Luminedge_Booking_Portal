@@ -30,7 +30,7 @@ function AvailableSchedulesPage() {
   const [schedulesPerPage, setSchedulesPerPage] = useState<number>(10);
   const [testTypeFilter, setTestTypeFilter] = useState<string>("");
   const [dateSortOrder, setDateSortOrder] = useState<string>("ascending");
-  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("upcoming");
   const [startDateFilter, setStartDateFilter] = useState<string>("");
 
   const fetchSchedules = async () => {
@@ -95,23 +95,21 @@ function AvailableSchedulesPage() {
         ? schedule.name === testTypeFilter
         : true;
 
-      // Date filter
-      let isDateMatch = true;
-      switch (dateFilter) {
-        case "completed":
-          isDateMatch = scheduleDate < today;
-          break;
-        case "upcoming":
-          isDateMatch = scheduleDate > today;
-          break;
-        case "today":
-          isDateMatch = scheduleDate === today;
-          break;
-        case "all":
-        default:
-          isDateMatch = true;
-          break;
-      }
+ // Date filter
+let isDateMatch = true;
+switch (dateFilter) {
+  case "past":
+    isDateMatch = scheduleDate < today; // Dates strictly before today
+    break;
+  case "upcoming":
+    isDateMatch = scheduleDate >= today; // Include today and future dates
+    break;
+  default: // If "all" or no valid filter
+    isDateMatch = true;
+    break;
+}
+
+
 
       // Start date filter
       const isStartDateMatch = startDateFilter
@@ -162,7 +160,7 @@ function AvailableSchedulesPage() {
           <option value="GRE">GRE</option>
           <option value="IELTS">IELTS</option>
           <option value="TOEFL">TOEFL</option>
-          <option value="PTE">PTE</option>
+          <option value="Pearson PTE">Pearson PTE</option>
         </select>
         <select
           value={dateSortOrder}
@@ -173,15 +171,15 @@ function AvailableSchedulesPage() {
           <option value="descending">Start Date Descending</option>
         </select>
         <select
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="px-2 py-1 border rounded w-full sm:w-auto"
-        >
-          <option value="all">All Schedules</option>
-          <option value="completed">Completed</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="today">Today</option>
-        </select>
+  value={dateFilter}
+  onChange={(e) => setDateFilter(e.target.value)}
+  className="px-2 py-1 border rounded w-full sm:w-auto"
+>
+  <option value="all">All Schedules</option>
+  <option value="past">Past</option>
+  <option value="upcoming">Upcoming</option>
+</select>
+
         <input
           type="date"
           value={startDateFilter}
