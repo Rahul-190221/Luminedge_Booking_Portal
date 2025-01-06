@@ -189,64 +189,64 @@ const TableAdmin = () => {
   return (
     <>
       <div className="flex flex-col sm:flex-row gap-4 py-4">
-        {/* Search Bar */}
-        <div className="mb-4 w-full sm:w-auto">
-          <label
-        htmlFor="search"
-        className="mr-2 block text-xs sm:text-sm md:text-base mb-1 sm:mb-0"
-          >
-        Search by Name:
-          </label>
-          <input
-        type="text"
-        id="search"
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="px-2 py-1 border rounded w-full text-xs sm:text-sm md:text-base"
-          />
-        </div>
-        
-        {/* Filter by Status */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center mb-4 w-full sm:w-auto">
-          <label
-        htmlFor="statusFilter"
-        className="mb-1 sm:mb-0 w-full sm:w-auto sm:mr-2 text-xs sm:text-sm md:text-base"
-          >
-        Filter by Status:
-          </label>
-          <select
-        id="statusFilter"
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-        className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
-          >
-        <option value="all">All</option>
-        <option value="active">Active</option>
-        <option value="checked">Checked</option>
-        <option value="completed">Completed</option>
-          </select>
-        </div>
+      <div className="flex items-center w-full sm:w-auto">
+    <label
+      htmlFor="search"
+      className="mr-2 text-xs sm:text-sm md:text-base"
+    >
+      Search by Name:
+    </label>
+    <input
+      type="text"
+      id="search"
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
+    />
+  </div>
 
-        {/* Filter by Action */}
-        <div className="mb-4 w-full sm:w-auto">
-          <label
-        htmlFor="actionFilter"
-        className="mr-2 block text-xs sm:text-sm md:text-base mb-1 sm:mb-0"
-          >
-        Active:
-          </label>
-          <select
-        id="actionFilter"
-        value={actionFilter}
-        onChange={(e) => setActionFilter(e.target.value)}
-        className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
-          >
-        <option value="all">All</option>
-        <option value="blocked">Blocked</option>
-        <option value="unblocked">Unblocked</option>
-          </select>
-        </div>
+  {/* Filter by Status */}
+  <div className="flex items-center w-full sm:w-auto">
+    <label
+      htmlFor="statusFilter"
+      className="mr-2 text-xs sm:text-sm md:text-base"
+    >
+      Filter by Status:
+    </label>
+    <select
+      id="statusFilter"
+      value={statusFilter}
+      onChange={(e) => setStatusFilter(e.target.value)}
+      className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
+    >
+      <option value="all">All</option>
+      <option value="active">Active</option>
+      <option value="checked">Checked</option>
+      <option value="completed">Completed</option>
+    </select>
+  </div>
+
+  {/* Filter by Action */}
+  <div className="flex items-center w-full sm:w-auto">
+    <label
+      htmlFor="actionFilter"
+      className="mr-2 text-xs sm:text-sm md:text-base"
+    >
+      Active:
+    </label>
+    <select
+      id="actionFilter"
+      value={actionFilter}
+      onChange={(e) => setActionFilter(e.target.value)}
+      className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
+    >
+      <option value="all">All</option>
+      <option value="blocked">Blocked</option>
+      <option value="unblocked">Unblocked</option>
+    </select>
+  </div>
       </div>
+      
       <div className="mb-4"></div>
 
       <div className="overflow-x-auto">
