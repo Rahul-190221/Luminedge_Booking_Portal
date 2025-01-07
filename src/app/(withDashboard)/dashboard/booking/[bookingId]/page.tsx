@@ -63,7 +63,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     },
     {
       _id: "67337c880794d577cd982b78",
-      name: "TOFEL",
+      name: "TOEFL",
       image: "https://i.ibb.co.com/vjyL3QC/toefl.webp",
     },
   ];

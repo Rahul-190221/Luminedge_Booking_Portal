@@ -418,7 +418,7 @@ const TableAdmin = () => {
                       <option value="">Select Mock Type</option>
                       <option value="IELTS">IELTS</option>
                       <option value="GRE">GRE</option>
-                      <option value="TOFEL">TOFEL</option>
+                      <option value="TOFEL">TOEFL</option>
                       <option value="Pearson PTE">Pearson PTE</option>
                     </select>
                   </div>
