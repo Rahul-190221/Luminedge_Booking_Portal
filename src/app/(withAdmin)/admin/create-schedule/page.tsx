@@ -323,6 +323,7 @@ export default function CreateSchedulePage() {
         <button
           type="submit"
           className="bg-green-500 text-white px-6 py-2 rounded"
+          onClick={() => router.push('/admin/available-schedules')}
         >
           Create Schedule
         </button>

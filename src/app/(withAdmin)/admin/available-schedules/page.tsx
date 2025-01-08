@@ -240,7 +240,11 @@ switch (dateFilter) {
                         (t) => (
                           <div className="bg-gray-100 p-4 rounded shadow-lg text-black">
                             <p className="text-sm">
-                              Are you sure you want to delete this schedule?
+                              Are you sure you want to delete the schedule on {new Date(schedule.startDate).toLocaleDateString("en-US", {
+                              month: "long",
+                              day: "2-digit",
+                              year: "numeric",
+                              }).replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}?
                             </p>
                             <div className="mt-4 flex justify-center gap-4">
                               <button
