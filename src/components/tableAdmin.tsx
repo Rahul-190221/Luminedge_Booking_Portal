@@ -383,91 +383,94 @@ const TableAdmin = () => {
             <p>
               <strong>Created At:</strong> {selectedUser.createdAt}
             </p>
+{/* this form is hidden if selectedUser?.mockType, mock, transactionId have values; if any is missing, only those fields will be visible */}
+{(!selectedUser?.mockType ||
+  !selectedUser?.mock ||
+  !selectedUser?.transactionId ||
+  !selectedUser?.testType ||
+  Number(selectedUser?.mock) === 0) && ( // Check if remaining mocks are 0
+  <>
+    {/* Always show Mock Number, Transaction ID, and Test Type fields if mocks are 0 */}
+    {(Number(selectedUser?.mock) === 0 || !selectedUser?.mock) && (
+      <div className="mt-4">
+        <label htmlFor="mock" className="block mb-1.5">
+          Mock Number:
+        </label>
+        <input
+          type="text"
+          id="mock"
+          value={mock}
+          onChange={(e) => setMock(e.target.value)}
+          className="px-2 py-1 border rounded w-full"
+        />
+      </div>
+    )}
+    {(Number(selectedUser?.mock) === 0 || !selectedUser?.transactionId) && (
+      <div className="mt-1">
+        <label htmlFor="transactionId" className="block mb-2">
+          Transaction ID:
+        </label>
+        <input
+          type="text"
+          id="transactionId"
+          value={transactionId}
+          onChange={(e) => setTransactionId(e.target.value)}
+          className="px-2 py-1 border rounded w-full"
+        />
+      </div>
+    )}
+    {(Number(selectedUser?.mock) === 0 || !selectedUser?.testType) && (
+      <div className="mt-1">
+        <label htmlFor="testType" className="block mb-2">
+          Test Type:
+        </label>
+        <select
+          id="testType"
+          value={testType}
+          onChange={(e) => setTestType(e.target.value)}
+          className="px-2 py-1 border rounded w-full"
+        >
+          <option value="">Select Test Type</option>
+          <option value="Paper-Based">Paper-Based</option>
+          <option value="Computer-Based">Computer-Based</option>
+        </select>
+      </div>
+    )}
+    {!selectedUser?.mockType && (
+      <div className="mt-1.5">
+        <label htmlFor="mockType" className="block mb-2">
+          Mock Type:
+        </label>
+        <select
+          id="mockType"
+          value={mockType}
+          onChange={(e) => setMockType(e.target.value)}
+          className="px-2 py-1 border rounded w-full"
+        >
+          <option value="">Select Mock Type</option>
+          <option value="IELTS">IELTS</option>
+          <option value="GRE">GRE</option>
+          <option value="TOEFL">TOEFL</option>
+          <option value="Pearson PTE">Pearson PTE</option>
+        </select>
+      </div>
+    )}
+    {/* Show Save button only if at least one field is missing */}
+    <div className="flex justify-end mt-3">
+      <button
+        onClick={(e) => {
+          onUpdateUser(); // Call the update function if not disabled
+        }}
+        className={`px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded mr-2`}
+      >
+        Save
+      </button>
+    </div>
+  </>
+)}
 
-            {/* this form is hidden if selectedUser?.mockType, mock, transactionId have values; if any is missing, only those fields will be visible */}
-            {(!selectedUser?.mockType ||
-              !selectedUser?.mock ||
-              !selectedUser?.transactionId ||
-              !selectedUser?.testType) && ( // Check for testType
-              <>
-                {!selectedUser?.mock && (
-                  <div className="mt-4">
-                    <label htmlFor="mock" className="block mb-2">
-                      Mock Number:
-                    </label>
-                    <input
-                      type="text"
-                      id="mock"
-                      value={mock}
-                      onChange={(e) => setMock(e.target.value)}
-                      className="px-2 py-1 border rounded w-full"
-                    />
-                  </div>
-                )}
-                {!selectedUser?.mockType && (
-                  <div className="mt-4">
-                    <label htmlFor="mockType" className="block mb-2">
-                      Mock Type:
-                    </label>
-                    <select
-                      id="mockType"
-                      value={mockType}
-                      onChange={(e) => setMockType(e.target.value)}
-                      className="px-2 py-1 border rounded w-full"
-                    >
-                      <option value="">Select Mock Type</option>
-                      <option value="IELTS">IELTS</option>
-                      <option value="GRE">GRE</option>
-                      <option value="TOEFL">TOEFL</option>
-                      <option value="Pearson PTE">Pearson PTE</option>
-                    </select>
-                  </div>
-                )}
-                {!selectedUser?.transactionId && (
-                  <div className="mt-4">
-                    <label htmlFor="transactionId" className="block mb-2">
-                      Transaction ID:
-                    </label>
-                    <input
-                      type="text"
-                      id="transactionId"
-                      value={transactionId}
-                      onChange={(e) => setTransactionId(e.target.value)}
-                      className="px-2 py-1 border rounded w-full"
-                    />
-                  </div>
-                )}
-                {!selectedUser?.testType && ( // New field for test type
-                  <div className="mt-4">
-                    <label htmlFor="testType" className="block mb-2">
-                      Test Type:
-                    </label>
-                    <select
-                      id="testType"
-                      value={testType}
-                      onChange={(e) => setTestType(e.target.value)}
-                      className="px-2 py-1 border rounded w-full"
-                    >
-                      <option value="">Select Test Type</option>
-                      <option value="Paper-Based">Paper-Based</option>
-                      <option value="Computer-Based">Computer-Based</option>
-                    </select>
-                  </div>
-                )}
-                {/* Show Save button only if at least one field is missing */}
-                <div className="flex justify-end mt-4">
-                  <button
-                    onClick={(e) => {
-                      onUpdateUser(); // Call the update function if not disabled
-                    }}
-                    className={`px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded mr-2`}
-                  >
-                    Save
-                  </button>
-                </div>
-              </>
-            )}
-            <div className="flex justify-end mt-4">
+
+            <div className="flex justify-end mt-3">
               <button
                 onClick={closeModal}
                 className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
