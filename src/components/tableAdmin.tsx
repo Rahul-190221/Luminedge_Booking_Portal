@@ -31,7 +31,7 @@ const TableAdmin = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all"); // Holds the selected status filter
   const [currentPage, setCurrentPage] = useState<number>(1); // Current page number
-  const [usersPerPage, setUsersPerPage] = useState<number>(10); // Users per page
+  const [usersPerPage, setUsersPerPage] = useState<number>(20); // Users per page
   const [mock, setMock] = useState<string>(""); // State for mock number
   const [mockType, setMockType] = useState<string>(""); // State for mock type
   const [transactionId, setTransactionId] = useState<string>(""); // State for transaction ID

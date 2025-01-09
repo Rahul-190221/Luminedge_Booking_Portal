@@ -27,7 +27,7 @@ function AvailableSchedulesPage() {
   const router = useRouter();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [schedulesPerPage, setSchedulesPerPage] = useState<number>(10);
+  const [schedulesPerPage, setSchedulesPerPage] = useState<number>(20);
   const [testTypeFilter, setTestTypeFilter] = useState<string>("");
   const [dateSortOrder, setDateSortOrder] = useState<string>("ascending");
   const [dateFilter, setDateFilter] = useState<string>("upcoming");
