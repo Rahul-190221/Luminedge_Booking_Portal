@@ -191,6 +191,7 @@ switch (dateFilter) {
         <table className="table-auto w-full border-collapse">
           <thead>
             <tr className="bg-gray-200">
+            <th className="px-4 py-2 text-left">List</th>
               <th className="px-4 py-2 text-left">Name</th>
               <th className="px-4 py-2 text-left">Test Type</th>
               <th className="px-4 py-2 text-left">Exam Date</th>
@@ -201,8 +202,9 @@ switch (dateFilter) {
             </tr>
           </thead>
           <tbody>
-            {currentSchedules.map((schedule) => (
+            {currentSchedules.map((schedule, index) => (
               <tr key={schedule.id} className="border-b">
+                <td className="px-4 py-2 text-sm">{index + 1}</td>
                 <td className="px-4 py-2">{schedule.name}</td>
                 <td className="px-4 py-2">{schedule.testType}</td>
                 <td className="px-4 py-2">
@@ -292,6 +294,7 @@ switch (dateFilter) {
             <option value={5}>5</option>
             <option value={10}>10</option>
             <option value={20}>20</option>
+            <option value={30}>30</option>
           </select>
         </div>
         <div className="flex space-x-2">
