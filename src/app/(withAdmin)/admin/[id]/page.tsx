@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, ChangeEvent } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
@@ -28,7 +28,15 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [attendance, setAttendance] = useState<{ [key: string]: string }>({});
+const [filter, setFilter] = useState<string>("");
+  const [testTypeFilter, setTestTypeFilter] = useState<string>("");
+  const [testSystemFilter, setTestSystemFilter] = useState<string>("");
   const [userAttendance, setUserAttendance] = useState<{ [key: string]: number | null }>({});
+  const [attendanceFilter, setAttendanceFilter] = useState<string>("");
+  const [attendanceCounts, setAttendanceCounts] = useState({
+    present: 0,
+    absent: 0,
+  });
 
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
@@ -72,11 +80,18 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
           initialAttendance[booking.userId] = booking.attendance || "N/A";
         }
       });
+// Calculate attendance counts
+const presentCount = Object.values(initialAttendance).filter(
+  (status) => status === "present"
+).length;
+const absentCount = Object.values(initialAttendance).filter(
+  (status) => status === "absent"
+).length;
 
       setBookings(filteredBookings);
       setUsers(matchedUsers);
       setAttendance(initialAttendance);
-
+      setAttendanceCounts({ present: presentCount, absent: absentCount });
       // Fetch individual user attendance
       const attendanceData: Record<string, number | null> = {};
       await Promise.all(
@@ -202,17 +217,130 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
   if (!scheduleId) {
     return <div>No Schedule ID provided.</div>;
   }
+  const filterUsers = (
+    users: any[],
+    bookings: Booking[],
+    filter: string,
+    testTypeFilter: string,
+    testSystemFilter: string,
+    attendanceFilter: string
+  ) => {
+    return users.filter((user) => {
+      const userBookings = bookings.find((booking) => booking.userId.includes(user._id));
 
+      const matchesFilter =
+        user?.name?.toLowerCase().includes(filter.toLowerCase()) ||
+        user?.email?.toLowerCase().includes(filter.toLowerCase());
+
+      const matchesTestType =
+        !testTypeFilter ||
+        userBookings?.testType?.toLowerCase().trim() === testTypeFilter.toLowerCase().trim();
+
+      const matchesTestSystem =
+        !testSystemFilter ||
+        userBookings?.testSystem?.toLowerCase().trim() === testSystemFilter.toLowerCase().trim();
+
+      return matchesFilter && matchesTestType && matchesTestSystem;
+    });
+  };
+
+  const filteredUsers = filterUsers(users, bookings, filter, testTypeFilter, testSystemFilter, attendanceFilter);
   return (
     <div className="p-4">
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <div className="overflow-x-auto">
-          <div className="mb-2 p-2 rounded shadow">
+        <>
+         {/* Filters Section */}
+         <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Name or Email Filter */}
+            <div className="flex flex-col">
+              <label htmlFor="filter" className="font-semibold mb-2">
+                Filter by Name or Email:
+              </label>
+              <input
+                id="filter"
+                type="text"
+                placeholder="Search by name or email"
+                className="border px-2 py-1 rounded w-full"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              />
+            </div>
+
+            {/* Test Type Filter */}
+            <div className="flex flex-col">
+              <label htmlFor="testTypeFilter" className="font-semibold mb-2">
+                Filter by Test Type:
+              </label>
+              <select
+                id="testTypeFilter"
+                value={testTypeFilter}
+                onChange={(e) => setTestTypeFilter(e.target.value)}
+                className="border px-2 py-1 rounded w-full"
+              >
+                <option value="">All</option>
+                <option value="paper-based">Paper-Based</option>
+                <option value="computer-based">Computer-Based</option>
+              </select>
+            </div>
+
+            {/* Test System Filter */}
+            <div className="flex flex-col">
+              <label htmlFor="testSystemFilter" className="font-semibold mb-2">
+                Filter by Test System:
+              </label>
+              <select
+                id="testSystemFilter"
+                value={testSystemFilter}
+                onChange={(e) => setTestSystemFilter(e.target.value)}
+                className="border px-2 py-1 rounded w-full"
+              >
+                <option value="">All</option>
+                <option value="academic">Academic</option>
+                <option value="general training">General Training</option>
+              </select>
+            </div>
+            {/* Attendance Filter */}
+            {/* <div className="flex flex-col">
+              <label htmlFor="attendanceFilter" className="font-semibold mb-2">
+                Filter by Attendance:
+              </label>
+              <select
+                id="attendanceFilter"
+                value={attendanceFilter}
+                onChange={(e) => setAttendanceFilter(e.target.value)}
+                className="border px-2 py-1 rounded w-full"
+              >
+                <option value="">All</option>
+                <option value="present">Present</option>
+                <option value="absent">Absent</option>
+              </select>
+            </div> */}
+          </div>
+
+          {/* Attendance Counts */}
+          {/* <div className="mb-4">
+            <p>
+              <strong>Total Present:</strong> {attendanceCounts.present}
+            </p>
+            <p>
+              <strong>Total Absent:</strong> {attendanceCounts.absent}
+            </p>
+          </div> */}
+          
+
+
+          {/* Booking Details */}
+            <div className="mb-2 p-2 rounded shadow grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mb-4">
             <h2 className="text-lg font-semibold">Booking Details</h2>
-            <p><strong>Test Name:</strong> {bookings[0]?.name || "N/A"}</p>
-            <p><strong>Date:</strong> {bookings[0]?.bookingDate || "N/A"}</p>
+            <p>
+              <strong>Test Name:</strong> {bookings[0]?.name || "N/A"}
+            </p>
+            <p>
+              <strong>Date:</strong> {bookings[0]?.bookingDate || "N/A"}
+            </p>
             <p>
               <strong>Schedule Time:</strong>{" "}
               {bookings[0]?.startTime && bookings[0]?.endTime
@@ -220,7 +348,18 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
                 : "N/A"}
             </p>
           </div>
+            {/* Attendance Counts */}
+          <div className="mb-4">
+            <p>
+              <strong>Total Present:</strong> {attendanceCounts.present}
+            </p>
+            <p>
+              <strong>Total Absent:</strong> {attendanceCounts.absent}
+            </p>
+          </div>
+          </div>
 
+          {/* Users Table */}
           <div className="overflow-x-auto">
             <table className="table-auto w-full border-collapse mt-2">
               <thead>
@@ -239,7 +378,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user, index) => (
+                {filteredUsers.map((user, index) => (
                   <tr key={user._id} className="border-b">
                     <td className="px-4 py-2 text-sm">{index + 1}</td>
                     <td className="px-4 py-2 text-sm">{user?.name || "N/A"}</td>
@@ -275,7 +414,9 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
               </tbody>
             </table>
           </div>
-          <div className="mt-10 sm:mt-0">
+
+          {/* Download Button */}
+          <div className="mt-20 sm:mt-0">
             <button
               onClick={confirmDownload}
               className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 w-full sm:w-auto"
@@ -283,10 +424,13 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
               Download as PDF
             </button>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
 };
-
 export default BookingRequestsPage;
+
+function setTestTypeFilter(value: string) {
+  throw new Error("Function not implemented.");
+}
