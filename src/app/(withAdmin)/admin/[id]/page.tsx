@@ -330,15 +330,7 @@ const absentCount = Object.values(initialAttendance).filter(
                 <option value="general training">General Training</option>
               </select>
             </div>
-             {/* Mail Send Button */}
-             <div>
-              <button
-                onClick={handleSendMail}
-                className="bg-blue-500 text-white px-4 py-2 rounded"
-              >
-                Send Mail
-              </button>
-            </div>
+           
           </div>
    
 
