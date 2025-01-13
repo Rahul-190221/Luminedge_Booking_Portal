@@ -127,7 +127,7 @@ const absentCount = Object.values(initialAttendance).filter(
         return;
       }
 
-      const status = attendanceValue === "present" ? "completed" : "missed";
+      const status = attendanceValue === "present" ? "Present" : "Absent";
 
       const response = await axios.put(
         `https://luminedge-server.vercel.app/api/v1/user/bookings/${scheduleId}`,
@@ -245,6 +245,35 @@ const absentCount = Object.values(initialAttendance).filter(
   };
 
   const filteredUsers = filterUsers(users, bookings, filter, testTypeFilter, testSystemFilter, attendanceFilter);
+  const handleSendMail = async () => {
+    try {
+      const userEmails = users.map((user) => user.email).filter(Boolean);
+
+      if (userEmails.length === 0) {
+        toast.error("No valid email addresses found.");
+        return;
+      }
+
+      const emailData = {
+        emails: userEmails,
+        subject: "Your Subject Here",
+        message: "Your Message Body Here",
+      };
+
+      const response = await axios.post("https://luminedge-server.vercel.app/api/v1/send-reminder", emailData);
+
+
+      if (response.status === 200) {
+        toast.success("Emails sent successfully!");
+      } else {
+        throw new Error(response.data.message || "Failed to send emails.");
+      }
+    } catch (error: any) {
+      console.error("Error sending emails:", error);
+      toast.error(error.message || "Failed to send emails.");
+    }
+  };
+
   return (
     <div className="p-4">
       {loading ? (
@@ -301,35 +330,17 @@ const absentCount = Object.values(initialAttendance).filter(
                 <option value="general training">General Training</option>
               </select>
             </div>
-            {/* Attendance Filter */}
-            {/* <div className="flex flex-col">
-              <label htmlFor="attendanceFilter" className="font-semibold mb-2">
-                Filter by Attendance:
-              </label>
-              <select
-                id="attendanceFilter"
-                value={attendanceFilter}
-                onChange={(e) => setAttendanceFilter(e.target.value)}
-                className="border px-2 py-1 rounded w-full"
+             {/* Mail Send Button */}
+             <div>
+              <button
+                onClick={handleSendMail}
+                className="bg-blue-500 text-white px-4 py-2 rounded"
               >
-                <option value="">All</option>
-                <option value="present">Present</option>
-                <option value="absent">Absent</option>
-              </select>
-            </div> */}
+                Send Mail
+              </button>
+            </div>
           </div>
-
-          {/* Attendance Counts */}
-          {/* <div className="mb-4">
-            <p>
-              <strong>Total Present:</strong> {attendanceCounts.present}
-            </p>
-            <p>
-              <strong>Total Absent:</strong> {attendanceCounts.absent}
-            </p>
-          </div> */}
-          
-
+   
 
           {/* Booking Details */}
             <div className="mb-2 p-2 rounded shadow grid grid-cols-1 md:grid-cols-3 gap-4">
