@@ -7,6 +7,7 @@ export default function middleware(req: NextRequest) {
   const protectedRoutes = [
     "/dashboard",
     "/admin",
+    "/bdm",
     "/admin/create-schedule",
     "/booking"
   ];

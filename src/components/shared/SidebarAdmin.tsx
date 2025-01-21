@@ -154,7 +154,7 @@ const SidebarAdmin = () => {
               <span className="inline">All Users</span>
             </Link>
           </li>
-            {/* Email Menu Item */}
+            {/* Email Menu Item
     <li
       className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
         pathname === ""
@@ -166,21 +166,21 @@ const SidebarAdmin = () => {
         <IoMailOutline className="h-5 w-5 mr-2" />
         <span className="inline">Email</span>
       </Link>
-    </li>
+    </li> */}
     
     {/* Settings Menu Item */}
-    <li
+    {/* <li
       className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
         pathname === "/admin/settings"
           ? "bg-[#FACE39] text-black font-bold rounded-full"
           : ""
       }`}
     >
-      <Link href="" className="flex items-center px-4 py-3">
+      <Link href="/admin/settings" className="flex items-center px-4 py-3">
         <IoSettingsOutline className="h-5 w-5 mr-2" />
         <span className="inline">Setting</span>
       </Link>
-    </li>
+    </li> */}
           <li
             className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
               pathname === "/admin/notifications"
@@ -196,7 +196,21 @@ const SidebarAdmin = () => {
               <span className="inline">Notifications</span>
             </Link>
           </li>
-          <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
+         
+           {/* Settings Menu Item */}
+    <li
+      className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+        pathname === "/admin/settings"
+          ? "bg-[#FACE39] text-black font-bold rounded-full"
+          : ""
+      }`}
+    >
+      <Link href="" className="flex items-center px-4 py-3">
+        <IoSettingsOutline className="h-5 w-5 mr-2" />
+        <span className="inline">Setting</span>
+      </Link>
+    </li>
+    <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
             <button
               onClick={() => logout()}
               className="flex items-center px-4 py-3"

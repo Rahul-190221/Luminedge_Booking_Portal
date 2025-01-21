@@ -2,24 +2,25 @@
 
 import Link from "next/link";
 import {
-
+  IoBagRemoveOutline,
+  IoWalletOutline,
+  IoCloudDownloadOutline,
   IoLogOutOutline,
 } from "react-icons/io5";
-import { TbMoneybag, TbReport } from "react-icons/tb";
+import { TbMoneybag, TbReport, TbBell } from "react-icons/tb";
 import { useState } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/utils/actions/logout";
 import GetMe from "@/app/helpers/getme";
+import { RxAvatar } from "react-icons/rx";
+import { FaArrowDown } from "react-icons/fa";
+import { IoMailOutline, IoSettingsOutline, IoHomeOutline } from "react-icons/io5"; // Import the icons
+import { AiOutlineHome } from "react-icons/ai"; // Import Home icon
 
-import { IoMailOutline, IoSettingsOutline } from "react-icons/io5"; // Import the icons
-
-import { IoHomeOutline } from "react-icons/io5"; // Import Home icon
-
-const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const SidebarAdmin = () => {
+  const [isOpen, setIsOpen] = useState(false); // State for mobile toggle
   const pathname = usePathname();
-  const user = GetMe();
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
@@ -38,14 +39,14 @@ const Sidebar = () => {
         )}
       </button>
 
-      {/* Sidebar container */}
-      <div
+ {/* Sidebar container */}
+ <div
         className={`fixed top-0 left-0 h-full w-64 bg-white md:bg-transparent transform ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-50 md:relative md:flex md:flex-col md:items-start`}
       >
         <div className="flex items-center justify-between px-4 py-2">
-        <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 609.58 304.79"
@@ -83,75 +84,132 @@ const Sidebar = () => {
             <FaTimes className="h-8 w-8" />
           </button>
         </div>
-        {/* Sidebar links */}
-        <ul className="menu min-h-screen rounded-box px-2">
-          {/* Dashboard link */}
+        <ul className="menu min-h-screen rounded-box">
           <li
-            className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
-              pathname === "/dashboard" ? "bg-[#FACE39] text-black font-bold" : ""
+            className={`hover:bg-[#FACE39] hover:text-black flex justify-center rounded-full ${
+              pathname === "/bdm/dashboard"
+                ? "bg-[#FACE39] text-black font-bold rounded-full"
+                : ""
             }`}
           >
-            <Link href="/dashboard" className="flex items-center px-4 py-3">
-            <IoHomeOutline className="h-5 w-5 mr-2" />
+            <Link href="/bdm/dashboard" className="flex items-center px-4 py-3">
+              <IoHomeOutline className="h-5 w-5 mr-2" />
               <span className="inline">Dashboard</span>
             </Link>
           </li>
+         {/* <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
+             <Link
+              href="/admin/create-schedule"
+              className={`flex items-center px-4 py-3 ${
+                pathname === "/admin/create-schedule"
+                  ? "bg-[#FACE39] text-black font-bold rounded-full"
+                  : ""
+              }`}
+            >
+              <IoBagRemoveOutline className="h-5 w-5 mr-2" />
+              <span className="inline">Create Schedule</span>
+            </Link>
+          </li> */}
 
-          {/* Courses link */}
           <li
-            className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
-              pathname === "/dashboard/courses" ? "bg-[#FACE39] text-black font-bold" : ""
+            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+              pathname === "/bdm/available-schedulesbdm"
+                ? "bg-[#FACE39] text-black font-bold rounded-full"
+                : ""
             }`}
           >
-            <Link href="/dashboard/courses" className="flex items-center px-4 py-3">
-              <TbReport className="h-5 w-5 mr-2" />
-              <span className="inline">Courses</span>
+            <Link
+              href="/bdm/available-schedulesbdm"
+              className="flex items-center px-4 py-3"
+            >
+              <IoCloudDownloadOutline className="h-5 w-5 mr-2" />
+              <span className="inline">Available Schedules</span>
             </Link>
           </li>
-
-          {/* Terms and Conditions link */}
+          {/* booking-requests
           <li
-            className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
-              pathname === "/dashboard/terms" ? "bg-[#FACE39] text-black font-bold" : ""
+            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+              pathname === "/admin/booking-requests"
+                ? "bg-[#FACE39] text-black font-bold rounded-full"
+                : ""
             }`}
           >
-            <Link href="/dashboard/terms" className="flex items-center px-4 py-3">
-            <IoMailOutline className="h-5 w-5 mr-2" />
-              <span className="inline">Terms and Conditions</span>
+            <Link
+              href="/admin/booking-requests"
+              className="flex items-center px-4 py-3"
+            >
+              <IoBagRemoveOutline className="h-5 w-5 mr-2" />
+              <span className="inline">Booking Requests</span>
+            </Link>
+          </li> */}
+          <li
+            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+              pathname === "/bdm/all-usersbdm"
+                ? "bg-[#FACE39] text-black font-bold rounded-full"
+                : ""
+            }`}
+          >
+            <Link href="/bdm/all-usersbdm" className="flex items-center px-4 py-3">
+              <IoWalletOutline className="h-5 w-5 mr-2" />
+              <span className="inline">All Users</span>
             </Link>
           </li>
+            {/* Email Menu Item */}
+    {/* <li
+      className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+        pathname === ""
+          ? "bg-[#FACE39] text-black font-bold rounded-full"
+          : ""
+      }`}
+    >
+      <Link href="" className="flex items-center px-4 py-3">
+        <IoMailOutline className="h-5 w-5 mr-2" />
+        <span className="inline">Email</span>
+      </Link>
+    </li> */}
 
-          {/* Logout button */}
-          <li className="hover:bg-[#FACE39] hover:text-black rounded-full">
-            <button onClick={() => logout()} className="flex items-center px-4 py-3 w-full text-left">
+          {/* <li
+            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+              pathname === "/admin/notifications"
+                ? "bg-[#FACE39] text-black font-bold rounded-full"
+                : ""
+            }`}
+          >
+            <Link
+              href="/admin/notifications"
+              className="flex items-center px-4 py-3"
+            >
+              <TbBell className="h-5 w-5 mr-2" />
+              <span className="inline">Notifications</span>
+            </Link>
+          </li> */}
+            {/* Settings Menu Item */}
+    {/* <li
+      className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
+        pathname === "/admin/settings"
+          ? "bg-[#FACE39] text-black font-bold rounded-full"
+          : ""
+      }`}
+    >
+      <Link href="/admin/settings" className="flex items-center px-4 py-3">
+        <IoSettingsOutline className="h-5 w-5 mr-2" />
+        <span className="inline">Setting</span>
+      </Link>
+    </li> */}
+          <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
+            <button
+              onClick={() => logout()}
+              className="flex items-center px-4 py-3"
+            >
               <IoLogOutOutline className="h-5 w-5 mr-2" />
               <span className="inline">Logout</span>
             </button>
           </li>
-          {/* <div className="flex items-center gap-2 ml-1 py-2 px-2 transition-colors duration-300 w-full overflow-hidden">
-  <RxAvatar className="text-2xl flex-shrink-0" />
-  <h1 className="text-lg text-amber-400 font-semibold truncate w-full overflow-hidden">
-    {user && user.name}
-  </h1>
-  <FaArrowDown className="text-lg text-yellow-400 flex-shrink-0" />
-</div> */}
-  {/* Profile Settings link */}
-  <li
-  className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
-    pathname === "/dashboard/settings" ? "bg-[#FACE39] text-black font-bold" : ""
-  }`}
-  >
-  <Link href="/dashboard/settings" className="flex items-center px-4 py-3">
-    <IoSettingsOutline className="h-5 w-5 mr-2" />
-    <span className="inline">Settings</span>
-  </Link>
-  </li>
-
-
+         
         </ul>
       </div>
     </div>
   );
 };
 
-export default Sidebar;
+export default SidebarAdmin;

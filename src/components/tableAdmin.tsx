@@ -188,12 +188,12 @@ const TableAdmin = () => {
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row gap-4 py-4">
+    <h1 className="text-xl md:text-1.5xl font-semibold mb-4">
+          Students Waiting for Approval
+        </h1>
+         <div className="bg-gray-100 p-4 h-22 mb-3 flex flex-col sm:flex-row gap-4 py-4">
       <div className="flex items-center w-full sm:w-auto">
-    <label
-      htmlFor="search"
-      className="mr-2 text-xs sm:text-sm md:text-base"
-    >
+      <label htmlFor="search" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
       Search by Name:
     </label>
     <input
@@ -207,10 +207,7 @@ const TableAdmin = () => {
 
   {/* Filter by Status */}
   <div className="flex items-center w-full sm:w-auto">
-    <label
-      htmlFor="statusFilter"
-      className="mr-2 text-xs sm:text-sm md:text-base"
-    >
+  <label htmlFor="statusFilter" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
       Filter by Status:
     </label>
     <select
@@ -228,10 +225,7 @@ const TableAdmin = () => {
 
   {/* Filter by Action */}
   <div className="flex items-center w-full sm:w-auto">
-    <label
-      htmlFor="actionFilter"
-      className="mr-2 text-xs sm:text-sm md:text-base"
-    >
+  <label htmlFor="statusFilter" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
       Active:
     </label>
     <select
@@ -253,7 +247,7 @@ const TableAdmin = () => {
         <table className="table-auto w-full border-collapse">
           {/* Table Head */}
           <thead>
-            <tr className="bg-gray-200">
+          <tr className="bg-[#face39]">
               <th className="px-4 py-2 text-left">Name</th>
               <th className="px-4 py-2 text-left">Enrollment Date</th>
               <th className="px-4 py-2 text-left">Status</th>
@@ -331,7 +325,7 @@ const TableAdmin = () => {
           >
             Previous
           </button>
-          <span className="mx-2">Page {currentPage}</span>
+          <span className="mx-2">Page {currentPage} / {Math.ceil(filteredUsers.length / usersPerPage)}</span>
           <button
             onClick={() => setCurrentPage((prev) => prev + 1)}
             disabled={indexOfLastUser >= filteredUsers.length}

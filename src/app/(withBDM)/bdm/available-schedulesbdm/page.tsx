@@ -23,16 +23,17 @@ type Schedule = {
   }>;
 };
 
-function AvailableSchedulesPage() {
+function AvailableSchedulesBDMPage() {
   const router = useRouter();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [schedulesPerPage, setSchedulesPerPage] = useState<number>(20);
   const [testTypeFilter, setTestTypeFilter] = useState<string>("");
   const [dateSortOrder, setDateSortOrder] = useState<string>("ascending");
+  const [scheduletestType, setscheduletestType] = useState<string>("");
   const [dateFilter, setDateFilter] = useState<string>("upcoming");
   const [startDateFilter, setStartDateFilter] = useState<string>("");
-  const [scheduletestType, setscheduletestType] = useState<string>("");
+
   const fetchSchedules = async () => {
     try {
       const response = await fetch(
@@ -153,17 +154,16 @@ function AvailableSchedulesPage() {
 
   return (
     <div>
-       <h1 className="text-2xl font-semibold">Available Schedules</h1>
-
-      <div className="bg-gray-100 p-4 h-22 mb-3">
-      <h3><b>Filter by</b></h3>
-      <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
+      <h1 className="text-2xl font-semibold">Available Schedules</h1>
+      <div className="bg-gray-100 p-4 h-22 mb-5">
+<h3><b>Filter by</b></h3>
+        <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
         <select
           value={testTypeFilter}
           onChange={(e) => setTestTypeFilter(e.target.value)}
           className="px-2 py-1 border rounded w-full sm:w-auto"
         >
-          <option value="">All Course Types</option>
+            <option value=""><b>All Course Types</b></option>
           <option value="GRE">GRE</option>
           <option value="IELTS">IELTS</option>
           <option value="TOEFL">TOEFL</option>
@@ -203,7 +203,10 @@ function AvailableSchedulesPage() {
           className="px-2 py-1 border rounded w-full sm:w-auto"
         />
       </div>
+
       </div>
+
+
       <div className="overflow-x-auto">
         <table className="table-auto w-full border-collapse">
           <thead>
@@ -247,50 +250,12 @@ function AvailableSchedulesPage() {
                 <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                   {schedule && (
                     <button
-                      onClick={() => router.push(`/admin/${schedule?._id}`)}
+                      onClick={() => router.push(`/bdm/${schedule?._id}`)}
                       className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
                     >
                       View Bookings
                     </button>
                   )}
-                  <button
-                    onClick={() =>
-                      toast(
-                        (t) => (
-                          <div className="bg-gray-100 p-4 rounded shadow-lg text-black">
-                            <p className="text-sm">
-                              Are you sure you want to delete the schedule on {new Date(schedule.startDate).toLocaleDateString("en-US", {
-                              month: "long",
-                              day: "2-digit",
-                              year: "numeric",
-                              }).replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}?
-                            </p>
-                            <div className="mt-4 flex justify-center gap-4">
-                              <button
-                                className="px-4 py-2 bg-green-500 hover:bg-green-700 text-white font-bold rounded-lg"
-                                onClick={() => {
-                                  deleteSchedule(schedule._id);
-                                  toast.dismiss(t.id);
-                                }}
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                className="px-4 py-2 bg-red-500 hover:bg-red-700 text-white font-semibold rounded-lg"
-                                onClick={() => toast.dismiss(t.id)}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ),
-                        { id: `delete-${schedule._id}`, duration: 5000 }
-                      )
-                    }
-                    className="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
                 </td>
               </tr>
             ))}
@@ -335,4 +300,4 @@ function AvailableSchedulesPage() {
     </div>
   );
 }
-export default AvailableSchedulesPage;
+export default AvailableSchedulesBDMPage;

@@ -37,7 +37,7 @@ const [filter, setFilter] = useState<string>("");
     present: 0,
     absent: 0,
   });
-  const [emailsSent, setEmailsSentState] = useState<boolean>(false);
+ 
 
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
@@ -271,95 +271,6 @@ const absentCount = Object.values(initialAttendance).filter(
     return `${start} - ${end}`;
   };
   
-  const handleSendMail = async (users: any[], bookings: any[]) => {
-    try {
-      // Check if emails were already sent for this scheduleId
-      if (localStorage.getItem(`emailsSent_${scheduleId}`)) {
-        toast.error("Emails have already been sent for this schedule.");
-        return;
-      }
-  
-      // Ensure users and bookings data are available
-      if (!users.length || !bookings.length) {
-        toast.error("No users or bookings data available.");
-        return;
-      }
-  
-      // Prepare personalized email data
-      const emailData = users
-        .map((user) => {
-          const booking = bookings.find((b) => b.userId.includes(user._id));
-          if (!booking) return null;
-  
-          const examDate = formatExamDate(booking.bookingDate);
-          const examTime = formatExamTime(booking.startTime, booking.endTime);
-  
-          return {
-            email: user.email,
-            subject: "Reminder: Your Mock Test at Luminedge is Tomorrow.",
-            message: `
-              <p>Dear ${user.name},</p>
-              <p>This is a friendly reminder that your mock test is scheduled for tomorrow. Please find the details below:</p>
-              <h3>Test Details:</h3>
-              <p><strong>Test Title:</strong> ${booking.name} ${booking.testType}</p>
-              <p><strong>Test Date:</strong> ${examDate}</p>
-              <p><strong>Test Time:</strong> ${examTime}</p>
-              <p><strong>Reporting Time:</strong> 30 minutes before Test Time</p>
-              <p><strong>Office Address:</strong> Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi 9/A, Dhaka-1205, Bangladesh</p>
-              <h3>Important Instructions:</h3>
-              <ul>
-                <li>Arrive at least 30 minutes before the test time for check-in.</li>
-                <li>Bring a valid photo ID (Passport/NID) that matches the ID information provided at the time of account creation.</li>
-                <li>Candidates must bring their own stationery items (e.g., pens, pencils, erasers) as they will not be provided at the test venue.</li>
-              </ul>
-              <h3>Mock Test Terms & Conditions:</h3>
-              <ul>
-                <li>Purchased or course-provided mock test(s) must be used within 6 months of the MR date.</li>
-                <li>Free mock test(s) must be taken within 10 days of the MR date.</li>
-                <li>Mock test rescheduling requests must be made 24 hours prior to the booked test date.</li>
-                <li>Any mismatch between the provided ID details and the ID shown on the test day may result in test cancellation, and no refunds will be issued in such cases.</li>
-                <li>Late arrivals, no-shows, invalid photo IDs, or expired service validity may result in forfeiting the test, with no refund requests entertained.</li>
-                <li>Students are required to maintain professional behavior with Luminedge employees at all times. Any instance of misbehavior may result in service cancellation, with no refund issued.</li>
-              </ul>
-              <p>To facilitate a smooth check-in process, kindly present your valid photo ID (Passport/NID) voucher to our office executive upon arrival. This step is crucial to confirm your eligibility for the mock test.</p>
-              <p>We sincerely appreciate your cooperation in adhering to these guidelines. Your punctuality and preparedness will contribute to a successful and efficient mock test experience.</p>
-              <p>Thank you for choosing Luminedge for your test preparation needs. If you have any questions or require further assistance, please do not hesitate to contact us.</p>
-              <p><strong>Contact Us:</strong> 📞 01400-406374 | 01400-403475 | 01400-403486 | 01400-403487 | 01400-403493 | 01400-403494</p>
-              <p>We wish you the best for your mock test!</p>
-              <p>Best regards,<br>The Luminedge Team</p>
-            `,
-          };
-        })
-        .filter(Boolean);
-  
-      if (!emailData.length) {
-        toast.error("No valid email data to send.");
-        return;
-      }
-  
-      // Send emails
-      const response = await axios.post("https://luminedge-server.vercel.app/api/v1/send-reminder", {
-        emails: emailData,
-      });
-  
-      if (response.status === 200) {
-        // Mark emails as sent in localStorage
-        localStorage.setItem(`emailsSent_${scheduleId}`, "true");
-        toast.success("Emails sent successfully!");
-      } else {
-        throw new Error(response.data.message || "Failed to send emails.");
-      }
-    } catch (error) {
-      console.error("Error sending emails:", error);
-      toast.error("Failed to send emails.");
-    }
-  };
-  
-  function setEmailsSent(arg0: boolean) {
-    throw new Error("Function not implemented.");
-  }
-  
-
   return (
     <div className="p-4">
       {loading ? (
@@ -419,7 +330,7 @@ const absentCount = Object.values(initialAttendance).filter(
           </div>
   
           {/* Booking Details */}
-          <div className=" mt-2 p-2 rounded shadow grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-2 p-2 rounded shadow grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="mb-4">
               <h2 className="text-lg font-semibold">Booking Details</h2>
               <p>
@@ -485,17 +396,7 @@ const absentCount = Object.values(initialAttendance).filter(
                       {userAttendance[user._id] !== null ? userAttendance[user._id] : "N/A"}
                     </td>
                     <td className="px-4 py-2">
-                      <select
-                        className="px-2 py-1 border rounded text-sm"
-                        value={attendance[user._id] || "N/A"}
-                        onChange={(e) => handleSubmit(user._id, e.target.value)}
-                      >
-                        <option value="N/A" disabled>
-                          Select Attendance
-                        </option>
-                        <option value="present">Present</option>
-                        <option value="absent">Absent</option>
-                      </select>
+                    {attendance[user._id] || "N/A"}
                     </td>
                   </tr>
                 ))}
@@ -512,60 +413,6 @@ const absentCount = Object.values(initialAttendance).filter(
             >
               Download as PDF
             </button>
-  
-            {/* Send Mail Button */}
-          <button
-            onClick={() => {
-              if (typeof window !== "undefined" && 
-                  (emailsSent || localStorage.getItem(`emailsSent_${scheduleId}`))) {
-                toast.error("Emails have already been sent to all users!");
-                return;
-              }
-
-              toast((t) => (
-                <div>
-                  <p className="mb-1">
-                    Are you sure you want to send reminder emails to all users?
-                  </p>
-                  <p className="mb-1">
-                    The exam date is {bookings[0]?.bookingDate || "N/A"}.
-                    The exam time is{" "}
-                    {bookings[0]?.startTime && bookings[0]?.endTime
-                      ? `${bookings[0]?.startTime} - ${bookings[0]?.endTime}`
-                      : "N/A"}.
-                  </p>
-                  <div className="flex justify-center space-x-2">
-                    <button
-                      onClick={() => {
-                        handleSendMail(users, bookings);
-                        setEmailsSentState(true);
-                        if (typeof window !== "undefined") {
-                          localStorage.setItem(`emailsSent_${scheduleId}`, "true");
-                        }
-                        toast.dismiss(t.id);
-                      }}
-                      className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                      Confirm
-                    </button>
-                    <button
-                      onClick={() => toast.dismiss(t.id)}
-                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ));
-            }}
-            className={`px-4 py-2 text-white rounded ${
-              emailsSent || (typeof window !== "undefined" && localStorage.getItem(`emailsSent_${scheduleId}`))
-                ? "bg-black"
-                : "bg-blue-500 hover:bg-blue-600"
-            }`}
-          >
-            Send Reminder Emails
-          </button>
 
           </div>
         </>

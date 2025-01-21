@@ -45,7 +45,11 @@ const LoginPage = () => {
       setTimeout(() => {
         if (user.role === "admin") {
           router.push("/admin/dashboard");
-        } else if (user.role === "user") {
+        }  
+        else if (user.role === "bdm") {
+          router.push("/bdm/dashboard");
+        }
+        else if (user.role === "user") {
           router.push("/dashboard");
         }
       }, 500); // Delay to ensure state update

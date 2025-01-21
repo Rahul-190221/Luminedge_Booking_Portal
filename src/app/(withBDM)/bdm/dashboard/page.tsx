@@ -1,8 +1,9 @@
+
 "use client";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import DonutChart from "@/components/DonutChart";
-import TableAdmin from "@/components/tableAdmin";
+import TableBDM from "@/components/tableBDM";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -136,7 +137,7 @@ const DashboardPage = () => {
 
       <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4 md:p-6">
         
-        <TableAdmin />
+        <TableBDM />
       </div>
     </div>
   );
