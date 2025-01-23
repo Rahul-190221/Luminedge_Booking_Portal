@@ -136,7 +136,7 @@ const Sidebar = () => {
   <FaArrowDown className="text-lg text-yellow-400 flex-shrink-0" />
 </div> */}
   {/* Profile Settings link */}
-  <li
+  {/* <li
   className={`hover:bg-[#FACE39] hover:text-black rounded-full ${
     pathname === "/dashboard/settings" ? "bg-[#FACE39] text-black font-bold" : ""
   }`}
@@ -145,7 +145,7 @@ const Sidebar = () => {
     <IoSettingsOutline className="h-5 w-5 mr-2" />
     <span className="inline">Settings</span>
   </Link>
-  </li>
+  </li> */}
 
 
         </ul>
