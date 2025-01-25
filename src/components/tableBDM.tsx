@@ -50,19 +50,27 @@ const TableBDM = () => {
     fetchUsers();
   }, []);
 
-  // Filter users by status and search term
-  useEffect(() => {
-    let filtered = users;
+// Filter users by status, action, and search term
+useEffect(() => {
+  let filtered = users;
 
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((user) => user.status === statusFilter);
-    }
+  // Filter by status
+  if (statusFilter !== "all") {
+    filtered = filtered.filter((user) => user.status === statusFilter);
+  }
 
-   
+  
 
-    setFilteredUsers(filtered);
-  }, [statusFilter, users]);
+  // Filter by search term
+  if (searchTerm) {
+    filtered = filtered.filter((user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+
+  setFilteredUsers(filtered);
+}, [statusFilter,users, searchTerm]);
+
 
   // Calculate pagination
   const indexOfLastUser = currentPage * usersPerPage;
