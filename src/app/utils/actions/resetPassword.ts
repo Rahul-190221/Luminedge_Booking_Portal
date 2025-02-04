@@ -3,7 +3,7 @@ import { ResetFormValues } from "@/app/reset-password/page";
 export const resetPassword = async (data: ResetFormValues) => {
   console.log("resetPassword", data);
   const response = await fetch(
-    `https://luminedge-server.vercel.app/api/v1/auth/reset-password`,
+    `http://localhost:5000/api/v1/auth/reset-password`,
     {
       method: "PUT",
       headers: {
