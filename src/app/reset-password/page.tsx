@@ -27,27 +27,50 @@ const ResetPasswordPage = ({
 
   const router = useRouter();
 
+  // const onSubmit = async (data: ResetFormValues) => {
+  //   // Handle password reset logic here
+  //   console.log(searchParams);
+  //   data.userId = searchParams.userId;
+  //   data.token = searchParams.token;
+  //   if (data.newPassword !== data.confirmPassword) {
+  //     toast.error("Passwords do not match");
+  //     return;
+  //   }
+  //   try {
+  //     // Assume resetPassword is a function that handles the password reset
+  //     await resetPassword(data);
+  //     toast.success("Password reset successfully");
+  //     localStorage.removeItem("accessToken");
+  //     router.push("/login");
+  //   } catch (error) {
+  //     console.error("Reset error:", error);
+  //     toast.error("An error occurred while resetting password");
+  //   }
+  // };
   const onSubmit = async (data: ResetFormValues) => {
-    // Handle password reset logic here
     console.log(searchParams);
     data.userId = searchParams.userId;
     data.token = searchParams.token;
+  
     if (data.newPassword !== data.confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
+  
     try {
-      // Assume resetPassword is a function that handles the password reset
-      await resetPassword(data);
+      await resetPassword(data); // Call API to reset password
       toast.success("Password reset successfully");
+  
       localStorage.removeItem("accessToken");
-      router.push("/login");
+  
+      // ✅ Redirect to live site explicitly
+      window.location.href = "https://luminedge.io/login";
     } catch (error) {
       console.error("Reset error:", error);
       toast.error("An error occurred while resetting password");
     }
   };
-
+  
   return (
     <div className="my-8 px-4 md:px-8 lg:px-10">
       <div className="card shadow-lg card-body w-full lg:w-[80%] mx-auto">
