@@ -1,10 +1,10 @@
 "use client";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { resetPassword } from "../utils/actions/resetPassword";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export type ResetFormValues = {
   newPassword: string;
@@ -13,41 +13,56 @@ export type ResetFormValues = {
   token: string;
 };
 
-const ResetPasswordPage = ({
-  searchParams,
-}: {
-  searchParams: { userId: string; token: string };
-}) => {
+const ResetPasswordPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<ResetFormValues>();
-
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const userId = searchParams.get("userId");
+  const token = searchParams.get("token");
+
+  useEffect(() => {
+    if (!userId || !token) {
+      toast.error("Invalid or missing reset token!");
+      router.push("/login");
+    }
+  }, [userId, token, router]);
 
   const onSubmit = async (data: ResetFormValues) => {
-    // Handle password reset logic here
-    console.log(searchParams);
-    data.userId = searchParams.userId;
-    data.token = searchParams.token;
+    if (!userId || !token) {
+      toast.error("Invalid or expired token!");
+      return;
+    }
+
+    data.userId = userId;
+    data.token = token;
+
     if (data.newPassword !== data.confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
+
     try {
-      // Assume resetPassword is a function that handles the password reset
-      await resetPassword(data);
-      toast.success("Password reset successfully");
-      localStorage.removeItem("accessToken");
-      window.location.href = "https://luminedge.io/login";
+      const response = await resetPassword(data);
+
+      if (response.success) {
+        toast.success("Password reset successfully!");
+        localStorage.removeItem("accessToken");
+        window.location.href = "/login";
+      } else {
+        toast.error(response.message || "Password reset failed!");
+      }
     } catch (error) {
       console.error("Reset error:", error);
-      toast.error("An error occurred while resetting password");
+      toast.error("An error occurred while resetting the password.");
     }
   };
- 
+
   return (
     <div className="my-8 px-4 md:px-8 lg:px-10">
       <div className="card shadow-lg card-body w-full lg:w-[80%] mx-auto">
@@ -56,6 +71,7 @@ const ResetPasswordPage = ({
             Reset Password
           </h1>
 
+          {/* New Password */}
           <div className="form-control mt-4 mb-3">
             <label className="label">
               <span className="label-text font-bold ml-2">New Password</span>
@@ -66,7 +82,7 @@ const ResetPasswordPage = ({
                   required: "New password is required",
                   minLength: {
                     value: 8,
-                    message: "Password must be at least 6 characters",
+                    message: "Password must be at least 8 characters",
                   },
                 })}
                 type={showPassword ? "text" : "password"}
@@ -88,6 +104,7 @@ const ResetPasswordPage = ({
             </div>
           </div>
 
+          {/* Confirm Password */}
           <div className="form-control mt-4">
             <label className="label">
               <span className="label-text font-bold ml-2">
@@ -99,7 +116,7 @@ const ResetPasswordPage = ({
                 required: "Confirm password is required",
                 minLength: {
                   value: 8,
-                  message: "Password must be at least 6 characters",
+                  message: "Password must be at least 8 characters",
                 },
               })}
               type="password"
