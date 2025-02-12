@@ -160,12 +160,12 @@ const absentCount = Object.values(initialAttendance).filter(
       toast.error("No booking data to download.");
       return;
     }
-
+  
     const bookingToDownload = bookings[0];
-
+  
     const doc = new jsPDF({ orientation: "landscape", format: "a4" });
-
-    doc.setFontSize(12);
+  
+    doc.setFontSize(10);
     doc.text("Booking Details", 10, 15);
     doc.text(`Test Name: ${bookingToDownload.name}`, 10, 20);
     doc.text(`Date: ${bookingToDownload.bookingDate}`, 10, 25);
@@ -174,7 +174,7 @@ const absentCount = Object.values(initialAttendance).filter(
       10,
       30
     );
-
+  
     autoTable(doc, {
       head: [
         [
@@ -191,30 +191,54 @@ const absentCount = Object.values(initialAttendance).filter(
           "Attendance",
         ],
       ],
-      body: users.map((user, index) => [
-        index + 1,
-        user?.name || "N/A",
-        user?.email || "N/A",
-        user?.contactNo || "N/A",
-        user?.transactionId || "N/A",
-        user?.passportNumber || "N/A",
-        bookings.find((booking) => booking.userId.includes(user._id))?.testType || "N/A",
-        bookings.find((booking) => booking.userId.includes(user._id))?.testSystem || "N/A",
-        user?.totalMock || "N/A",
-        userAttendance[user._id] !== null ? userAttendance[user._id] : "N/A",
-        attendance[user._id] || "N/A",
-      ]),
+      body: users.map((user, index) => {
+        let userId = user._id;
+        if (Array.isArray(userId)) {
+          userId = userId[0]; // Take the first user ID if it's an array
+        }
+  
+        const relatedBooking = bookings.find(
+          (booking) => booking.userId === userId
+        );
+  
+        return [
+          index + 1,
+          user?.name || "N/A",
+          user?.email || "N/A",
+          user?.contactNo || "N/A",
+          user?.transactionId || "N/A",
+          user?.passportNumber || "N/A",
+          relatedBooking?.testType || "N/A",
+          relatedBooking?.testSystem || "N/A",
+          user?.totalMock || "N/A",
+          userAttendance[userId] !== null ? userAttendance[userId] : "N/A",
+          attendance[userId] || "N/A",
+        ];
+      }),
       theme: "grid",
-      styles: { fontSize: 10 },
+      styles: { fontSize: 10, overflow: "linebreak" },
       headStyles: { fillColor: "#face39" },
+      columnStyles: {
+        0: { cellWidth: 10 }, // List #
+        1: { cellWidth: 35 }, // User Name
+        2: { cellWidth: 53 }, // Email
+        3: { cellWidth: 26 }, // Phone
+        4: { cellWidth: 25 }, // Transaction ID
+        5: { cellWidth: 25 }, // Passport Number
+        6: { cellWidth: 25 }, // Test Type
+        7: { cellWidth: 25 }, // Test System
+        8: { cellWidth: 22 }, // Purchased
+        9: { cellWidth: 15 }, // Attend
+        10: { cellWidth: 23 }, // Attendance
+      },
       margin: { top: 35 },
       tableWidth: "auto",
     });
-
+  
     const currentDate = new Date().toISOString().split("T")[0];
     doc.save(`booking_requests_${currentDate}.pdf`);
   };
-
+  
   if (!scheduleId) {
     return <div>No Schedule ID provided.</div>;
   }

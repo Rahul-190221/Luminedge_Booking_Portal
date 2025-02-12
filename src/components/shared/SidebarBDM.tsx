@@ -17,6 +17,7 @@ import { RxAvatar } from "react-icons/rx";
 import { FaArrowDown } from "react-icons/fa";
 import { IoMailOutline, IoSettingsOutline, IoHomeOutline } from "react-icons/io5"; // Import the icons
 import { AiOutlineHome } from "react-icons/ai"; // Import Home icon
+import { RiHomeOfficeFill } from "react-icons/ri"; // Importing the correct icon
 
 const SidebarAdmin = () => {
   const [isOpen, setIsOpen] = useState(false); // State for mobile toggle
@@ -154,19 +155,16 @@ const SidebarAdmin = () => {
               <span className="inline">All Users</span>
             </Link>
           </li>
-            {/* Email Menu Item */}
-    {/* <li
-      className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-        pathname === ""
-          ? "bg-[#FACE39] text-black font-bold rounded-full"
-          : ""
-      }`}
-    >
-      <Link href="" className="flex items-center px-4 py-3">
-        <IoMailOutline className="h-5 w-5 mr-2" />
-        <span className="inline">Email</span>
-      </Link>
-    </li> */}
+      {/* Home Based Booking */}
+<li className={`flex justify-center transition-all duration-200 
+  ${ pathname === "/bdm/homebasedbdm" ? "bg-[#FACE39] text-black font-bold rounded-full"
+                  : ""
+              }`}>
+  <Link href="/bdm/homebasedbdm" className="flex items-center px-4 py-3">
+    <RiHomeOfficeFill className="h-5 w-5 mr-2" /> {/* Replaced the icon here */}
+    <span className="inline">Home Based Booking</span>
+  </Link>
+</li>
 
           {/* <li
             className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
