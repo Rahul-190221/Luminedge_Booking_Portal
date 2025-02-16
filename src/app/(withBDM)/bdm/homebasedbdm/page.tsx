@@ -38,7 +38,7 @@ type Schedule = {
   location?: string;
 };
 
-export default function HomeBasedPage() {
+function HomeBasedPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<Record<string, any>>({}); // Store user details by userId
   const [userAttendance, setUserAttendance] = useState<{ [key: string]: number | null }>({});
@@ -494,3 +494,5 @@ export default function HomeBasedPage() {
     </div>
   );
 }
+
+export default HomeBasedPage;
