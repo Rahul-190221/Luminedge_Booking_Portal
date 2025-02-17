@@ -14,7 +14,7 @@ type Booking = {
   testSystem: string;
   location: string;
   bookingDate: string;
-  startTime: string;
+  startTime?: string;
   testTime?: string;
   endTime: string;
   userId: string;
@@ -38,10 +38,10 @@ type Schedule = {
   location?: string;
 };
 
-function HomeBasedPage() {
+export default function HomeBasedPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<Record<string, any>>({}); // Store user details by userId
-  const [userAttendance, setUserAttendance] = useState<{ [key: string]: number | null }>({});
+  const [userAttendance, setUserAttendance] = useState<{ [key: string]: { present: number; absent: number } }>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attendance, setAttendance] = useState<Record<string, string>>({});
@@ -54,74 +54,156 @@ function HomeBasedPage() {
   const [dateFilter, setDateFilter] = useState("all");
   const [startDateFilter, setStartDateFilter] = useState("");
 
+  // const fetchUsersAndAttendance = async () => {
+  //   try {
+  //     const usersResponse = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");
+  
+  //     if (!usersResponse.data || !usersResponse.data.users) {
+  //       throw new Error("No users found");
+  //     }
+  
+  //     // Convert users array to a map for easy access
+  //     const usersMap: Record<string, any> = {};
+  //     usersResponse.data.users.forEach((user: any) => {
+  //       usersMap[user._id] = user;
+  //     });
+  
+  //     setUsers(usersMap);
+  
+  //     // ✅ Fetch Attendance Data for Each User and Store in `userAttendance`
+  //     const newAttendanceData: Record<string, number | null> = {};
+  
+  //     await Promise.all(
+  //       usersResponse.data.users.map(async (user: any) => {
+  //         try {
+  //           const response = await axios.get(
+  //             `https://luminedge-server.vercel.app/api/v1/user/attendance/${user._id}`
+  //           );
+  //           newAttendanceData[user._id] = response.data.attendance || null; // Store attendance as null if not available
+  //         } catch (error) {
+  //           console.error(`Error fetching attendance for user ${user._id}:`, error);
+  //           newAttendanceData[user._id] = null; // Default to null if an error occurs
+  //         }
+  //       })
+  //     );
+  
+  //     setUserAttendance(newAttendanceData); // ✅ Update state properly
+  //   } catch (error: any) {
+  //     toast.error(error.message || "Error fetching users and attendance");
+  //     console.error(error);
+  //   }
+  // };
+  
+  // // Fetch Home Bookings
+  // const fetchHomeBasedBookings = useCallback(async () => {
+  //   setLoading(true);
+  //   setError(null);
+  //   try {
+  //     const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings");
+  //     if (!response.data || !response.data.bookings) {
+  //       throw new Error("No bookings found");
+  //     }
 
-  const fetchUsersAndAttendance = async () => {
-    try {
-      const usersResponse = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");
-  
-      if (!usersResponse.data || !usersResponse.data.users) {
-        throw new Error("No users found");
-      }
-  
-      // Convert users array to a map for easy access
-      const usersMap: Record<string, any> = {};
-      usersResponse.data.users.forEach((user: any) => {
-        usersMap[user._id] = user;
-      });
-  
-      setUsers(usersMap);
-  
-      // ✅ Fetch Attendance Data for Each User and Store in `userAttendance`
-      const newAttendanceData: Record<string, number | null> = {};
-  
-      await Promise.all(
-        usersResponse.data.users.map(async (user: any) => {
-          try {
-            const response = await axios.get(
-              `https://luminedge-server.vercel.app/api/v1/user/attendance/${user._id}`
-            );
-            newAttendanceData[user._id] = response.data.attendance || null; // Store attendance as null if not available
-          } catch (error) {
-            console.error(`Error fetching attendance for user ${user._id}:`, error);
-            newAttendanceData[user._id] = null; // Default to null if an error occurs
-          }
-        })
-      );
-  
-      setUserAttendance(newAttendanceData); // ✅ Update state properly
-    } catch (error: any) {
-      toast.error(error.message || "Error fetching users and attendance");
-      console.error(error);
+  //     const homeBasedBookings = response.data.bookings
+  //       .filter((booking: Booking) => booking.location === "Home")
+  //       .sort((a: Booking, b: Booking) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime());
+
+  //     setBookings(homeBasedBookings);
+  //   } catch (error: any) {
+  //     setError(error.message || "Error fetching Home bookings");
+  //     toast.error(error.message || "Error fetching bookings");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, []);
+
+  // useEffect(() => {
+  //   fetchUsersAndAttendance(); // Fetch users and attendance first
+  //   fetchHomeBasedBookings(); // Fetch bookings after users
+  // }, [fetchHomeBasedBookings]);
+// Fetch Home-Based Bookings & Users
+const fetchHomeBookingsAndUsers = useCallback(async () => {
+  setLoading(true);
+  setError(null);
+
+  try {
+    const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings");
+
+    if (!response.data || !response.data.bookings) {
+      throw new Error("No bookings found");
     }
-  };
-  
-  // Fetch Home Bookings
-  const fetchHomeBasedBookings = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings");
-      if (!response.data || !response.data.bookings) {
-        throw new Error("No bookings found");
-      }
 
-      const homeBasedBookings = response.data.bookings
-        .filter((booking: Booking) => booking.location === "Home")
-        .sort((a: Booking, b: Booking) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime());
+    // Filter home-based bookings
+    const homeBasedBookings = response.data.bookings.filter(
+      (booking: Booking) => booking.location === "Home"
+    );
 
-      setBookings(homeBasedBookings);
-    } catch (error: any) {
-      setError(error.message || "Error fetching Home bookings");
-      toast.error(error.message || "Error fetching bookings");
-    } finally {
+    if (homeBasedBookings.length === 0) {
+      setBookings([]);
+      setUsers({});
+      setUserAttendance({});
       setLoading(false);
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    fetchUsersAndAttendance(); // Fetch users and attendance first
-    fetchHomeBasedBookings(); // Fetch bookings after users
-  }, [fetchHomeBasedBookings]);
+    // Extract unique user IDs
+    const uniqueUserIds = Array.from(new Set(homeBasedBookings.map((booking : Booking) => booking.userId)));
+
+    if (uniqueUserIds.length === 0) {
+      setUsers({});
+      setUserAttendance({});
+      setLoading(false);
+      return;
+    }
+
+    // Fetch only the unique users
+    const usersResponse = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");
+    const usersData = usersResponse.data;
+
+    if (!usersData || !usersData.users) {
+      throw new Error("No users found");
+    }
+
+    // Store users in an object for fast lookup
+    const usersMap: { [key: string]: any } = {};
+    usersData.users.forEach((user: any) => {
+      if (uniqueUserIds.includes(user._id)) {
+        usersMap[user._id] = user;
+      }
+    });
+
+    // Calculate attendance counts for each user
+    const attendanceSummary: { [key: string]: { present: number; absent: number } } = {};
+    homeBasedBookings.forEach((booking :  Booking) => {
+      const userId = booking.userId;
+      const status = booking.attendance || "N/A";
+
+      if (!attendanceSummary[userId]) {
+        attendanceSummary[userId] = { present: 0, absent: 0 };
+      }
+
+      if (status === "present") {
+        attendanceSummary[userId].present += 1;
+      } else if (status === "absent") {
+        attendanceSummary[userId].absent += 1;
+      }
+    });
+
+    // ✅ Update states
+    setBookings(homeBasedBookings);
+    setUsers(usersMap);
+    setUserAttendance(attendanceSummary); // ✅ Now matches the correct type
+  } catch (error: any) {
+    setError(error.message || "Error fetching home bookings and users");
+    toast.error(error.message || "Error fetching home bookings and users");
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
+useEffect(() => {
+  fetchHomeBookingsAndUsers();
+}, [fetchHomeBookingsAndUsers]);
 
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -132,65 +214,11 @@ function HomeBasedPage() {
     return `${day} ${month}, ${year}`;
   };
   
-  const handleSubmit = async (
-    scheduleId: string, // "Home" for Home, actual scheduleId for On-Campus
-    userId: string,
-    attendanceValue: string,
-    location: string,
-    bookingDate?: string // Optional for On-Campus, required for Home
-  ) => {
-    try {
-      // Validate input
-      if (!userId || !attendanceValue) {
-        toast.error("Invalid attendance update request.");
-        return;
-      }
-  
-      // 🏡 Ensure bookingDate is present for Home
-      if (scheduleId === "Home" && !bookingDate) {
-        toast.error("Booking date is required for Home bookings.");
-        return;
-      }
-  
-      // ✅ Define request payload
-      const requestBody: Record<string, any> = {
-        userId,
-        attendance: attendanceValue,
-        status: attendanceValue === "present" ? "Present" : "Absent",
-        ...(scheduleId === "Home" && bookingDate ? { bookingDate } : {}), // Include bookingDate only if Home
-      };
-  
-      console.log("📤 Sending request to backend:", requestBody);
-  
-      // ✅ Send API request
-      const response = await axios.put(
-        `https://luminedge-server.vercel.app/api/v1/user/bookings/${scheduleId}`,
-        requestBody
-      );
-  
-      if (response.status !== 200) {
-        throw new Error(response.data.message || "Failed to update attendance.");
-      }
-  
-      // ✅ Update attendance in the UI
-      setAttendance((prev) => ({
-        ...prev,
-        [userId]: attendanceValue,
-      }));
-  
-      // ✅ Show success message
-      toast.success("Attendance updated successfully!");
-  
-      console.log("✅ Attendance updated:", response.data);
-    } catch (error: any) {
-      console.error("❌ Error updating attendance:", error);
-      toast.error(error.response?.data?.message || "Failed to update attendance.");
-    }
-  };
-
-  
+ 
   const confirmDownload = () => {
-    if (!filteredBookings.length) {
+    const flattenedBookings = Object.values(filteredBookings).flat(); // Ensure it's an array
+  
+    if (!flattenedBookings.length) {
       toast.error("No booking data to download.");
       return;
     }
@@ -201,7 +229,7 @@ function HomeBasedPage() {
     doc.setFontSize(14);
     doc.text("Booking Report", 14, 15);
     doc.setFontSize(10);
-    doc.text(`Total Records: ${filteredBookings.length}`, 14, 22);
+    doc.text(`Total Records: ${flattenedBookings.length}`, 14, 22);
     doc.text(`Generated On: ${new Date().toLocaleString()}`, 14, 28);
   
     // ✅ Table Headers
@@ -214,9 +242,10 @@ function HomeBasedPage() {
           "Purchased", "Attend"
         ]
       ],
-      body: filteredBookings.map((booking, index) => {
-        const user = users[booking.userId] || {};
-  
+      body: flattenedBookings.map((booking, index) => {
+        const user = users[booking.userId] || {}; // Fetch user data
+        const userId = booking.userId; // Extract user ID
+      
         return [
           index + 1,
           user?.name || "N/A",
@@ -231,10 +260,10 @@ function HomeBasedPage() {
           user?.transactionId || "N/A",
           user?.passportNumber || "N/A",
           user?.totalMock || "N/A",
-          userAttendance[booking.userId] !== null ? userAttendance[booking.userId] : "N/A",
-         
+          userAttendance[userId] ? userAttendance[userId].present + userAttendance[userId].absent : "N/A",
         ];
       }),
+      
       startY: 25,
       styles: { fontSize: 7, overflow: "linebreak" },
       headStyles: { fillColor: "#face39", textColor: "#000" },
@@ -253,7 +282,6 @@ function HomeBasedPage() {
         11: { cellWidth: 22 },  // Passport Number
         12: { cellWidth: 17 },  // Purchased
         13: { cellWidth: 15 },  // Attend
-        
       },
       margin: { top: 20 },
       theme: "grid",
@@ -263,48 +291,56 @@ function HomeBasedPage() {
     const currentDate = new Date().toISOString().split("T")[0];
     doc.save(`booking_report_${currentDate}.pdf`);
   };
-
-  // Filter Bookings
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((booking) => {
-      const user = users[booking.userId] || {};
   
+ // Filter Bookings
+const filteredBookings = useMemo(() => {
+  return bookings
+    .filter((booking) => {
+      const user = users[booking.userId] || {};
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-  
+
       const bookingDate = new Date(booking.bookingDate);
       bookingDate.setHours(0, 0, 0, 0);
-  
+
       // Test type filter
       if (testTypeFilter && booking.name !== testTypeFilter) return false;
 
-
-  
       // Filter by date category (past, upcoming, all)
       if (dateFilter === "past" && bookingDate >= today) return false;
       if (dateFilter === "upcoming" && bookingDate < today) return false;
-  
+
       // Filter by start date
       if (startDateFilter) {
         const filterDate = new Date(startDateFilter);
         filterDate.setHours(0, 0, 0, 0);
         if (bookingDate.getTime() !== filterDate.getTime()) return false;
       }
-  
+
       // Filter by user name (case-insensitive)
       if (nameFilter && !user.name?.toLowerCase().includes(nameFilter.toLowerCase())) return false;
-  
+
       // Filter by course name
       if (courseNameFilter && !booking.name?.toLowerCase().includes(courseNameFilter.toLowerCase())) return false;
-  
+
       return true;
-    });
-  }, [bookings, testTypeFilter, dateFilter, startDateFilter, nameFilter, courseNameFilter]);
-  
-  const indexOfLastSchedule = currentPage * schedulesPerPage;
-  const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;
-  const currentSchedules = filteredBookings.slice(indexOfFirstSchedule, indexOfLastSchedule);
-  
+    })
+    .sort((a, b) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime()) // ✅ Sort by date (Ascending)
+    .reduce((acc: Record<string, Booking[]>, booking) => {
+      const dateKey = formatDate(booking.bookingDate); // Group by formatted date (e.g., "17 February, 2025")
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(booking);
+      return acc;
+    }, {});
+}, [bookings, testTypeFilter, dateFilter, startDateFilter, nameFilter, courseNameFilter]);
+
+const indexOfLastSchedule = currentPage * schedulesPerPage;
+const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;
+const currentSchedules = Object.values(filteredBookings).flat().slice(indexOfFirstSchedule, indexOfLastSchedule);
+
 
   function formatTime(time: string) {
     const [hour, minute] = time.split(":").map(Number);
@@ -312,6 +348,8 @@ function HomeBasedPage() {
     const formattedHour = hour % 12 || 12;
     return `${formattedHour}:${minute.toString().padStart(2, "0")} ${period}`;
   }
+
+
   return (
     <div className="p-4 w-full max-w-7xl mx-auto overflow-x-auto">
 <div className="bg-gray-100 p-8 h-auto mb-3 rounded shadow-sm">
@@ -396,8 +434,8 @@ function HomeBasedPage() {
       </tr>
     </thead>
     <tbody>
-      {filteredBookings.length > 0 ? (
-        filteredBookings.map((booking, index) => {
+      {Object.values(filteredBookings).flat().length > 0 ? (
+        Object.values(filteredBookings).flat().map((booking: Booking, index: number) => {
           const user = users[booking.userId] || {};
           return (
             <tr key={booking._id} className="text-center border-b text-sm">
@@ -410,7 +448,6 @@ function HomeBasedPage() {
               <td className="p-4">{formatDate(booking.bookingDate)}</td>
               <td className="p-4">
   {booking.location === "Home"
-
     ? booking.testTime
       ? formatTime(booking.testTime)  // ✅ Use testTime for Home
       : "N/A"
@@ -418,15 +455,14 @@ function HomeBasedPage() {
     ? formatTime(booking.startTime)   // ✅ Use startTime for Test Center
     : "N/A"}
 </td>
-
               <td className="p-4">{user.email || "N/A"}</td>
               <td className="p-4">{user.contactNo || "N/A"}</td>
               <td className="p-4">{user.transactionId || "N/A"}</td>
               <td className="p-4">{user.passportNumber || "N/A"}</td>
               <td className="p-4">{user.totalMock || 0}</td>
               <td className="px-4 py-2 text-sm">
-  {userAttendance[booking.userId] !== undefined && userAttendance[booking.userId] !== null
-    ? userAttendance[booking.userId] 
+  {userAttendance[user._id] 
+    ? userAttendance[user._id].present + userAttendance[user._id].absent 
     : "N/A"}
 </td>
 
@@ -479,11 +515,11 @@ function HomeBasedPage() {
             Previous
           </button>
           <span className="mx-2">
-  Page {currentPage} / {Math.ceil(filteredBookings.length / schedulesPerPage)}
+  Page {currentPage} / {Math.ceil(Object.values(filteredBookings).flat().length / schedulesPerPage)}
 </span>
 <button
   onClick={() => setCurrentPage((prev) => prev + 1)}
-  disabled={indexOfLastSchedule >= filteredBookings.length}
+  disabled={indexOfLastSchedule >= Object.values(filteredBookings).flat().length}
   className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
 >
   Next
@@ -494,5 +530,3 @@ function HomeBasedPage() {
     </div>
   );
 }
-
-export default HomeBasedPage;

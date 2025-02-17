@@ -39,87 +39,245 @@ const [filter, setFilter] = useState<string>("");
   });
   const [emailsSent, setEmailsSentState] = useState<boolean>(false);
 
-  const fetchBookingsAndUsers = useCallback(async () => {
-    if (!scheduleId) return;
+//   const fetchBookingsAndUsers = useCallback(async () => {
+//     if (!scheduleId) return;
 
-    try {
-      setLoading(true);
+//     try {
+//       setLoading(true);
 
-      const bookingsResponse = await axios.get(
-        `https://luminedge-server.vercel.app/api/v1/admin/bookings`
-      );
-      const bookingsData = bookingsResponse.data;
+//       const bookingsResponse = await axios.get(
+//         `https://luminedge-server.vercel.app/api/v1/admin/bookings`
+//       );
+//       const bookingsData = bookingsResponse.data;
 
-      const filteredBookings = bookingsData.bookings.filter(
-        (booking: Booking) => booking.scheduleId === scheduleId
-      );
+//       const filteredBookings = bookingsData.bookings.filter(
+//         (booking: Booking) => booking.scheduleId === scheduleId
+//       );
 
-      const userIds = Array.from(
-        new Set(
-          filteredBookings.flatMap((booking: { userId: any }) =>
-            Array.isArray(booking.userId) ? booking.userId : [booking.userId]
-          )
+//       const userIds = Array.from(
+//         new Set(
+//           filteredBookings.flatMap((booking: { userId: any }) =>
+//             Array.isArray(booking.userId) ? booking.userId : [booking.userId]
+//           )
+//         )
+//       );
+
+//       const usersResponse = await axios.get(
+//         `https://luminedge-server.vercel.app/api/v1/admin/users`
+//       );
+//       const usersData = usersResponse.data;
+
+//       const matchedUsers = usersData?.users?.filter((user: any) =>
+//         userIds.includes(user?._id)
+//       );
+
+//       const initialAttendance: { [key: string]: string } = {};
+//       filteredBookings.forEach((booking: { userId: any[] | string; attendance: string }) => {
+//         if (Array.isArray(booking.userId)) {
+//           booking.userId.forEach((id) => {
+//             initialAttendance[id] = booking.attendance || "N/A";
+//           });
+//         } else {
+//           initialAttendance[booking.userId] = booking.attendance || "N/A";
+//         }
+//       });
+// // Calculate attendance counts
+// const presentCount = Object.values(initialAttendance).filter(
+//   (status) => status === "present"
+// ).length;
+// const absentCount = Object.values(initialAttendance).filter(
+//   (status) => status === "absent"
+// ).length;
+
+//       setBookings(filteredBookings);
+//       setUsers(matchedUsers);
+//       setAttendance(initialAttendance);
+//       setAttendanceCounts({ present: presentCount, absent: absentCount });
+//       // Fetch individual user attendance
+//       const attendanceData: Record<string, number | null> = {};
+//       await Promise.all(
+//         userIds.map(async (userId) => {
+//           try {
+//             const response = await axios.get(
+//               `https://luminedge-server.vercel.app/api/v1/user/attendance/${userId}`
+//             );
+//             attendanceData[userId as string] = response.data.attendance || 0;
+//           } catch (error) {
+//             console.error(`Error fetching attendance for user ${userId}:`, error);
+//             attendanceData[userId as string] = null;
+//           }
+//         })
+//       );
+//       setUserAttendance(attendanceData);
+//     } catch (error) {
+//       toast.error("Error fetching data. Please try again.");
+//       console.error(error);
+//     } finally {
+//       setLoading(false);
+//     }
+//   }, [scheduleId]);
+
+//   useEffect(() => {
+//     fetchBookingsAndUsers();
+//   }, [fetchBookingsAndUsers]);
+// const fetchBookingsAndUsers = useCallback(async () => {
+//   if (!scheduleId) return;
+
+//   try {
+//     setLoading(true);
+
+//     // Fetch bookings
+//     const { data: bookingsData } = await axios.get(`https://luminedge-server.vercel.app/api/v1/admin/bookings`);
+//     const filteredBookings = bookingsData.bookings.filter(
+//       (booking: Booking) => booking.scheduleId === scheduleId
+//     );
+
+//  // Define the correct type for `booking`
+// const userIds: string[] = Array.from(
+//   new Set<string>(
+//     filteredBookings.flatMap((booking: { userId: string | string[] }) =>
+//       Array.isArray(booking.userId) ? booking.userId : [booking.userId]
+//     )
+//   )
+// );
+
+
+
+//     // Fetch users (only filtered ones)
+//     const { data: usersData } = await axios.get(`https://luminedge-server.vercel.app/api/v1/admin/users`);
+//     const matchedUsers = usersData.users.filter((user: any) => userIds.includes(user._id));
+
+//     // Initialize attendance mapping
+//     const initialAttendance: Record<string, string> = {};
+//     filteredBookings.forEach((booking : Booking) => {
+//       const ids = Array.isArray(booking.userId) ? booking.userId : [booking.userId];
+//       ids.forEach((id: string) => {
+//         initialAttendance[id] = booking.attendance || "N/A";
+//       });
+//     });
+
+//     // Calculate attendance counts
+//     const presentCount = Object.values(initialAttendance).filter(status => status === "present").length;
+//     const absentCount = Object.values(initialAttendance).filter(status => status === "absent").length;
+
+//     setBookings(filteredBookings);
+//     setUsers(matchedUsers);
+//     setAttendance(initialAttendance);
+//     setAttendanceCounts({ present: presentCount, absent: absentCount });
+
+//     // Fetch attendance for only the unique user IDs
+//     if (userIds.length > 0) {
+//       try {
+//         const { data: attendanceResponse } = await axios.post(
+//           `https://luminedge-server.vercel.app/api/v1/user/attendance/bulk`, 
+//           { userIds } // Assuming your API supports bulk fetching
+//         );
+
+//         // Map attendance data
+//         const attendanceData: Record<string, number | null> = {};
+//         userIds.forEach((userId: string) => {
+//           attendanceData[userId] = attendanceResponse.attendance?.[userId] ?? null;
+//         });
+
+//         setUserAttendance(attendanceData);
+//       } catch (error) {
+//         console.error("Error fetching bulk attendance:", error);
+//       }
+//     }
+
+//   } catch (error) {
+//     toast.error("Error fetching data. Please try again.");
+//     console.error(error);
+//   } finally {
+//     setLoading(false);
+//   }
+// }, [scheduleId]);
+
+// useEffect(() => {
+//   fetchBookingsAndUsers();
+// }, [fetchBookingsAndUsers]);
+
+const fetchBookingsAndUsers = useCallback(async () => {
+  if (!scheduleId) return;
+
+  try {
+    setLoading(true);
+
+    // Fetch all bookings
+    const { data: bookingsData } = await axios.get(`https://luminedge-server.vercel.app/api/v1/admin/bookings`);
+    const filteredBookings = bookingsData.bookings.filter(
+      (booking: Booking) => booking.scheduleId === scheduleId
+    );
+
+    // Extract unique user IDs
+    const userIds: string[] = Array.from(
+      new Set(
+        filteredBookings.flatMap((booking: { userId: string | string[] }) =>
+          Array.isArray(booking.userId) ? booking.userId : [booking.userId]
         )
-      );
+      )
+    );
 
-      const usersResponse = await axios.get(
-        `https://luminedge-server.vercel.app/api/v1/admin/users`
-      );
-      const usersData = usersResponse.data;
+    // Fetch only necessary users
+    const { data: usersData } = await axios.get(`https://luminedge-server.vercel.app/api/v1/admin/users`);
+    const matchedUsers = usersData.users.filter((user: any) => userIds.includes(user._id));
 
-      const matchedUsers = usersData?.users?.filter((user: any) =>
-        userIds.includes(user?._id)
-      );
-
-      const initialAttendance: { [key: string]: string } = {};
-      filteredBookings.forEach((booking: { userId: any[] | string; attendance: string }) => {
-        if (Array.isArray(booking.userId)) {
-          booking.userId.forEach((id) => {
-            initialAttendance[id] = booking.attendance || "N/A";
-          });
-        } else {
-          initialAttendance[booking.userId] = booking.attendance || "N/A";
-        }
+    // Initialize attendance mapping
+    const initialAttendance: Record<string, string> = {};
+    filteredBookings.forEach((booking: Booking) => {
+      const ids = Array.isArray(booking.userId) ? booking.userId : [booking.userId];
+      ids.forEach((id: string) => {
+        initialAttendance[id] = booking.attendance || "N/A";
       });
-// Calculate attendance counts
-const presentCount = Object.values(initialAttendance).filter(
-  (status) => status === "present"
-).length;
-const absentCount = Object.values(initialAttendance).filter(
-  (status) => status === "absent"
-).length;
+    });
 
-      setBookings(filteredBookings);
-      setUsers(matchedUsers);
-      setAttendance(initialAttendance);
-      setAttendanceCounts({ present: presentCount, absent: absentCount });
-      // Fetch individual user attendance
-      const attendanceData: Record<string, number | null> = {};
-      await Promise.all(
-        userIds.map(async (userId) => {
-          try {
-            const response = await axios.get(
-              `https://luminedge-server.vercel.app/api/v1/user/attendance/${userId}`
-            );
-            attendanceData[userId as string] = response.data.attendance || 0;
-          } catch (error) {
-            console.error(`Error fetching attendance for user ${userId}:`, error);
-            attendanceData[userId as string] = null;
-          }
-        })
-      );
-      setUserAttendance(attendanceData);
-    } catch (error) {
-      toast.error("Error fetching data. Please try again.");
-      console.error(error);
-    } finally {
-      setLoading(false);
+    // Calculate attendance counts
+    const presentCount = Object.values(initialAttendance).filter(status => status === "present").length;
+    const absentCount = Object.values(initialAttendance).filter(status => status === "absent").length;
+
+    setBookings(filteredBookings);
+    setUsers(matchedUsers);
+    setAttendance(initialAttendance);
+    setAttendanceCounts({ present: presentCount, absent: absentCount });
+
+    // 🚀 Fetch attendance in **one** bulk request (instead of multiple API calls)
+    if (userIds.length > 0) {
+      try {
+        const { data: attendanceResponse } = await axios.post(
+          `https://luminedge-server.vercel.app/api/v1/user/attendance/bulk`, 
+          { userIds }, // Backend should support bulk fetching
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        // Map attendance data
+        const attendanceData: Record<string, number | null> = {};
+        userIds.forEach((userId: string) => {
+          attendanceData[userId] = attendanceResponse.attendance?.[userId] ?? null;
+        });
+
+        setUserAttendance(attendanceData);
+      } catch (error) {
+        console.error("Error fetching bulk attendance:", error);
+        if (axios.isAxiosError(error) && error.response) {
+          toast.error(`Attendance API error: ${error.response.data.message || "Check the API"}`);
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
+      }
     }
-  }, [scheduleId]);
 
-  useEffect(() => {
-    fetchBookingsAndUsers();
-  }, [fetchBookingsAndUsers]);
+  } catch (error) {
+    toast.error("Error fetching data. Please try again.");
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+}, [scheduleId]);
+
+useEffect(() => {
+  fetchBookingsAndUsers();
+}, [fetchBookingsAndUsers]);
+
 
   const handleSubmit = async (userId: string, attendanceValue: string) => {
     try {
