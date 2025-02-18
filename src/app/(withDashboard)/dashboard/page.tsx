@@ -1,8 +1,8 @@
 "use client";
 import { getUserIdFromToken } from "@/app/helpers/jwt";
 import axios from "axios";
-import { useEffect, useState } from "react";
 
+import { useEffect, useState, useCallback } from "react";
 import Table from "@/components/table";
 import Link from "next/link";
 
@@ -11,20 +11,73 @@ const DashboardPage = () => {
   const [userData, setUserData] = useState<any>(null);
   const [userAttendance, setUserAttendance] = useState<any>(null);
 
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const userIdFromToken = await getUserIdFromToken();
+
+  //       if (userIdFromToken) {
+  //         setUserId(userIdFromToken.userId);
+  //         const response = await axios.get(
+  //           `https://luminedge-server.vercel.app/api/v1/user/${userIdFromToken.userId}`
+  //         );
+  //         setUserData(response.data);
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching data:", error);
+  //       setUserData(null);
+  //     }
+  //   };
+
+  //   fetchData();
+  // }, []);
+
+  // useEffect(() => {
+  //   if (userId) {
+  //     const fetchAttendance = async () => {
+  //       try {
+  //         const response = await axios.get(
+  //           `https://luminedge-server.vercel.app/api/v1/user/attendance/${userId}`
+  //         );
+  //         setUserAttendance(response.data); // {attendance:4}
+  //       } catch (error) {
+  //         console.error("Error fetching attendance:", error);
+  //         setUserAttendance(null);
+  //       }
+  //     };
+
+  //     fetchAttendance();
+  //   }
+  // }, [userId]); // Only run this effect when userId changes
+
+  // if (!userData || !userData.user) {
+  //   return (
+  //     <div className="flex items-center justify-center h-screen">
+  //       Loading...
+  //     </div>
+  //   );
+  // }
+  // ✅ Fetch user data
   useEffect(() => {
     const fetchData = async () => {
       try {
         const userIdFromToken = await getUserIdFromToken();
-
         if (userIdFromToken) {
-          setUserId(userIdFromToken.userId);
+          const userId = userIdFromToken.userId;
+          setUserId(userId);
+
           const response = await axios.get(
-            `https://luminedge-server.vercel.app/api/v1/user/${userIdFromToken.userId}`
+            `https://luminedge-server.vercel.app/api/v1/user/${userId}`
           );
-          setUserData(response.data);
+
+          if (response.data && response.data.user) {
+            setUserData(response.data);
+          } else {
+            throw new Error("User data not found");
+          }
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("❌ Error fetching user data:", error);
         setUserData(null);
       }
     };
@@ -32,24 +85,31 @@ const DashboardPage = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    if (userId) {
-      const fetchAttendance = async () => {
-        try {
-          const response = await axios.get(
-            `https://luminedge-server.vercel.app/api/v1/user/attendance/${userId}`
-          );
-          setUserAttendance(response.data); // {attendance:4}
-        } catch (error) {
-          console.error("Error fetching attendance:", error);
-          setUserAttendance(null);
-        }
-      };
+  // ✅ Fetch attendance only when userId is available
+  const fetchAttendance = useCallback(async () => {
+    if (!userId) return;
 
-      fetchAttendance();
+    try {
+      const response = await axios.post(
+        `https://luminedge-server.vercel.app/api/v1/user/attendance/bulk`,
+        { userIds: [userId] }
+      );
+
+      // ✅ Extract attendance count for the specific user
+      const attendanceCount = response.data.attendance?.[userId] || 0;
+      setUserAttendance(attendanceCount);
+    } catch (error: any) {
+      console.error("❌ Error fetching attendance:", error);
+      setUserAttendance(0); // ✅ Default to 0 if API fails
     }
-  }, [userId]); // Only run this effect when userId changes
+  }, [userId]);
 
+  // ✅ Run the attendance fetch when userId changes
+  useEffect(() => {
+    fetchAttendance();
+  }, [fetchAttendance]);
+
+  // ✅ Show loading state until userData is available
   if (!userData || !userData.user) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -97,22 +157,23 @@ const DashboardPage = () => {
         </div>
         <div className="bg-white p-4 rounded-lg shadow-md text-center">
           <h3 className="text-gray-600 font-medium">Booked</h3>
-          <p className="text-2xl font-bold text-yellow-500">
+          <p className="text-2xl font-bold text-[#FACE39]">
             {userData.user.totalMock - userData.user.mock}
           </p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-md text-center">
           <h3 className="text-gray-600 font-medium">Remaining</h3>
-          <p className="text-2xl font-bold text-green-500">
+          <p className="text-2xl font-bold text-gray-800">
             {userData.user.mock}
           </p>
         </div>
         <div className="bg-white p-4 rounded-lg shadow-md text-center">
-          <h3 className="text-gray-600 font-medium">Attended</h3>
-          <p className="text-2xl font-bold text-[#FACE39]">
-            {userAttendance ? userAttendance.attendance : 0}
-          </p>
-        </div>
+  <h3 className="text-gray-600 font-medium">Attended</h3>
+  <p className="text-2xl font-bold text-[#FACE39]">
+    {userAttendance ?? 0} {/* ✅ Fix: Directly use userAttendance */}
+  </p>
+</div>
+
       </div>
 
       {/* Exam Schedule Section */}
