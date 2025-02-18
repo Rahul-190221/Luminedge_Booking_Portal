@@ -54,157 +54,99 @@ export default function HomeBasedPage() {
   const [dateFilter, setDateFilter] = useState("all");
   const [startDateFilter, setStartDateFilter] = useState("");
 
-  // const fetchUsersAndAttendance = async () => {
-  //   try {
-  //     const usersResponse = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");
+  const fetchHomeBookingsAndUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
   
-  //     if (!usersResponse.data || !usersResponse.data.users) {
-  //       throw new Error("No users found");
-  //     }
+    try {
+      // ✅ Fetch all bookings
+      const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings");
   
-  //     // Convert users array to a map for easy access
-  //     const usersMap: Record<string, any> = {};
-  //     usersResponse.data.users.forEach((user: any) => {
-  //       usersMap[user._id] = user;
-  //     });
+      if (!response.data || !response.data.bookings) {
+        throw new Error("No bookings found");
+      }
   
-  //     setUsers(usersMap);
+      // ✅ Step 1: Filter home-based bookings
+      const homeBasedBookings = response.data.bookings.filter(
+        (booking: Booking) => booking.location === "Home"
+      );
   
-  //     // ✅ Fetch Attendance Data for Each User and Store in `userAttendance`
-  //     const newAttendanceData: Record<string, number | null> = {};
+      if (homeBasedBookings.length === 0) {
+        setBookings([]);
+        setUsers({});
+        setUserAttendance({});
+        setLoading(false);
+        return;
+      }
   
-  //     await Promise.all(
-  //       usersResponse.data.users.map(async (user: any) => {
-  //         try {
-  //           const response = await axios.get(
-  //             `https://luminedge-server.vercel.app/api/v1/user/attendance/${user._id}`
-  //           );
-  //           newAttendanceData[user._id] = response.data.attendance || null; // Store attendance as null if not available
-  //         } catch (error) {
-  //           console.error(`Error fetching attendance for user ${user._id}:`, error);
-  //           newAttendanceData[user._id] = null; // Default to null if an error occurs
-  //         }
-  //       })
-  //     );
+      // ✅ Step 2: Extract unique user IDs from home-based bookings
+      const uniqueUserIds = Array.from(new Set(homeBasedBookings.map((booking: Booking) => booking.userId)));
   
-  //     setUserAttendance(newAttendanceData); // ✅ Update state properly
-  //   } catch (error: any) {
-  //     toast.error(error.message || "Error fetching users and attendance");
-  //     console.error(error);
-  //   }
-  // };
+      if (uniqueUserIds.length === 0) {
+        setUsers({});
+        setUserAttendance({});
+        setLoading(false);
+        return;
+      }
   
-  // // Fetch Home Bookings
-  // const fetchHomeBasedBookings = useCallback(async () => {
-  //   setLoading(true);
-  //   setError(null);
-  //   try {
-  //     const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings");
-  //     if (!response.data || !response.data.bookings) {
-  //       throw new Error("No bookings found");
-  //     }
-
-  //     const homeBasedBookings = response.data.bookings
-  //       .filter((booking: Booking) => booking.location === "Home")
-  //       .sort((a: Booking, b: Booking) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime());
-
-  //     setBookings(homeBasedBookings);
-  //   } catch (error: any) {
-  //     setError(error.message || "Error fetching Home bookings");
-  //     toast.error(error.message || "Error fetching bookings");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }, []);
-
-  // useEffect(() => {
-  //   fetchUsersAndAttendance(); // Fetch users and attendance first
-  //   fetchHomeBasedBookings(); // Fetch bookings after users
-  // }, [fetchHomeBasedBookings]);
-// Fetch Home-Based Bookings & Users
-const fetchHomeBookingsAndUsers = useCallback(async () => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings");
-
-    if (!response.data || !response.data.bookings) {
-      throw new Error("No bookings found");
-    }
-
-    // Filter home-based bookings
-    const homeBasedBookings = response.data.bookings.filter(
-      (booking: Booking) => booking.location === "Home"
-    );
-
-    if (homeBasedBookings.length === 0) {
-      setBookings([]);
-      setUsers({});
-      setUserAttendance({});
+      // ✅ Step 3: Fetch only the unique users
+      const usersResponse = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");
+  
+      if (!usersResponse.data || !usersResponse.data.users) {
+        throw new Error("No users found");
+      }
+  
+      // ✅ Store users in an object for quick lookup
+      const usersMap: Record<string, any> = {};
+      usersResponse.data.users.forEach((user: any) => {
+        if (uniqueUserIds.includes(user._id)) {
+          usersMap[user._id] = user;
+        }
+      });
+  
+      // ✅ Step 4: Filter all bookings to get data only for the filtered users
+      const filteredBookings = response.data.bookings.filter((booking: Booking) =>
+        uniqueUserIds.includes(booking.userId)
+      );
+  
+      // ✅ Step 5: Calculate attendance counts for each user from **all** their bookings
+      const attendanceSummary: Record<string, { present: number; absent: number; total: number }> = {};
+  
+      filteredBookings.forEach((booking: Booking) => {
+        const userId = booking.userId;
+        const status = booking.attendance || "N/A";
+  
+        // Initialize user's attendance tracking
+        if (!attendanceSummary[userId]) {
+          attendanceSummary[userId] = { present: 0, absent: 0, total: 0 };
+        }
+  
+        // ✅ Count attendance
+        if (status === "present") {
+          attendanceSummary[userId].present += 1;
+        } else if (status === "absent") {
+          attendanceSummary[userId].absent += 1;
+        }
+        attendanceSummary[userId].total += 1; // Track total bookings
+      });
+  
+      // ✅ Step 6: Update states
+      setBookings(homeBasedBookings);
+      setUsers(usersMap);
+      setUserAttendance(attendanceSummary);
+  
+    } catch (error: any) {
+      setError(error.message || "Error fetching home bookings and users");
+      toast.error(error.message || "Error fetching home bookings and users");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Extract unique user IDs
-    const uniqueUserIds = Array.from(new Set(homeBasedBookings.map((booking : Booking) => booking.userId)));
-
-    if (uniqueUserIds.length === 0) {
-      setUsers({});
-      setUserAttendance({});
-      setLoading(false);
-      return;
-    }
-
-    // Fetch only the unique users
-    const usersResponse = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");
-    const usersData = usersResponse.data;
-
-    if (!usersData || !usersData.users) {
-      throw new Error("No users found");
-    }
-
-    // Store users in an object for fast lookup
-    const usersMap: { [key: string]: any } = {};
-    usersData.users.forEach((user: any) => {
-      if (uniqueUserIds.includes(user._id)) {
-        usersMap[user._id] = user;
-      }
-    });
-
-    // Calculate attendance counts for each user
-    const attendanceSummary: { [key: string]: { present: number; absent: number } } = {};
-    homeBasedBookings.forEach((booking :  Booking) => {
-      const userId = booking.userId;
-      const status = booking.attendance || "N/A";
-
-      if (!attendanceSummary[userId]) {
-        attendanceSummary[userId] = { present: 0, absent: 0 };
-      }
-
-      if (status === "present") {
-        attendanceSummary[userId].present += 1;
-      } else if (status === "absent") {
-        attendanceSummary[userId].absent += 1;
-      }
-    });
-
-    // ✅ Update states
-    setBookings(homeBasedBookings);
-    setUsers(usersMap);
-    setUserAttendance(attendanceSummary); // ✅ Now matches the correct type
-  } catch (error: any) {
-    setError(error.message || "Error fetching home bookings and users");
-    toast.error(error.message || "Error fetching home bookings and users");
-  } finally {
-    setLoading(false);
-  }
-}, []);
-
-useEffect(() => {
-  fetchHomeBookingsAndUsers();
-}, [fetchHomeBookingsAndUsers]);
-
+  }, []);
+  
+  useEffect(() => {
+    fetchHomeBookingsAndUsers();
+  }, [fetchHomeBookingsAndUsers]);
+  
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const day = date.getDate();

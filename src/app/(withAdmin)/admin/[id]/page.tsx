@@ -438,11 +438,11 @@ useEffect(() => {
       columnStyles: {
         0: { cellWidth: 10 }, // List #
         1: { cellWidth: 35 }, // User Name
-        2: { cellWidth: 53 }, // Email
+        2: { cellWidth: 47 }, // Email
         3: { cellWidth: 26 }, // Phone
         4: { cellWidth: 25 }, // Transaction ID
         5: { cellWidth: 25 }, // Passport Number
-        6: { cellWidth: 25 }, // Test Type
+        6: { cellWidth: 30 }, // Test Type
         7: { cellWidth: 25 }, // Test System
         8: { cellWidth: 22 }, // Purchased
         9: { cellWidth: 15 }, // Attend
