@@ -51,7 +51,7 @@ export default function HomeBasedPage() {
   const [nameFilter, setNameFilter] = useState(""); 
   const [courseNameFilter, setCourseNameFilter] = useState(""); 
   const [testTypeFilter, setTestTypeFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("upcoming");
   const [startDateFilter, setStartDateFilter] = useState("");
 
   const fetchHomeBookingsAndUsers = useCallback(async () => {
