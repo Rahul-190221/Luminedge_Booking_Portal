@@ -148,14 +148,7 @@ useEffect(() => {
 }, [fetchHomeBookingsAndUsers]);
 
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleString("en-US", { month: "long" });
-    const year = date.getFullYear();
-    
-    return `${day} ${month}, ${year}`;
-  };
+
   
   const handleHomeAttendanceSubmit = async (userId: string, attendanceValue: string, bookingDate: string) => {
     try {
@@ -230,7 +223,7 @@ useEffect(() => {
           booking?.testType || "N/A",
           booking?.testSystem || "N/A",
           booking?.location || "N/A",
-          formatDate(booking?.bookingDate) || "N/A",
+          formatTime(booking?.bookingDate) || "N/A",
           booking?.testTime || "N/A",
           user?.email || "N/A",
           user?.contactNo || "N/A",
@@ -304,7 +297,7 @@ const filteredBookings = useMemo(() => {
     })
     .sort((a, b) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime()) // ✅ Sort by date (Ascending)
     .reduce((acc: Record<string, Booking[]>, booking) => {
-      const dateKey = formatDate(booking.bookingDate); // Group by formatted date (e.g., "17 February, 2025")
+      const dateKey = formatTime(booking.bookingDate); // Group by formatted date (e.g., "17 February, 2025")
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
@@ -316,14 +309,21 @@ const filteredBookings = useMemo(() => {
 const indexOfLastSchedule = currentPage * schedulesPerPage;
 const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;
 const currentSchedules = Object.values(filteredBookings).flat().slice(indexOfFirstSchedule, indexOfLastSchedule);
+function formatTime(time?: string) {
+  if (!time || typeof time !== "string" || !time.includes(":")) return "N/A"; // ✅ Prevent undefined, null, or invalid formats
 
+  const [hourStr, minuteStr] = time.split(":");
 
-  function formatTime(time: string) {
-    const [hour, minute] = time.split(":").map(Number);
-    const period = hour >= 12 ? "PM" : "AM";
-    const formattedHour = hour % 12 || 12;
-    return `${formattedHour}:${minute.toString().padStart(2, "0")} ${period}`;
-  }
+  const hour = Number(hourStr);
+  const minute = Number(minuteStr);
+
+  if (isNaN(hour) || isNaN(minute)) return "N/A"; // ✅ Handle cases where parsing fails
+
+  const period = hour >= 12 ? "PM" : "AM";
+  const formattedHour = hour % 12 || 12;
+  
+  return `${formattedHour}:${minute.toString().padStart(2, "0")} ${period}`;
+}
 
 
   return (
@@ -421,7 +421,7 @@ const currentSchedules = Object.values(filteredBookings).flat().slice(indexOfFir
               <td className="p-4">{booking.testType}</td>
               <td className="p-4">{booking.testSystem}</td>
               <td className="p-4">{booking.location}</td>
-              <td className="p-4">{formatDate(booking.bookingDate)}</td>
+              <td className="p-4">{formatTime(booking.bookingDate)}</td>
               <td className="p-4">
   {booking.location === "Home"
     ? booking.testTime
