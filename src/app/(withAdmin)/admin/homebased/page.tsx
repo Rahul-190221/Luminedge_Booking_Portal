@@ -325,6 +325,14 @@ function formatTime(time?: string) {
   return `${formattedHour}:${minute.toString().padStart(2, "0")} ${period}`;
 }
 
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+};
 
   return (
     <div className="p-4 w-full max-w-7xl mx-auto overflow-x-auto">
@@ -421,7 +429,10 @@ function formatTime(time?: string) {
               <td className="p-4">{booking.testType}</td>
               <td className="p-4">{booking.testSystem}</td>
               <td className="p-4">{booking.location}</td>
-              <td className="p-4">{formatTime(booking.bookingDate)}</td>
+              <td className="p-4">
+  {booking.bookingDate ? formatDate(booking.bookingDate) : "N/A"}
+</td>
+
               <td className="p-4">
   {booking.location === "Home"
     ? booking.testTime

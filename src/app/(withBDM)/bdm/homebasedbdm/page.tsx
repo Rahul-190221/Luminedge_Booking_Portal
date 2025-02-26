@@ -147,16 +147,31 @@ export default function HomeBasedPage() {
     fetchHomeBookingsAndUsers();
   }, [fetchHomeBookingsAndUsers]);
   
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleString("en-US", { month: "long" });
-    const year = date.getFullYear();
+  function formatTime(time?: string) {
+    if (!time || typeof time !== "string" || !time.includes(":")) return "N/A"; // ✅ Prevent undefined, null, or invalid formats
+  
+    const [hourStr, minuteStr] = time.split(":");
+  
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+  
+    if (isNaN(hour) || isNaN(minute)) return "N/A"; // ✅ Handle cases where parsing fails
+  
+    const period = hour >= 12 ? "PM" : "AM";
+    const formattedHour = hour % 12 || 12;
     
-    return `${day} ${month}, ${year}`;
+    return `${formattedHour}:${minute.toString().padStart(2, "0")} ${period}`;
+  }
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   };
   
- 
   const confirmDownload = () => {
     const flattenedBookings = Object.values(filteredBookings).flat(); // Ensure it's an array
   
@@ -284,13 +299,6 @@ const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;
 const currentSchedules = Object.values(filteredBookings).flat().slice(indexOfFirstSchedule, indexOfLastSchedule);
 
 
-  function formatTime(time: string) {
-    const [hour, minute] = time.split(":").map(Number);
-    const period = hour >= 12 ? "PM" : "AM";
-    const formattedHour = hour % 12 || 12;
-    return `${formattedHour}:${minute.toString().padStart(2, "0")} ${period}`;
-  }
-
 
   return (
     <div className="p-4 w-full max-w-7xl mx-auto overflow-x-auto">
@@ -387,7 +395,11 @@ const currentSchedules = Object.values(filteredBookings).flat().slice(indexOfFir
               <td className="p-4">{booking.testType}</td>
               <td className="p-4">{booking.testSystem}</td>
               <td className="p-4">{booking.location}</td>
-              <td className="p-4">{formatDate(booking.bookingDate)}</td>
+              <td className="p-4">{booking.location}</td>
+              <td className="p-4">
+  {booking.bookingDate ? formatDate(booking.bookingDate) : "N/A"}
+</td>
+
               <td className="p-4">
   {booking.location === "Home"
     ? booking.testTime
