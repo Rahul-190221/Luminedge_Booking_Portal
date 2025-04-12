@@ -625,7 +625,7 @@ const TableAdmin = () => {
 {/* Spacer to push the button to the bottom */}
 <div className="flex-grow"></div>
 
-        <div className="flex justify-between items-center mt-40">
+        <div className="flex justify-between items-center mt-0">
         <div className="flex items-center justify-between mt-6 flex-wrap gap-[23rem]">
 
   {/* Left-aligned Add More button */}
