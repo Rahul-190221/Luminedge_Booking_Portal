@@ -179,7 +179,7 @@ const SidebarAdmin = () => {
         <span className="inline">Setting</span>
       </Link>
     </li> */}
-          <li
+          {/* <li
             className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
               pathname === "/admin/notifications"
                 ? "bg-[#FACE39] text-black font-bold rounded-full"
@@ -193,10 +193,10 @@ const SidebarAdmin = () => {
               <TbBell className="h-5 w-5 mr-2" />
               <span className="inline">Notifications</span>
             </Link>
-          </li>
+          </li> */}
          
            {/* Settings Menu Item */}
-    <li
+    {/* <li
       className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
         pathname === "/admin/settings"
           ? "bg-[#FACE39] text-black font-bold rounded-full"
@@ -207,7 +207,14 @@ const SidebarAdmin = () => {
         <IoSettingsOutline className="h-5 w-5 mr-2" />
         <span className="inline">Setting</span>
       </Link>
-    </li>
+    </li> */}
+
+{/* <li className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${pathname === "/admin/analysis" ? "bg-[#FACE39] text-black font-bold rounded-full" : ""}`}>
+  <Link href="/admin/analysis" className="flex items-center px-4 py-3">
+    <TbReport className="h-5 w-5 mr-2" />
+    <span className="inline">Analysis</span>
+  </Link>
+</li> */}
     <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
             <button
               onClick={() => logout()}

@@ -6,6 +6,7 @@ import DonutChart from "@/components/DonutChart";
 import TableBDM from "@/components/tableBDM";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { motion } from "framer-motion";
 
 const DashboardPage = () => {
   const [users, setUsers] = useState([]); // All users from the API
@@ -74,68 +75,75 @@ const DashboardPage = () => {
   const currentMonthName = new Date().toLocaleString("default", { month: "long" });
 
   return (
-    <div className="flex flex-col mx-auto gap-3 max-w-7xl">
-      <h1 className="text-2xl font-semibold">Overview</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {/* Daily Booking Requests */}
-        <div className="stat bg-white shadow-md rounded-lg p-3 text-center">
-            <div className="stat-title text-gray-900 font-medium mb-2 text-center sm:text-left">
-            Booking Requests by Date
-            </div>
-          <DonutChart completedCount={dailyRequests} totalCount={dailyRequests || 1} />
-          <div className="mt-4">
-            <label
-              htmlFor="datePicker"
-              className="block text-sm font-medium text-gray-900 mb-2"
-            >
-              Select Date:
-            </label>
-            <DatePicker
-              id="datePicker"
-              selected={selectedDate}
-              onChange={handleDateChange}
-              className="border px-3 py-2 rounded w-full sm:w-auto"
-              placeholderText="Select a date"
-            />
+    <div className="flex flex-col gap-1 w-full">
+    <motion.h1
+className="text-2xl font-semibold text-[#00000f] md:mt-0 lg:mt-0"
+initial={{ opacity: 0, y: 20 }}
+animate={{ opacity: 1, y: 0 }}
+transition={{ duration: 0.6, ease: "easeOut" }}
+>
+Overview
+</motion.h1>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      {/* Daily Booking Requests */}
+      <div className="stat bg-white shadow-md rounded-lg p-4 text-center max-h-[380px] text-[#00000f]">
+          <div className="stat-title text-[#00000f] font-medium mb-1 text-center sm:text-left">
+          Booking Requests by Date
           </div>
-        </div>
-
-        {/* Monthly Booking Requests */}
-        <div className="stat bg-white shadow-md rounded-lg p-3 text-center">
-            <div className="stat-title text-gray-900 font-medium mb-2 text-center sm:text-left">
-              {currentMonthName} Booking Requests
-            </div>
-          <DonutChart completedCount={monthlyRequests} totalCount={monthlyRequests || 1} />
-          <div className="mt-4">
-            <label
-              htmlFor="monthPicker"
-              className="block text-sm font-medium text-gray-900 mb-2"
-            >
-              Select Month:
-            </label>
-            <DatePicker
-              id="monthPicker"
-              selected={selectedDate}
-              onChange={handleMonthChange}
-              dateFormat="MMMM, yyyy"
-              showMonthYearPicker
-              className="border px-3 py-2 rounded w-full sm:w-auto"
-              placeholderText="Select a month"
-            />
-          </div>
-        </div>
-
-        {/* Total Booking */}
-        <div className="stat bg-white shadow-md rounded-lg p-3 text-center">
-          <div className="stat-title text-gray-900 font-medium mb-2">Total Booking</div>
-          <DonutChart
-            completedCount={overallSchedule.reduce((acc, item) => acc + item.count, 0)}
-            totalCount={overallSchedule.reduce((acc, item) => acc + item.count, 1)}
+        <DonutChart completedCount={dailyRequests} totalCount={dailyRequests || 1} />
+        <div className="mt-2">
+          <label
+            htmlFor="datePicker"
+            className="block text-sm font-medium text-[#00000f] mb-1"
+          >
+            Select Date:
+          </label>
+          <DatePicker
+            id="datePicker"
+            selected={selectedDate}
+            onChange={handleDateChange}
+            className="border px-3 py-2 rounded w-full sm:w-auto"
+            placeholderText="Select a date"
           />
         </div>
       </div>
 
-      <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4 md:p-6">
+      {/* Monthly Booking Requests */}
+      <div className="stat bg-white shadow-md rounded-lg p-4 text-center max-h-[380px]">
+          <div className="stat-title text-[#00000f] font-medium mb-1 text-center sm:text-left">
+            {currentMonthName} Booking Requests
+          </div>
+        <DonutChart completedCount={monthlyRequests} totalCount={monthlyRequests || 1} />
+        <div className="mt-2">
+          <label
+            htmlFor="monthPicker"
+            className="block text-sm font-medium text-[#00000f] mb-1"
+          >
+            Select Month:
+          </label>
+          <DatePicker
+            id="monthPicker"
+            selected={selectedDate}
+            onChange={handleMonthChange}
+            dateFormat="MMMM, yyyy"
+            showMonthYearPicker
+            className="border px-3 py-2 rounded w-full sm:w-auto"
+            placeholderText="Select a month"
+          />
+        </div>
+      </div>
+
+      {/* Total Booking */}
+      <div className="stat bg-white shadow-md rounded-lg p-4  max-h-[380px]">
+        <div className="stat-title text-[#00000f] font-medium mb-0">Total Booking</div>
+        <DonutChart
+          completedCount={overallSchedule.reduce((acc, item) => acc + item.count, 0)}
+          totalCount={overallSchedule.reduce((acc, item) => acc + item.count, 1)}
+        />
+      </div>
+    </div>
+
+      <div className="overflow-x-auto bg-white shadow-md rounded-lg p-0 md:p-2">
         
         <TableBDM />
       </div>

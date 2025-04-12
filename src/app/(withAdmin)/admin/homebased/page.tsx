@@ -5,6 +5,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { motion } from "framer-motion";
 
 // Booking Type Definition
 type Booking = {
@@ -197,7 +198,7 @@ useEffect(() => {
   
     // ✅ Set Title & Info
     doc.setFontSize(14);
-    doc.text("Booking Report", 14, 15);
+    doc.text("Home Booking Report", 14, 15);
     doc.setFontSize(10);
     doc.text(`Total Records: ${flattenedBookings.length}`, 14, 22);
     doc.text(`Generated On: ${new Date().toLocaleString()}`, 14, 28);
@@ -335,14 +336,13 @@ const formatDate = (dateString: string) => {
 };
 
   return (
-    <div className="p-4 w-full max-w-7xl mx-auto overflow-x-auto">
-<div className="bg-gray-100 p-8 h-auto mb-3 rounded shadow-sm">
-  <h3 className="font-bold text-lg mb-2">Filter by</h3>
-
+    <div className="flex flex-col gap-1 w-full">
+<div className="bg-gray-100 p-3 h-auto mb-0 rounded shadow-sm">
+  <h3 className="font-bold text-lg mb-0">Filter by</h3>
   <div className="flex flex-col sm:flex-row gap-4 text-sm">
     {/* Name Filter */}
-    <label className="flex flex-col">
-      <span className="mb-1">Search by Name</span>
+    <label className="flex flex-col text-[#00000f]">
+      <span className="mb-1 text-[#00000f]">Search by Name</span>
       <input
         type="text"
         value={nameFilter}
@@ -353,12 +353,12 @@ const formatDate = (dateString: string) => {
     </label>
 
     {/* Test Type Filter */}
-    <label className="flex flex-col">
-      <span className="mb-1">Course Type</span>
+    <label className="flex flex-col text-[#00000f]">
+      <span className="mb-1 text-[#00000f]">Course Type</span>
       <select
           value={testTypeFilter}
           onChange={(e) => setTestTypeFilter(e.target.value)}
-          className="px-2 py-1 border rounded w-full sm:w-auto"
+          className="px-2 py-1 border rounded w-full sm:w-auto text-[#00000f]"
         >
           <option value="">All Course Types</option>
           <option value="GRE">GRE</option>
@@ -370,11 +370,11 @@ const formatDate = (dateString: string) => {
 
     {/* Date Filter */}
     <label className="flex flex-col">
-      <span className="mb-1">Schedule</span>
+      <span className="mb-1 text-[#00000f]">Schedule</span>
       <select
         value={dateFilter}
         onChange={(e) => setDateFilter(e.target.value)}
-        className="px-2 py-1 border rounded w-full sm:w-auto"
+        className="px-2 py-1 border rounded w-full sm:w-auto text-[#00000f]"
       >
         <option value="all">All Schedules</option>
         <option value="past">Past</option>
@@ -384,7 +384,7 @@ const formatDate = (dateString: string) => {
 
     {/* Start Date Filter */}
     <label className="flex flex-col">
-      <span className="mb-1">Search by Date</span>
+      <span className="mb-1 text-[#00000f]">Search by Date</span>
       <input
         type="date"
         value={startDateFilter}
@@ -394,7 +394,14 @@ const formatDate = (dateString: string) => {
     </label>
   </div>
 </div>
-
+<motion.h1
+  className="text-2xl font-semibold mt-4 mb-1 text-[#00000f]"
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6, ease: "easeOut" }}
+>
+ Home Based Booking List
+</motion.h1>
 
 <div className="overflow-x-auto">
   <table className="table-auto w-full border-collapse">
@@ -477,7 +484,7 @@ const formatDate = (dateString: string) => {
         })
       ) : (
         <tr>
-         <td colSpan={14} className="p-4 text-center text-gray-500">No matching bookings found.</td>
+         <td colSpan={14} className="p-4 text-center text-gray-500">loading...</td>
 
         </tr>
       )}
@@ -488,12 +495,12 @@ const formatDate = (dateString: string) => {
 
       {/* Action Buttons */}
       <div className="mt-8 flex justify-start space-x-4">
-        <button
-          onClick={confirmDownload}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          Download as PDF
-        </button>
+      <button
+  onClick={confirmDownload}
+  className="w-64 px-6 py-3 rounded-full font-extrabold text-sm uppercase tracking-widest bg-gradient-to-r from-[#00000f] to-[#1a1a2e] text-white shadow-md hover:from-[#face39] hover:to-[#fce77d] hover:text-[#00000f] hover:shadow-2xl hover:scale-105 ring-2 ring-[#00000f] hover:ring-[#face39] transition-all duration-300 ease-in-out flex items-center justify-center gap-1"
+>
+  📄 Download as PDF
+</button>
       </div>
       <div className="flex flex-col sm:flex-row justify-between items-center mt-4 space-y-4 sm:space-y-0">
         <div>

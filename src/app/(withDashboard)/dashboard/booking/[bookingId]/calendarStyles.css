@@ -1,0 +1,22 @@
+.available-date {
+  border: 2px solid #FACE39 !important;
+  border-radius: 50% !important;
+  padding: 10px;
+  color: #00000f !important; /* Day number color */
+  font-weight: bold;
+}
+
+.selected-date {
+  background-color: #FACE39 !important;
+  color: #00000f !important; /* Day number color */
+  border-radius: 50% !important;
+  padding: 10px;
+  font-weight: bold;
+}
+.unavailable-date {
+  background-color: #00000f !important;
+  color: #ffffff !important; /* Day number color */
+  border-radius: 50% !important;
+  padding: 6px;
+  font-weight: bold;
+}

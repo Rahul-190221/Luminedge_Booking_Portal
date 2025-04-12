@@ -16,7 +16,7 @@ export default function DashboardLayout({
 }>) {
   return (
     // Add the sidebar component to the layout
-    <div className="min-h-screen w-full flex flex-col md:flex-row">
+    <div className="min-h-screen w-full flex flex-col md:flex-row ">
       {/* Sidebar */}
       <div className="w-full md:w-1/5 bg-gray-100 md:min-h-screen p-4">
       <Sidebar />
@@ -24,7 +24,7 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <div className="flex-1 w-full md:w-4/5 p-4">
-        <div className=" p-6">{children}</div>
+        <div className=" p-0">{children}</div>
       </div>
     </div>
   );

@@ -1,13 +1,38 @@
 "use client";
 import CourseCard from "@/components/courseCard";
 import { Course } from "@/app/types";
-import { getUserIdFromToken } from "@/app/helpers/jwt";
-import GetMe from "@/app/helpers/getme";
+import useUser from "@/app/helpers/getme";
+import { motion } from "framer-motion";
+
+type Mock = {
+  mockType: string;
+  testType: string;
+  testSystem: string;
+  mock: number;
+  transactionId: string;
+  mrValidation: string;
+  createdAt: string;
+};
+
+const getExpiryTime = (validation: string): number => {
+  const [value, unit] = validation.split(" ");
+  const num = parseInt(value);
+  switch (unit.toLowerCase()) {
+    case "minute":
+    case "minutes":
+      return num * 60 * 1000;
+    case "month":
+    case "months":
+      return num * 30 * 24 * 60 * 60 * 1000;
+    default:
+      return 0;
+  }
+};
 
 const CoursesPage = () => {
-  const user = GetMe();
-  
-  const courses = [
+  const { user, mocks } = useUser();
+
+  const courses: Course[] = [
     {
       _id: "67337c880794d577cd982b75",
       name: "IELTS",
@@ -32,24 +57,56 @@ const CoursesPage = () => {
 
   return (
     <div className="flex flex-col justify-center items-start w-[90%] mx-auto">
-      <div className="flex flex-col mt-[30px] ">
-        <h1 className="text-3xl font-semibold">Book Your</h1>
-        <h1 className="text-3xl font-bold w-fit bg-[#FACE39] p-2">
-          Mock Test Now!
-        </h1>
-        <h1 className="text-3xl font-semibold">in our Premium Venue</h1>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5 mt-10 mx-auto">
-        {user && user.mockType ? (
-          courses.map((course: Course) => (
-            <CourseCard
-              key={course._id}
-              mockType={user.mockType}
-              course={course}
-            />
-          ))
+<div className="w-full flex justify-center mt-[10px] lg:mt-20">
+  <motion.div
+    className="flex flex-col mt-[10px] text-center items-center gap-1"
+    initial={{ opacity: 0, y: 40 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, ease: "easeOut" }}
+  >
+    <h4 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight text-gray-800">
+      Book Your
+    </h4>
+
+    <h4 className="text-3xl md:text-6xl lg:text-6xl font-extrabold text-[#FACE39] mt-1 mb-1">
+      Mock Test Now!
+    </h4>
+
+    <h4 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight text-gray-800">
+      in Our <span className="text-[#FACE39]">Premium Venue</span>
+    </h4>
+
+    <div className="h-[6px] w-24 bg-[#FACE39] rounded-full mt-1 animate-pulse" />
+  </motion.div>
+</div>
+
+
+<div className="w-full max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5 mt-6 px-4">
+        {user && Array.isArray(mocks) ? (
+          courses.map((course) => {
+            const relevantMocks = mocks.filter(
+              (mock: Mock) => mock.mockType === course.name
+            );
+
+            const isAllowed = relevantMocks.some((mock: Mock) => {
+              const createdAt = new Date(mock.createdAt).getTime();
+              const expiryDuration = getExpiryTime(mock.mrValidation);
+              const expiryTime = createdAt + expiryDuration;
+              return Date.now() < expiryTime;
+            });
+
+            return (
+              <CourseCard
+                key={course._id}
+                allowed={isAllowed}
+                course={course}
+              />
+            );
+          })
         ) : (
-          <p>No user data available. Please wait for your approval. </p>
+          <p className="col-span-full text-gray-500 text-center">
+            Loading or no user data available.
+          </p>
         )}
       </div>
     </div>

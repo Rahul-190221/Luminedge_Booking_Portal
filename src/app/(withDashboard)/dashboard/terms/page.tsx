@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import GetMe from "@/app/helpers/getme"; // Adjust the path if necessary
+import { motion } from "framer-motion";
 
 const TermsPage = () => {
     const user = GetMe(); // Fetch user data using GetMe
@@ -24,16 +25,19 @@ const TermsPage = () => {
     return (
         <div className="flex flex-col items-center w-full max-w-screen-xl mx-auto space-y-6 font-montserrat">
             {/* Terms and Conditions Section */}
-            <div className="w-full max-w-5xl bg-transparent  p-6">
-                <h1
-                    className="text-3xl font-semibold mb-6 text-center"
-                    style={{
-                        color: "#face39",
-                        fontSize: isMobile ? "1.5rem" : "2rem",
-                    }}
-                >
-                    Mock Test Terms and Conditions
-                </h1>
+            <div className="w-full max-w-5xl bg-transparent  p-4">
+            <motion.h1
+  className="text-3xl font-semibold mb-4 text-center"
+  style={{
+    color: "#face39",
+    fontSize: isMobile ? "1.5rem" : "2rem",
+  }}
+  initial={{ opacity: 0, y: 30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.7, ease: "easeOut" }}
+>
+  Mock Test Terms and Conditions
+</motion.h1>
                 <div className="space-y-5">
                     <ol className="list-decimal list-inside">
                         <li className="mb-4">
@@ -146,9 +150,8 @@ const TermsPage = () => {
                     </p>
                 </div>
             </div>
-           
-           {/* Emergency Contact Information */}         
-     <div className="w-full max-w-5xl bg-transparent  p-2">
+               {/* Emergency Contact Information */}         
+         <div className="w-full max-w-5xl bg-transparent  p-2">
         <h1 className="text-xl font-semibold text-center" style={{ color: "#face39" }}>
           {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
         </h1>
@@ -182,6 +185,7 @@ const TermsPage = () => {
           </div>
         </div>
       </div>
+      
         </div>
     );
 };

@@ -95,8 +95,8 @@ const RegisterPage = () => {
 
   return (
     // need to responsive
-    <div className="my-10 px-4 md:px-8 lg:px-10 ">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="my-4 px-2 md:px-4 lg:px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="hidden lg:block w-full lg:w-[80%] h-[70%] m-auto">
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -131,22 +131,22 @@ const RegisterPage = () => {
               </g>
             </g>
           </svg>
-          <h1 className=" font-bold text-5xl py-3">
+          <h1 className=" font-bold text-5xl py-3 text-[#00000f]">
             Welcome to <br /> Luminedge.
           </h1>
-        <div className="text-lg mt-2 lg:mt-2.5 text-xl lg:text-2xl">
+        <div className="text-lg mt-2 lg:mt-2.5 text-xl lg:text-2xl text-[#00000f]">
           The most premium exam venue awarded by <br /> 
           <span className="block h-2"></span> {/* Add this line to create space */}
           <Image
             src={britishLogo} // Use the imported image here
             width={90} // Add width property
             height={35} // Add height property
-            className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+            className="inline-block ml-0 h-10 w-auto" // Increased height to 10
             alt={""}
           />
         </div>
 
-            <p className="text-lg mt-5 lg:mt-40 ">
+            <p className="text-lg mt-5 lg:mt-40 text-[#00000f] ">
             If you have already an account <br className="hidden lg:block" />
             you can{" "}
             <Link className="text-[#ffd23c] font-bold px-2" href="/login">
@@ -155,7 +155,12 @@ const RegisterPage = () => {
             </p>
         </div>
 
-        <div className="card shadow-lg card-body w-full lg:w-[80%] mx-auto">
+        <div
+  className="card card-body w-full lg:w-[80%] mx-auto mt-14 px-5 py-4 rounded-xl"
+  style={{
+    boxShadow: "0px 10px 30px rgba(250, 206, 57, 0.35)" // yellow glow
+  }}
+>
           {/* Show logo on mobile */}
           <div className="lg:hidden  mb-6  px-3 ">
             <svg
@@ -190,22 +195,22 @@ const RegisterPage = () => {
                 </g>
               </g>
             </svg>
-            <h1 className="font-bold text-2xl pt-3 pb-1  ">
+            <h1 className="font-bold text-2xl pt-3 pb-1 text-[#00000f] ">
               Welcome to{" "}
               <span className="text-amber-400 font-bold">Luminedge</span>
             </h1>
-            <p className="text-sm">
+            <p className="text-sm text-[#00000f] ">
                 The most premium exam venue awarded by <br />
                 <Image
               src={britishLogo} // Use the imported image here
               width={90} // Add width property
               height={35} // Add height property
 
-              className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+              className="inline-block ml-0 h-10 w-auto" // Increased height to 10
               alt={""}                />
                 </p>
           </div>
-          <h1 className="text-2xl md:text-3xl text-amber-500 font-bold mt-4">
+          <h1 className="text-2xl md:text-3xl text-amber-500 font-bold mt-2 mb-0">
   Sign Up
 </h1>
 <form
@@ -219,11 +224,12 @@ const RegisterPage = () => {
   }}
   className="w-full max-w-4xl mx-auto"
 >
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mt-4 mb-3">
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mt-0 mb-0">
     {/* First Name */}
-    <div className="form-control my-1">
-      <label className="label">
-        <span className="label-text text-gray-600 ml-2 font-semibold whitespace-nowrap text-sm sm:text-base">
+    <div className="form-control ">
+    <label className="label pt-0 pb-1 mt-2">
+
+        <span className="label-text text-gray-600 ml-0 font-semibold whitespace-nowrap text-sm sm:text-base">
           First Name*
         </span>
       </label>
@@ -241,9 +247,9 @@ const RegisterPage = () => {
     </div>
 
     {/* Last Name */}
-    <div className="form-control my-1">
-      <label className="label">
-        <span className="label-text text-gray-600 ml-2 font-semibold whitespace-nowrap text-sm sm:text-base">
+    <div className="form-control ">
+    <label className="label pt-0 pb-1 mt-2">
+        <span className="label-text text-gray-600 ml-0 font-semibold whitespace-nowrap text-sm sm:text-base">
           Last Name*
         </span>
       </label>
@@ -262,9 +268,9 @@ const RegisterPage = () => {
   </div>
 
   {/* Phone Number */}
-  <div className="form-control my-1">
-    <label className="label">
-      <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
+  <div className="form-control ">
+  <label className="label pt-0 pb-1 mt-2">
+      <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
         Phone Number*
       </span>
     </label>
@@ -282,9 +288,10 @@ const RegisterPage = () => {
   </div>
 
   {/* Passport Number */}
-  <div className="form-control my-1">
-    <label className="label">
-      <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
+  <div className="form-control">
+  <label className="label pt-0 pb-1 mt-2">
+
+      <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
         Passport / NID Number*
       </span>
     </label>
@@ -301,9 +308,10 @@ const RegisterPage = () => {
     )}
   </div>
 {/* Money Receipt Number */}
-<div className="form-control my-1">
-    <label className="label">
-      <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
+<div className="form-control">
+<label className="label pt-0 pb-1 mt-2">
+
+      <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
         Money Receipt Number*
       </span>
     </label>
@@ -320,9 +328,10 @@ const RegisterPage = () => {
     )}
   </div>
   {/* Email */}
-  <div className="form-control my-1">
-    <label className="label">
-      <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
+  <div className="form-control ">
+  <label className="label pt-0 pb-1 mt-2">
+
+      <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
         Email*
       </span>
     </label>
@@ -339,11 +348,12 @@ const RegisterPage = () => {
 
   
 
-  <div className="grid md:grid-cols-2 gap-4">
+  <div className="grid md:grid-cols-2 gap-4 mt-2">
     {/* Password Field */}
-    <div className="form-control my-1">
-      <label className="label">
-        <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
+    <div className="form-control ">
+    <label className="label pt-0 pb-1 mt-2">
+
+        <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
           Password*
         </span>
       </label>
@@ -378,9 +388,10 @@ const RegisterPage = () => {
     </div>
 
     {/* Confirm Password Field */}
-    <div className="form-control my-1">
-      <label className="label">
-        <span className="label-text text-gray-600 ml-2 font-semibold text-sm sm:text-base">
+    <div className="form-control ">
+    <label className="label pt-0 pb-1 mt-2">
+
+        <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
           Confirm Password*
         </span>
       </label>
@@ -414,7 +425,7 @@ const RegisterPage = () => {
   </div>
 
   {/* Agree to Terms */}
-  <div className="form-control mb-6">
+  <div className="form-control mb-6 mt-1">
     <label className="cursor-pointer flex items-center">
       <input
         type="checkbox"
@@ -423,7 +434,7 @@ const RegisterPage = () => {
         })}
         className="checkbox checkbox-warning mr-2"
       />
-      <span className="label-text ml-2 text-sm sm:text-base">
+      <span className="label-text ml-0 mt-1.5 text-sm sm:text-base">
         I agree to all{" "}
         <span className="text-[#FACE39] font-semibold">
           <Link href="/terms-and-conditions">
@@ -438,7 +449,7 @@ const RegisterPage = () => {
   </div>
 
   {/* Sign Up Button */}
-  <div className="form-control my-6">
+  <div className="form-control mt-10">
     <button type="submit" className="btn bg-[#FACE39] w-full sm:w-auto">
       Sign Up
     </button>
@@ -454,7 +465,7 @@ const RegisterPage = () => {
             <span className="font-semibold">Sign up with Google</span>
           </div> */}
           {/* Add this sign in message for all screen sizes */}
-          <div className="text-center mt-6 text-sm text-gray-600">
+          <div className="text-center mt-4 text-sm text-[#00000f]">
             Already have an account?{" "}
             <Link
               href="/login"

@@ -3,6 +3,7 @@
 import CourseCard2 from "@/components/courseCard2"; // Corrected the import path
 import { Course2 } from "@/components/courses2"; // Corrected the import path
 import GetMe from "@/app/helpers/getme"; // Assuming you have a helper to fetch user data
+import { motion } from "framer-motion";
 
 const Courses2Page = () => {
   const user = GetMe(); // Fetch user data using GetMe helper
@@ -45,14 +46,32 @@ const Courses2Page = () => {
   };
 
   return (
-    <div className="flex flex-col justify-center items-start w-[90%] mx-auto">
-      <div className="flex flex-col mt-[30px]">
-        <h1 className="text-3xl font-semibold">To boost your preparation</h1>
-        <h1 className="text-3xl font-bold w-fit bg-[#FACE39] p-2">Enroll Now!</h1>
-        <h1 className="text-3xl font-semibold">in our Premium Venue</h1>
-      </div>
+    <div className="flex flex-col gap-1 w-full">
+<div className="w-full flex justify-center mt-[10px] lg:mt-20">
+  <motion.div
+    className="flex flex-col mt-[10px] text-center items-center gap-1"
+    initial={{ opacity: 0, y: 40 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5, ease: "easeOut" }}
+  >
+    <h2 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight text-gray-800">
+      To Boost Your Preparation
+    </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5 mt-10 mx-auto">
+    <h2 className="text-3xl md:text-6xl lg:text-6xl font-extrabold text-[#FACE39] mt-1 mb-1">
+      Enroll Now!
+    </h2>
+
+    <h2 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight text-gray-800">
+      in Our <span className="text-[#FACE39]">Premium Venue</span>
+    </h2>
+
+    <div className="h-[6px] w-24 bg-[#FACE39] rounded-full mt-1 animate-pulse" />
+  </motion.div>
+</div>
+
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5 mt-6 mx-auto">
         {courses2.map((course) => (
           <CourseCard2
             key={course._id}

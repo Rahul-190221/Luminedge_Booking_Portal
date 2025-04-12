@@ -5,10 +5,12 @@ import { useForm } from "react-hook-form";
 import { loginUser } from "../utils/actions/loginUser";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { getUserIdFromToken } from "../helpers/jwt";
 import { useEffect, useState } from "react";
 import Cookies from "js-cookie";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 
 export type FormValues = {
   email: string;
@@ -80,7 +82,7 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="my-8 px-4 md:px-8 lg:px-10">
+   <div className="my-4 px-2 md:px-4 lg:px-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="hidden lg:block w-full lg:w-[80%] h-[70%] m-auto">
           <svg
@@ -116,21 +118,21 @@ const LoginPage = () => {
               </g>
             </g>
           </svg>
-          <h1 className=" font-bold text-5xl py-3">
+          <h1 className=" font-bold text-5xl py-2 lg:py-6 text-[#00000f]">
             Welcome to <br /> Luminedge.
           </h1>
-          <div className="text-lg mt-2 lg:mt-2.5 text-xl lg:text-2xl">
+          <div className="text-lg mt-4 lg:mt-3 text-xl lg:text-2xl text-[#00000f]">
           The most premium exam venue awarded by <br /> 
           <span className="block h-2"></span> {/* Add this line to create space */}
           <Image
             src={britishLogo} // Use the imported image here
             width={90} // Add width property
             height={35} // Add height property
-            className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+            className="inline-block ml-0 h-10 w-auto" // Increased height to 10
             alt={""}
           />
         </div>
-        <p className="text-lg mt-4 lg:mt-40 ">
+        <p className="text-lg mt-4 lg:mt-20 text-[#00000f]">
             If you don&apos;t have an account <br />
             you can{" "}
             <Link className="text-[#FACE39] font-bold px-2" href="/register">
@@ -139,7 +141,13 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <div className="card shadow-lg card-body w-full lg:w-[80%] mx-auto mt-10">
+        <div
+        className="card card-body w-full lg:w-[80%] mx-auto mt-20 lg:mt-32 px-4 py-6 rounded-xl"
+        style={{
+          boxShadow: "0px 10px 30px rgba(250, 206, 57, 0.35)" // yellow glow
+        }}
+      >
+
           <form onSubmit={handleSubmit(onSubmit)} className="">
             {/* Show logo on mobile */}
             <div className="lg:hidden  mb-6  pb-4  ">
@@ -179,22 +187,22 @@ const LoginPage = () => {
                 Welcome to{" "}
                 <span className="text-amber-400 font-bold">Luminedge</span>
               </h1>
-              <p className="text-sm">
+              <p className="text-sm text-[#00000f]">
                 The most premium exam venue awarded by <br />
                 <Image
               src={britishLogo} // Use the imported image here
               width={90} // Add width property
               height={35} // Add height property
-              className="inline-block ml-2 h-10 w-auto" // Increased height to 10
+              className="inline-block ml-0 h-10 w-auto" // Increased height to 10
               alt={""}                />
                 </p>
             </div>
-            <h1 className="  text-2xl md:text-3xl font-bold mt-6 lg:mt-10">
+            <h1 className="  text-2xl md:text-3xl font-bold mt-8 lg:mt-7">
               Sign in
             </h1>
-            <div className="form-control mt-4 mb-3">
+            <div className="form-control mt-4 mb-1">
               <label className="label">
-                <span className="label-text font-bold ml-2">Email*</span>
+                <span className="label-text font-bold ml-0">Email*</span>
               </label>
               <input
                 type="email"
@@ -207,7 +215,7 @@ const LoginPage = () => {
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-bold ml-2">Password*</span>
+                <span className="label-text font-bold ml-0">Password*</span>
               </label>
               <div className="relative">
                 <input
@@ -227,18 +235,18 @@ const LoginPage = () => {
               </div>
             </div>
             <Link href="/forget-password">
-              <p className="text-xs text-end text-gray-500 mt-3 mb-10">
+              <p className="text-xs text-end text-[#00000f] mt-2 mb-10">
                 Forgot password?
               </p>
             </Link>
 
-            <div className="form-control mt-4">
+            <div className="form-control mt-8 lg:mt-12">
               <button type="submit" className="btn bg-[#FACE39]">
                 Sign in
               </button>
             </div>
           </form>
-          {/* <p className="text-center">Or </p>
+          {/* <p className="text-center">OR </p>
           <div className="border-2 border-[#FACE39] rounded-xl py-2 my-4 lg:my-6 mx-auto w-full flex justify-center">
             <span
               onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
@@ -247,7 +255,7 @@ const LoginPage = () => {
               <FcGoogle /> Sign in with Google
             </span>
           </div> */}
-          <p className="text-center text-sm md:text-base">
+          <p className="text-center text-sm md:text-base mt-4">
             Don&apos;t have an account?{" "}
             <Link className="text-[#FACE39] font-bold" href="/register">
               Sign up now

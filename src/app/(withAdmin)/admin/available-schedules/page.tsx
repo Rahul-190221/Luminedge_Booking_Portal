@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 // import { FiDownload } from "react-icons/fi"; // Download icon
-
+import { motion } from "framer-motion";
 
 
 // Define a type for the schedule
@@ -153,9 +153,16 @@ function AvailableSchedulesPage() {
 
   return (
     <div>
-       <h1 className="text-2xl font-semibold">Available Schedules</h1>
+      <motion.h1
+        className="text-2xl font-semibold mt-0 mb-0 text-[#00000f]  p-2 rounded"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        Available Schedules
+      </motion.h1>
 
-      <div className="bg-gray-100 p-4 h-22 mb-3">
+      <div className="bg-gray-100 p-2 h-22 mb-0 text-[#00000f]">
       <h3><b>Filter by</b></h3>
       <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
         <select
@@ -247,11 +254,12 @@ function AvailableSchedulesPage() {
                 <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                   {schedule && (
                     <button
-                      onClick={() => router.push(`/admin/${schedule?._id}`)}
-                      className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                      View Bookings
-                    </button>
+                    onClick={() => router.push(`/admin/${schedule?._id}`)}
+                    className="px-3 py-1 bg-[#00000f] text-white rounded font-medium shadow-sm hover:bg-[#face39] hover:text-[#00000f] hover:font-semibold hover:shadow-md hover:scale-105 transition-all duration-300 ease-in-out"
+                  >
+                    View Bookings
+                  </button>
+                  
                   )}
                   <button
                     onClick={() =>

@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 // import { FiDownload } from "react-icons/fi"; // Download icon
+import { motion } from "framer-motion";
 
 
 
@@ -51,39 +52,6 @@ function AvailableSchedulesBDMPage() {
     fetchSchedules();
   }, []);
 
-  const deleteSchedule = async (id: string) => {
-    try {
-      const response = await fetch(
-        `https://luminedge-server.vercel.app/api/v1/admin/delete-schedule/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || `Failed to delete schedule: ${response.statusText}`
-        );
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Schedule deleted successfully");
-        setSchedules((prev) =>
-          prev.filter((schedule) => schedule.id !== id)
-        );
-      } else {
-        toast.error(result.message || "Error deleting schedule");
-      }
-    } catch (error: any) {
-      toast.error(`Error deleting schedule: ${error.message}`);
-      console.error("Error deleting schedule:", error);
-    }
-  };
 
   const filteredSchedules = React.useMemo(() => {
     const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
@@ -154,8 +122,15 @@ function AvailableSchedulesBDMPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Available Schedules</h1>
-      <div className="bg-gray-100 p-4 h-22 mb-5">
+           <motion.h1
+        className="text-2xl font-semibold mt-0 mb-0 text-[#00000f]  p-2 rounded"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        Available Schedules
+      </motion.h1>
+      <div className="bg-gray-100 p-2 h-22 mb-0 text-[#00000f]">
 <h3><b>Filter by</b></h3>
         <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
         <select
@@ -250,11 +225,12 @@ function AvailableSchedulesBDMPage() {
                 <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                   {schedule && (
                     <button
-                      onClick={() => router.push(`/bdm/${schedule?._id}`)}
-                      className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                      View Bookings
-                    </button>
+                    onClick={() => router.push(`/bdm/${schedule?._id}`)}
+                    className="px-5 py-2 rounded-xl bg-[#00000f] text-white font-medium shadow-md hover:bg-[#face39] hover:text-[#00000f] hover:font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out"
+                  >
+                    View Bookings
+                  </button>
+                  
                   )}
                 </td>
               </tr>

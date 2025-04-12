@@ -6,13 +6,13 @@ import { FaLongArrowAltRight } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 
 const CourseCard = ({
-  mockType,
+  allowed,
   course,
 }: {
-  mockType: string;
+  allowed: boolean;
   course: Course;
 }) => {
-  const router = useRouter(); // For navigation
+  const router = useRouter();
 
   const courseLinks: Record<string, string> = {
     IELTS: "https://luminedge.com.bd/ielts/",
@@ -29,21 +29,12 @@ const CourseCard = ({
   };
 
   const handleCardClick = () => {
-    console.log("Course name:", course.name); // Debugging
-    console.log("Mock Type:", mockType); // Debugging
-
-    if (mockType === course.name) {
-      // Navigate to booking page if mockType matches course name
+    if (allowed) {
       router.push(`/dashboard/booking/${course._id}`);
     } else {
-      // Navigate to the course URL in the same tab
       const courseLink = courseLinks[course.name.trim()];
-      console.log("Course Link:", courseLink); // Debugging
-
       if (courseLink) {
-        window.location.href = courseLink; // Open the external link in the same tab
-      } else {
-        console.error("Course link not found for:", course.name); // Error logging
+        window.location.href = courseLink;
       }
     }
   };
@@ -63,19 +54,13 @@ const CourseCard = ({
         />
       </figure>
       <div className="card-body bg-black text-gray-400 hover:text-black hover:bg-[#FACE39] rounded-b-lg">
-        <p className="text-xs">
-          {courseDescriptions[course.name]}
-        </p>
+        <p className="text-xs">{courseDescriptions[course.name]}</p>
         <div className="card-actions justify-start">
           <div className="flex items-center gap-2 mt-3">
-            {mockType === course.name ? (
-              <>
-                Book Now <FaLongArrowAltRight />
-              </>
+            {allowed ? (
+              <>Book Now <FaLongArrowAltRight /></>
             ) : (
-              <>
-                Learn More <FaLongArrowAltRight />
-              </>
+              <>Learn More <FaLongArrowAltRight /></>
             )}
           </div>
         </div>

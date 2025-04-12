@@ -37,165 +37,7 @@ const [filter, setFilter] = useState<string>("");
     present: 0,
     absent: 0,
   });
-  const [emailsSent, setEmailsSentState] = useState<boolean>(false);
 
-//   const fetchBookingsAndUsers = useCallback(async () => {
-//     if (!scheduleId) return;
-
-//     try {
-//       setLoading(true);
-
-//       const bookingsResponse = await axios.get(
-//         `https://luminedge-server.vercel.app/api/v1/admin/bookings`
-//       );
-//       const bookingsData = bookingsResponse.data;
-
-//       const filteredBookings = bookingsData.bookings.filter(
-//         (booking: Booking) => booking.scheduleId === scheduleId
-//       );
-
-//       const userIds = Array.from(
-//         new Set(
-//           filteredBookings.flatMap((booking: { userId: any }) =>
-//             Array.isArray(booking.userId) ? booking.userId : [booking.userId]
-//           )
-//         )
-//       );
-
-//       const usersResponse = await axios.get(
-//         `https://luminedge-server.vercel.app/api/v1/admin/users`
-//       );
-//       const usersData = usersResponse.data;
-
-//       const matchedUsers = usersData?.users?.filter((user: any) =>
-//         userIds.includes(user?._id)
-//       );
-
-//       const initialAttendance: { [key: string]: string } = {};
-//       filteredBookings.forEach((booking: { userId: any[] | string; attendance: string }) => {
-//         if (Array.isArray(booking.userId)) {
-//           booking.userId.forEach((id) => {
-//             initialAttendance[id] = booking.attendance || "N/A";
-//           });
-//         } else {
-//           initialAttendance[booking.userId] = booking.attendance || "N/A";
-//         }
-//       });
-// // Calculate attendance counts
-// const presentCount = Object.values(initialAttendance).filter(
-//   (status) => status === "present"
-// ).length;
-// const absentCount = Object.values(initialAttendance).filter(
-//   (status) => status === "absent"
-// ).length;
-
-//       setBookings(filteredBookings);
-//       setUsers(matchedUsers);
-//       setAttendance(initialAttendance);
-//       setAttendanceCounts({ present: presentCount, absent: absentCount });
-//       // Fetch individual user attendance
-//       const attendanceData: Record<string, number | null> = {};
-//       await Promise.all(
-//         userIds.map(async (userId) => {
-//           try {
-//             const response = await axios.get(
-//               `https://luminedge-server.vercel.app/api/v1/user/attendance/${userId}`
-//             );
-//             attendanceData[userId as string] = response.data.attendance || 0;
-//           } catch (error) {
-//             console.error(`Error fetching attendance for user ${userId}:`, error);
-//             attendanceData[userId as string] = null;
-//           }
-//         })
-//       );
-//       setUserAttendance(attendanceData);
-//     } catch (error) {
-//       toast.error("Error fetching data. Please try again.");
-//       console.error(error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   }, [scheduleId]);
-
-//   useEffect(() => {
-//     fetchBookingsAndUsers();
-//   }, [fetchBookingsAndUsers]);
-// const fetchBookingsAndUsers = useCallback(async () => {
-//   if (!scheduleId) return;
-
-//   try {
-//     setLoading(true);
-
-//     // Fetch bookings
-//     const { data: bookingsData } = await axios.get(`https://luminedge-server.vercel.app/api/v1/admin/bookings`);
-//     const filteredBookings = bookingsData.bookings.filter(
-//       (booking: Booking) => booking.scheduleId === scheduleId
-//     );
-
-//  // Define the correct type for `booking`
-// const userIds: string[] = Array.from(
-//   new Set<string>(
-//     filteredBookings.flatMap((booking: { userId: string | string[] }) =>
-//       Array.isArray(booking.userId) ? booking.userId : [booking.userId]
-//     )
-//   )
-// );
-
-
-
-//     // Fetch users (only filtered ones)
-//     const { data: usersData } = await axios.get(`https://luminedge-server.vercel.app/api/v1/admin/users`);
-//     const matchedUsers = usersData.users.filter((user: any) => userIds.includes(user._id));
-
-//     // Initialize attendance mapping
-//     const initialAttendance: Record<string, string> = {};
-//     filteredBookings.forEach((booking : Booking) => {
-//       const ids = Array.isArray(booking.userId) ? booking.userId : [booking.userId];
-//       ids.forEach((id: string) => {
-//         initialAttendance[id] = booking.attendance || "N/A";
-//       });
-//     });
-
-//     // Calculate attendance counts
-//     const presentCount = Object.values(initialAttendance).filter(status => status === "present").length;
-//     const absentCount = Object.values(initialAttendance).filter(status => status === "absent").length;
-
-//     setBookings(filteredBookings);
-//     setUsers(matchedUsers);
-//     setAttendance(initialAttendance);
-//     setAttendanceCounts({ present: presentCount, absent: absentCount });
-
-//     // Fetch attendance for only the unique user IDs
-//     if (userIds.length > 0) {
-//       try {
-//         const { data: attendanceResponse } = await axios.post(
-//           `https://luminedge-server.vercel.app/api/v1/user/attendance/bulk`, 
-//           { userIds } // Assuming your API supports bulk fetching
-//         );
-
-//         // Map attendance data
-//         const attendanceData: Record<string, number | null> = {};
-//         userIds.forEach((userId: string) => {
-//           attendanceData[userId] = attendanceResponse.attendance?.[userId] ?? null;
-//         });
-
-//         setUserAttendance(attendanceData);
-//       } catch (error) {
-//         console.error("Error fetching bulk attendance:", error);
-//       }
-//     }
-
-//   } catch (error) {
-//     toast.error("Error fetching data. Please try again.");
-//     console.error(error);
-//   } finally {
-//     setLoading(false);
-//   }
-// }, [scheduleId]);
-
-// useEffect(() => {
-//   fetchBookingsAndUsers();
-// }, [fetchBookingsAndUsers]);
 
 const fetchBookingsAndUsers = useCallback(async () => {
   if (!scheduleId) return;
@@ -279,99 +121,23 @@ useEffect(() => {
 }, [fetchBookingsAndUsers]);
 
 
-  const handleSubmit = async (userId: string, attendanceValue: string) => {
-    try {
-      if (!userId || !attendanceValue) {
-        toast.error("Invalid attendance update request.");
-        return;
-      }
-
-      const status = attendanceValue === "present" ? "Present" : "Absent";
-
-      const response = await axios.put(
-        `https://luminedge-server.vercel.app/api/v1/user/bookings/${scheduleId}`,
-        {
-          userId,
-          attendance: attendanceValue,
-          status,
-        }
-      );
-
-      if (response.status !== 200) {
-        throw new Error(response.data.message || "Failed to update attendance");
-      }
-
-      setAttendance((prev) => ({
-        ...prev,
-        [userId]: attendanceValue,
-      }));
-
-      toast.success("Attendance updated successfully!");
-    } catch (error: any) {
-      console.error("Error updating attendance:", error);
-      toast.error(error.message || "Failed to update attendance.");
-    }
+  const formatCustomDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = date.toLocaleString("en-US", { month: "long" });
+    const year = date.getFullYear();
+    return `${day} ${month}, ${year}`;
   };
-
-  // const confirmDownload = () => {
-  //   if (!bookings.length) {
-  //     toast.error("No booking data to download.");
-  //     return;
-  //   }
-
-  //   const bookingToDownload = bookings[0];
-
-  //   const doc = new jsPDF({ orientation: "landscape", format: "a4" });
-
-  //   doc.setFontSize(10);
-  //   doc.text("Booking Details", 10, 15);
-  //   doc.text(`Test Name: ${bookingToDownload.name}`, 10, 20);
-  //   doc.text(`Date: ${bookingToDownload.bookingDate}`, 10, 25);
-  //   doc.text(
-  //     `Schedule Time: ${bookingToDownload.startTime} - ${bookingToDownload.endTime}`,
-  //     10,
-  //     30
-  //   );
-
-  //   autoTable(doc, {
-  //     head: [
-  //       [
-  //         "List",
-  //         "User Name",
-  //         "Email",
-  //         "Phone",
-  //         "Transaction ID",
-  //         "Passport Number",
-  //         "Test Type",
-  //         "Test System",
-  //         "Purchased",
-  //         "Attend",
-  //         "Attendance",
-  //       ],
-  //     ],
-  //     body: users.map((user, index) => [
-  //       index + 1,
-  //       user?.name || "N/A",
-  //       user?.email || "N/A",
-  //       user?.contactNo || "N/A",
-  //       user?.transactionId || "N/A",
-  //       user?.passportNumber || "N/A",
-  //       bookings.find((booking) => booking.userId.includes(user._id))?.testType || "N/A",
-  //       bookings.find((booking) => booking.userId.includes(user._id))?.testSystem || "N/A",
-  //       user?.totalMock || "N/A",
-  //       userAttendance[user._id] !== null ? userAttendance[user._id] : "N/A",
-  //       attendance[user._id] || "N/A",
-  //     ]),
-  //     theme: "grid",
-  //     styles: { fontSize: 10 },
-  //     headStyles: { fillColor: "#face39" },
-  //     margin: { top: 35 },
-  //     tableWidth: "auto",
-  //   });
-
-  //   const currentDate = new Date().toISOString().split("T")[0];
-  //   doc.save(`booking_requests_${currentDate}.pdf`);
-  // };
+  const formatCustomTime = (start: string, end: string) => {
+    const formatTime = (time: string) =>
+      new Date(`1970-01-01T${time}`).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    return `${formatTime(start)} - ${formatTime(end)}`;
+  };
+  
   const confirmDownload = () => {
     if (!bookings.length) {
       toast.error("No booking data to download.");
@@ -487,31 +253,7 @@ useEffect(() => {
   const filteredUsers = filterUsers(users, bookings, filter, testTypeFilter, testSystemFilter, attendanceFilter);
   
   
-  // Helper Functions for Formatting
-  const formatExamDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-  
-  const formatExamTime = (startTime: string, endTime: string) => {
-    const options = { hour: "numeric" as const, minute: "numeric" as const, hour12: true };
-    const start = new Date(`1970-01-01T${startTime}`).toLocaleTimeString(
-      "en-US",
-      options
-    );
-    const end = new Date(`1970-01-01T${endTime}`).toLocaleTimeString(
-      "en-US",
-      options
-    );
-    return `${start} - ${end}`;
-  };
-  
  
-
   return (
     <div className="p-4">
       {loading ? (
@@ -578,14 +320,18 @@ useEffect(() => {
                 <strong>Test Name:</strong> {bookings[0]?.name || "N/A"}
               </p>
               <p>
-                <strong>Date:</strong> {bookings[0]?.bookingDate || "N/A"}
-              </p>
-              <p>
-                <strong>Schedule Time:</strong>{" "}
-                {bookings[0]?.startTime && bookings[0]?.endTime
-                  ? `${bookings[0]?.startTime} - ${bookings[0]?.endTime}`
-                  : "N/A"}
-              </p>
+  <strong>Date:</strong>{" "}
+  {bookings[0]?.bookingDate
+    ? formatCustomDate(bookings[0].bookingDate)
+    : "N/A"}
+</p>
+<p>
+  <strong>Schedule Time:</strong>{" "}
+  {bookings[0]?.startTime && bookings[0]?.endTime
+    ? formatCustomTime(bookings[0].startTime, bookings[0].endTime)
+    : "N/A"}
+</p>
+
             </div>
   
             {/* Attendance Counts */}
@@ -645,13 +391,15 @@ useEffect(() => {
   
           {/* Action Buttons */}
           <div className="mt-8 flex justify-start space-x-4">
-            {/* Download Button */}
-            <button
-              onClick={confirmDownload}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              Download as PDF
-            </button>
+           {/* Download Button - left aligned */}
+           <button
+  onClick={confirmDownload}
+  className="w-64 px-6 py-2 rounded-full font-bold text-sm uppercase tracking-wider bg-[#00000f] text-white transition-all duration-300 ease-in-out shadow-lg hover:bg-[#face39] hover:text-[#00000f] hover:shadow-2xl ring-2 ring-[#00000f] hover:ring-[#face39] hover:scale-105 flex items-center justify-center gap-1"
+>
+  <span className="text-lg">📄</span>
+  Download as PDF
+</button>
+
   
           </div>
         </>

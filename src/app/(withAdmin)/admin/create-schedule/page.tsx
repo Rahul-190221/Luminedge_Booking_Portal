@@ -138,7 +138,7 @@ export default function CreateSchedulePage() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Course ID */}
         <div>
-          <label className="block mb-2 font-medium">Course ID</label>
+          <label className="block mb-2 font-medium text-[#00000f]">Course ID</label>
           <select
             value={formData.courseId}
             onChange={(e) =>
@@ -161,7 +161,7 @@ export default function CreateSchedulePage() {
 
         {/* Date Picker */}
         <div>
-          <label className="block mb-2 font-medium">Select Dates</label>
+          <label className="block mb-2 font-medium text-[#00000f]">Select Dates</label>
           <MultiDatePicker
             value={formData.dates as any}
             onChange={(dates) =>
@@ -321,12 +321,13 @@ export default function CreateSchedulePage() {
 
         {/* Submit */}
         <button
-          type="submit"
-          className="bg-green-500 text-white px-6 py-2 rounded"
-          onClick={() => router.push('/admin/available-schedules')}
-        >
-          Create Schedule
-        </button>
+  type="submit"
+  onClick={() => router.push('/admin/available-schedules')}
+  className="px-7 py-3 mt-0 rounded-xl bg-[#00000f] text-white font-semibold text-sm tracking-wide shadow-md hover:bg-[#face39] hover:text-[#00000f] hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out"
+>
+  ➕ Create Schedule
+</button>
+
       </form>
     </div>
   );

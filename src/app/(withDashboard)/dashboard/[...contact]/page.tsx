@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useEffect } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
 import GetMe from "@/app/helpers/getme"; // Adjust the path if necessary
@@ -11,12 +12,20 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
   const { contact: bookingId } = params || {};
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
-  const isMobile = typeof window !== "undefined" && window.innerWidth <= 768; // Check if window is available and determine if it's mobile
+  // const isMobile = typeof window !== "undefined" && window.innerWidth <= 768; // Check if window is available and determine if it's mobile
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [testType, setTestType] = useState<string>("");
   const [testSystem, setTestSystem] = useState<string>("");
   const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth <= 768);
+  }, []);
+  
+
+
   const isPast24Hours = (bookingDate: any, startTime: any) => {
     const bookingDateTime = new Date(`${bookingDate}T${startTime}`);
     const currentTime = new Date();
@@ -196,25 +205,25 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
           </ul>
         </div>
         <p><strong>Good luck with your mock test! Thank you once again for choosing Luminedge to help you achieve your goals.</strong></p>
-        {/* Emergency Contact Information */}
-        <div className="w-full max-w-5xl bg-transparent p-4 sm:p-6">
-          <h1 className="text-lg sm:text-xl font-semibold text-center" style={{ color: "#face39" }}>
-            {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
-          </h1>
-          <p className="text-center mt-1 mb-2 sm:mb-4">
-            In case of any emergency or if you need to communicate with us regarding your mock test, please contact:
-          </p>
-          {/* Contact Info Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full">
-            <div className="p-4 border rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold mb-2">Address</h2>
-              <p>
-                Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi, Dhaka,
-                Bangladesh, 1205
-              </p>
-            </div>
+                   {/* Emergency Contact Information */}         
+                   <div className="w-full max-w-5xl bg-transparent  p-2">
+        <h1 className="text-xl font-semibold text-center" style={{ color: "#face39" }}>
+          {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
+        </h1>
+        <p className="text-center mt-1 mb-4">
+          In case of any emergency or if you need to communicate with us regarding your mock test, please contact:
+        </p>
+        {/* Contact Info Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+          <div className="p-4 border rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold mb-2">Address</h2>
+            <p>
+              Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi, Dhaka,
+              Bangladesh, 1205
+            </p>
+          </div>
 
-            <div className="p-4 border rounded-lg shadow-md">
+          <div className="p-4 border rounded-lg shadow-md">
               <h2 className="text-lg font-semibold mb-2">Telephone</h2>
               <p>01400-403474</p>
               <p>01400-403475</p>
@@ -224,12 +233,13 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
               <p>01400-403494</p>
             </div>
 
-            <div className="p-4 border rounded-lg shadow-md">
-              <h2 className="text-lg font-semibold mb-2">E-mail</h2>
-              <p>ielts.luminedge@gmail.com</p>
-            </div>
+          <div className="p-4 border rounded-lg shadow-md">
+            
+          <h2 className="text-lg font-semibold mb-2">E-mail</h2>
+              <p className="break-words">ielts.luminedge@gmail.com</p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
