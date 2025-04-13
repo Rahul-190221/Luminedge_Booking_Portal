@@ -538,13 +538,10 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
           const dateStr = date.toDateString();
           const selectedStr = (value as Date).toDateString();
         
-          // Always apply selected date styling
           if (dateStr === selectedStr) return "selected-date";
         
-          // Only apply available-date circle if it's Test Center
-          if (userTestType === "Computer-Based" && selectedLocation === "Test Center") {
-            if (availableDates.includes(dateStr)) return "available-date";
-          }
+          // ✅ Now show available circle for both Paper-Based and Computer-Based
+          if (availableDates.includes(dateStr)) return "available-date";
         
           return null;
         }}
