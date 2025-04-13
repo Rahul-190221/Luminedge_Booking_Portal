@@ -162,44 +162,46 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     const fetchUserStatus = async () => {
       const id = getUserIdOnlyFromToken();
       setUserId(id);
-  
+
       try {
         const response = await axios.get(
           `https://luminedge-server.vercel.app/api/v1/user/status/${id}`
         );
         const data = response.data;
         const mocks = data.user.mocks || [];
-  
+
         // Set basic user status
         setUserStatus(data.user.status);
-  
+
         // Find mock entry that matches the courseName (i.e., mockType)
         const matchingMock = mocks.find(
           (mock: { mockType: string }) => mock.mockType === courseName
         );
-  
+
         if (matchingMock) {
           setUserMockType(matchingMock.mockType); // for UI
           setUserTestType(matchingMock.testType); // Paper/Computer Based
-  
-          if (matchingMock.testType !== "IELTS") {
-            setTestSystem(matchingMock.testSystem || "N/A");
-          } else {
-            setTestSystem(""); // IELTS doesn't need test system
-          }
+          setTestSystem(matchingMock.testSystem || "");
+        } else if (data.user.mockType === courseName) {
+          setUserMockType(data.user.mockType);
+          setUserTestType(data.user.testType);
+          setTestSystem(data.user.testSystem || "");
         } else {
           // No matching mock for the selected course
-          setUserTestType("N/A");
           setUserMockType("N/A");
+          setUserTestType("N/A");
           setTestSystem("");
         }
       } catch (error) {
         console.error("Error fetching user status:", error);
       }
     };
-  
+
     fetchUserStatus();
   }, [courseName]);
+
+
+
   // Removed duplicate declaration of 'value' and 'onChange'
   const [availableDates, setAvailableDates] = useState<string[]>([]);
 

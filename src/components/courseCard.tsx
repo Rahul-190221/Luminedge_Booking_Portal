@@ -8,9 +8,13 @@ import { useRouter } from "next/navigation";
 const CourseCard = ({
   allowed,
   course,
+  testType,
+  testSystem,
 }: {
   allowed: boolean;
   course: Course;
+  testType?: string;
+  testSystem?: string;
 }) => {
   const router = useRouter();
 
@@ -22,27 +26,29 @@ const CourseCard = ({
   };
 
   const courseDescriptions: Record<string, string> = {
-    IELTS: "Book Your IELTS Test with Confidence – Convenient, Reliable, and Trusted by Thousands.",
-    "Pearson PTE": "Book Your PTE Mock Test – Practice, Prepare, and Excel!",
+    IELTS:
+      "Book Your IELTS Test with Confidence – Convenient, Reliable, and Trusted by Thousands.",
+    "Pearson PTE":
+      "Book Your PTE Mock Test – Practice, Prepare, and Excel!",
     GRE: "Book Your GRE General Mock Test – Ace Your Preparation!",
     TOEFL: "Book Your TOEFL iBT Mock Test – Get Ready to Succeed!",
   };
 
   const handleCardClick = () => {
     if (allowed) {
-      router.push(`/dashboard/booking/${course._id}`);
+      router.push(
+        `/dashboard/booking/${course._id}?testType=${testType}&testSystem=${testSystem}`
+      );
     } else {
       const courseLink = courseLinks[course.name.trim()];
-      if (courseLink) {
-        window.location.href = courseLink;
-      }
+      if (courseLink) window.open(courseLink, "_blank");
     }
   };
 
   return (
     <div
       onClick={handleCardClick}
-      className="card bg-base-100 w-[280px] h-[300px] shadow-xl rounded-lg text-white hover:text-black cursor-pointer"
+      className="card bg-base-100 w-[280px] h-[300px] shadow-xl rounded-lg text-white hover:text-black cursor-pointer transition-all duration-300 ease-in-out"
     >
       <figure>
         <Image
@@ -50,17 +56,24 @@ const CourseCard = ({
           alt={course.name}
           width={308}
           height={268}
-          className="rounded-t-lg"
+          className="rounded-t-lg object-cover"
         />
       </figure>
-      <div className="card-body bg-black text-gray-400 hover:text-black hover:bg-[#FACE39] rounded-b-lg">
-        <p className="text-xs">{courseDescriptions[course.name]}</p>
+
+      <div className="card-body bg-black text-gray-400 hover:text-black hover:bg-[#FACE39] rounded-b-lg transition-all duration-300 ease-in-out">
+        <p className="text-xs font-medium leading-snug">
+          {courseDescriptions[course.name]}
+        </p>
         <div className="card-actions justify-start">
-          <div className="flex items-center gap-2 mt-3">
+          <div className="flex items-center gap-2 mt-3 font-semibold uppercase text-sm tracking-wide">
             {allowed ? (
-              <>Book Now <FaLongArrowAltRight /></>
+              <>
+                Book Now <FaLongArrowAltRight />
+              </>
             ) : (
-              <>Learn More <FaLongArrowAltRight /></>
+              <>
+                Learn More <FaLongArrowAltRight />
+              </>
             )}
           </div>
         </div>
