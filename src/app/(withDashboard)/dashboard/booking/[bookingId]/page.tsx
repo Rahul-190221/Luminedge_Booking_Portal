@@ -439,7 +439,9 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   <label htmlFor="testSystem" className="block mb-0 font-medium text-[#00000f]">
     Test System
   </label>
+
   {courseName === "IELTS" ? (
+    // ✅ Editable dropdown for IELTS
     <select
       id="testSystem"
       className="select select-bordered bg-[#FACE39] text-black w-full"
@@ -453,21 +455,36 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         </option>
       ))}
     </select>
-  ) : (
+  ) : testSystem ? (
+    // 🛑 Read-only if testSystem already fetched
     <select
       id="testSystem"
       className="select select-bordered bg-[#FACE39] text-black w-full"
-      value={testSystem || ""}
+      value={testSystem}
       onChange={() => {
-        // no-op: read-only for non-IELTS
+        // No-op, read-only
       }}
     >
-      <option value={testSystem || ""}>
-        {testSystem || ""}
-      </option>
+      <option value={testSystem}>{testSystem}</option>
+    </select>
+  ) : (
+    // ✅ Editable dropdown if testSystem not fetched
+    <select
+      id="testSystem"
+      className="select select-bordered bg-[#FACE39] text-black w-full"
+      value={testSystem}
+      onChange={(e) => setTestSystem(e.target.value)}
+    >
+      <option value="">Select Test System</option>
+      {(availableTestSystems || []).map((system) => (
+        <option key={system} value={system}>
+          {system}
+        </option>
+      ))}
     </select>
   )}
 </div>
+
 
       </div>
 
