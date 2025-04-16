@@ -21,17 +21,24 @@ const DashboardPage = () => {
         const response = await axios.get(
           `https://luminedge-server.vercel.app/api/v1/admin/users`
         );
-        const fetchedUsers = response.data.users || [];
-        setUsers(fetchedUsers);
-        calculateDailyRequests(fetchedUsers, new Date());
-        calculateMonthlyRequests(fetchedUsers);
-        calculateOverallSchedule(fetchedUsers);
+  
+        const allUsers = response.data.users || [];
+  
+        // ✅ Filter only users with role === "user"
+        const filteredUsers = allUsers.filter((user: any) => user.role === "user");
+  
+        setUsers(filteredUsers);
+        calculateDailyRequests(filteredUsers, new Date());
+        calculateMonthlyRequests(filteredUsers);
+        calculateOverallSchedule(filteredUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
       }
     };
+  
     fetchUsers();
   }, []);
+  
 
   const calculateDailyRequests = (users: any[], date: Date | null) => {
     const formattedDate = date?.toISOString().split("T")[0];

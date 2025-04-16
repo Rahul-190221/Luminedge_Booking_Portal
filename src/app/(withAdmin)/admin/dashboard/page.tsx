@@ -21,18 +21,24 @@ const DashboardPage = () => {
         const response = await axios.get(
           `https://luminedge-server.vercel.app/api/v1/admin/users`
         );
-        const fetchedUsers = response.data.users || [];
-        setUsers(fetchedUsers);
-        calculateDailyRequests(fetchedUsers, new Date());
-        calculateMonthlyRequests(fetchedUsers);
-        calculateOverallSchedule(fetchedUsers);
+  
+        const allUsers = response.data.users || [];
+  
+        // ✅ Filter only users with role === "user"
+        const filteredUsers = allUsers.filter((user: any) => user.role === "user");
+  
+        setUsers(filteredUsers);
+        calculateDailyRequests(filteredUsers, new Date());
+        calculateMonthlyRequests(filteredUsers);
+        calculateOverallSchedule(filteredUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
       }
     };
+  
     fetchUsers();
   }, []);
-
+  
   const calculateDailyRequests = (users: any[], date: Date | null) => {
     const formattedDate = date?.toISOString().split("T")[0];
     const count = users.filter((user: any) => {
@@ -135,7 +141,7 @@ const DashboardPage = () => {
 
         {/* Total Booking */}
         <div className="stat bg-white shadow-md rounded-lg p-4  max-h-[380px]">
-          <div className="stat-title text-[#00000f] font-medium mb-0">Total Booking</div>
+          <div className="stat-title text-[#00000f] font-medium mb-0">Total Users</div>
           <DonutChart
             completedCount={overallSchedule.reduce((acc, item) => acc + item.count, 0)}
             totalCount={overallSchedule.reduce((acc, item) => acc + item.count, 1)}
