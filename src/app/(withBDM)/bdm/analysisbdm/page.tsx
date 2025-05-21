@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
 BarChart, XAxis, YAxis, Tooltip, Bar } from "recharts";
 
-const AnalysisPage = () => {
+const BDMAnalysisPage = () => {
   const [users, setUsers] = useState([]);
   const [dailyRequests, setDailyRequests] = useState<number>(0);
   const [monthlyRequests, setMonthlyRequests] = useState<number>(0);
@@ -652,4 +652,4 @@ className="w-40 px-1 py-1 rounded-full font-extrabold text-sm uppercase tracking
   );
 };
 
-export default AnalysisPage;
+export default BDMAnalysisPage;

@@ -33,7 +33,9 @@ interface ItemType {
   mock: string;
   transactionId: string;
   mrValidation: string;
+  isEditing?: boolean;
 }
+
 
 const TableAdmin = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -183,6 +185,17 @@ const TableAdmin = () => {
       prevItems.map((item, i) => (i === index ? { ...item, [field]: value } : item))
     );
   };
+  const updateSubmittedItem = (index: number, field: keyof ItemType, value: string) => {
+    setSubmittedItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    );
+  };
+  
+  const toggleEditSubmittedItem = (index: number) => {
+    setSubmittedItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, isEditing: !item.isEditing } : item))
+    );
+  };
   
   // ✅ Add New Row
   const addItem = () => {
@@ -197,40 +210,7 @@ const TableAdmin = () => {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const onUpdateUser = async () => {
-    if (!selectedUser) return toast.error("No user selected.");
-
-    const isValid = items.every(item =>
-      item.mockType &&
-      item.testType &&
-      (item.mockType === "IELTS" || item.testSystem) &&
-      item.mock &&
-      item.transactionId &&
-      item.mrValidation
-    );
-
-    if (!isValid) return toast.error("Please fill in all required fields before saving.");
-
-    try {
-      const response = await axios.put(
-        `https://luminedge-server.vercel.app/api/v1/user/update-multiple/${selectedUser._id}`,
-        { mocks: items }
-      );
-
-      if (response.data.success) {
-        toast.success("All mock data updated successfully.");
-        setSubmittedItems([...submittedItems, ...items]);
-        setLastMock(items[items.length - 1]);
-        setItems([{ mockType: "", testType: "", testSystem: "", mock: "", transactionId: "", mrValidation: "" }]);
-      } else {
-        toast.error(response.data.message || "Failed to update mock data.");
-      }
-    } catch (error) {
-      console.error("Error updating user data:", error);
-      toast.error("Failed to update user mock data.");
-    }
-  };
-  
+ 
   // Add a function to block/unblock user
   const onToggleBlockUser = async (userId: string) => {
     const user = users.find((u) => u._id === userId);
@@ -271,7 +251,7 @@ const TableAdmin = () => {
             user._id === _id ? { ...user, status: value } : user
           )
         );
-        toast.success("✅ User status updated successfully!");
+        toast("✅ User status updated successfully!");
       } else {
         throw new Error(`Unexpected response: ${response.status}`);
       }
@@ -284,7 +264,125 @@ const TableAdmin = () => {
       toast.error(errorMessage);
     }
   };
-  
+
+// ✅ CORRECTION TO MR VALIDATION FORMAT LOGIC
+// Fix: Save human-readable 'mrValidation' + computed ISO 'mrValidationExpiry'
+
+const getFutureISODate = (duration: string): string => {
+  if (!duration || typeof duration !== "string") return new Date().toISOString();
+
+  const [valueStr, unit] = duration.trim().split(" ");
+  const value = parseInt(valueStr);
+
+  if (isNaN(value) || !unit) return new Date().toISOString();
+
+  const now = new Date();
+  switch (unit.toLowerCase()) {
+    case "minute":
+    case "minutes":
+      now.setMinutes(now.getMinutes() + value);
+      break;
+    case "day":
+    case "days":
+      now.setDate(now.getDate() + value);
+      break;
+    case "month":
+    case "months":
+      now.setMonth(now.getMonth() + value);
+      break;
+    default:
+      return new Date().toISOString();
+  }
+
+  return now.toISOString();
+};
+
+
+// ✅ Fix saveAllData to store both fields
+const saveAllData = async () => {
+  if (!selectedUser) return;
+
+  const newItems = items.filter(
+    (item) =>
+      item.mockType && item.testType && item.mock && item.transactionId && item.mrValidation
+  );
+
+  if (newItems.length > 0) {
+    try {
+      const response = await axios.put(
+        `https://luminedge-server.vercel.app/api/v1/user/update-multiple/${selectedUser._id}`,
+        {
+          mocks: newItems.map((item) => ({
+            ...item,
+            mrValidationExpiry: getFutureISODate(item.mrValidation), // ✅ ISO
+            mrValidation: item.mrValidation, // ✅ Human-readable
+          })),
+        }
+      );
+      if (response.data.success) {
+        toast.success("New mock entries saved.");
+        setSubmittedItems([
+          ...submittedItems,
+          ...newItems.map((item) => ({ ...item, isEditing: false })),
+        ]);
+        setItems([
+          {
+            mockType: "",
+            testType: "",
+            testSystem: "",
+            mock: "",
+            transactionId: "",
+            mrValidation: "",
+          },
+        ]);
+      }
+    } catch (err) {
+      toast.error("Failed to save new entries.");
+    }
+  }
+
+  const editedItems = submittedItems.filter((item) => item.isEditing);
+
+  for (const edited of editedItems) {
+    try {
+      const payload = {
+        updatedMock: {
+          mockType: edited.mockType.trim(),
+          testType: edited.testType.trim(),
+          testSystem: edited.testSystem?.trim() || "",
+          mock: String(Math.abs(Number(edited.mock))),
+          transactionId: edited.transactionId.trim(),
+          mrValidation: edited.mrValidation,
+          mrValidationExpiry: getFutureISODate(edited.mrValidation),
+        },
+        transactionId: edited.transactionId.trim(),
+      };
+
+      const res = await axios.put(
+        `https://luminedge-server.vercel.app/api/v1/user/update-one/${selectedUser._id}`,
+        payload
+      );
+
+      if (res.data.success) {
+        toast.success(`Mock updated: ${edited.transactionId}`);
+        setSubmittedItems((prev) =>
+          prev.map((item) =>
+            item.transactionId === edited.transactionId
+              ? { ...res.data.updatedMock, isEditing: false }
+              : item
+          )
+        );
+      } else {
+        toast.error(`Failed to update mock: ${edited.transactionId}`);
+      }
+    } catch (err: any) {
+      toast.error(
+        `Error updating mock: ${edited.transactionId}\n${err.response?.data?.message || err.message}`
+      );
+    }
+  }
+};
+
   return (
     <>
     <h1 className="text-2xl font-minibold text-[#00000f] mb-2">
@@ -454,7 +552,7 @@ const TableAdmin = () => {
     <div className="bg-white p-5 rounded-lg shadow-lg w-full sm:w-3/4 flex flex-col sm:flex-row gap-5">
       
       {/* User Details Section */}
-      <div className="w-full sm:w-1/3 bg-white rounded-xl shadow-md p-3 border border-gray-300">
+      <div className="w-full sm:w-[25%] bg-white rounded-xl shadow-md p-2 border border-gray-300">
         <h2 className="text-2xl font-semibold text-[#00000f] mb-1">👤User Details</h2>
         <div className="space-y-1 text-sm text-[#00000f]">
           <p><strong>Name:</strong> {selectedUser?.name || "N/A"}</p>
@@ -494,167 +592,243 @@ const TableAdmin = () => {
       <div className="w-px bg-[#00000f]"></div>
 
       {/* Update User Section */}
-      <div className="w-full sm:w-2/3 bg-white rounded-2xl shadow-lg border  p-3">
-        <h2 className="text-2xl font-semibold text-[#00000f] mb-2">🛠Update User</h2>
+      <div className="w-full sm:w-[78%] bg-white rounded-2xl shadow-lg border  p-2">
+        <h2 className="text-2xl font-semibold text-[#00000f] mb-1">🛠Update User</h2>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm border border-gray-400 border-collapse rounded-lg overflow-hidden shadow-sm">
-            <thead>
-              <tr className="bg-yellow-300 text-gray-900 font-semibold text-center">
-                <th className="p-3 border border-gray-400">Mock Type</th>
-                <th className="p-3 border border-gray-400">Test Type</th>
-                <th className="p-3 border border-gray-400">Test System</th>
-                <th className="p-3 border border-gray-400">Mock #</th>
-                <th className="p-3 border border-gray-400">MR</th>
-                <th className="p-3 border border-gray-400">MR Validation</th>
-                <th className="p-3 border border-gray-400">❌</th>
-              </tr>
-            </thead>
-            <tbody className="text-center bg-white">
-              {submittedItems.map((item, index) => (
-                <tr key={`submitted-${index}`} className="hover:bg-gray-50">
-                  <td className="p-3 border border-gray-300">{item.mockType}</td>
-                  <td className="p-3 border border-gray-300">{item.testType}</td>
-                  <td className="p-3 border border-gray-300">{item.testSystem}</td>
-                  <td className="p-3 border border-gray-300">{item.mock}</td>
-                  <td className="p-3 border border-gray-300">{item.transactionId}</td>
-                  <td className="p-3 border border-gray-300">{item.mrValidation}</td>
-                  <td className="p-3 border border-gray-300">—</td>
-                </tr>
-              ))}
+        <table className="table-fixed w-full border-collapse text-[#00000f]">
+  <thead>
+    <tr className="bg-yellow-300 text-gray-900 font-semibold text-center">
+      <th className="w-[13%] p-1 border border-gray-300">Mock Type</th>
+      <th className="w-[20%] p-1 border border-gray-300">Test Type</th>
+      <th className="w-[15%] p-1 border border-gray-300">Test System</th>
+      <th className="w-[10%] p-1 border border-gray-300">Mock #</th>
+      <th className="w-[15%] p-1 border border-gray-300">MR Number</th>
+      <th className="w-[15%] p-1 border border-gray-300">MR Validation</th>
+      <th className="w-[6%] p-1 border border-gray-300">✏️</th>
+    </tr>
+  </thead>
 
-              {items.map((item, index) => (
-                <tr key={`new-${index}`} className="hover:bg-gray-50">
-                  <td className="p-2 border border-gray-300">
-                    <select
-                      value={item.mockType}
-                      onChange={(e) => updateItem(index, "mockType", e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                      required
-                    >
-                      <option value="">Select</option>
-                      <option value="IELTS">IELTS</option>
-                      <option value="GRE">GRE</option>
-                      <option value="TOEFL">TOEFL</option>
-                      <option value="Pearson PTE">Pearson PTE</option>
-                    </select>
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <select
-                      value={item.testType}
-                      onChange={(e) => updateItem(index, "testType", e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                      disabled={!item.mockType}
-                      required
-                    >
-                      <option value="">Select</option>
-                      {item.mockType === "IELTS" ? (
-                        <>
-                          <option value="Paper-Based">Paper-Based</option>
-                          <option value="Computer-Based">Computer-Based</option>
-                        </>
-                      ) : (
-                        <option value="Computer-Based">Computer-Based</option>
-                      )}
-                    </select>
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <select
-                      value={item.testSystem}
-                      onChange={(e) => updateItem(index, "testSystem", e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                      disabled={!item.mockType}
-                      required={item.mockType !== "IELTS"}
-                    >
-                      <option value="">Select</option>
-                      {mockSystemOptions[item.mockType]?.map((system) => (
-                        <option key={system} value={system}>
-                          {system}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <input
-                      type="text"
-                      value={item.mock}
-                      onChange={(e) => updateItem(index, "mock", e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                      required
-                    />
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <input
-                      type="text"
-                      value={item.transactionId}
-                      onChange={(e) => updateItem(index, "transactionId", e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                      required
-                    />
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <select
-                      value={item.mrValidation}
-                      onChange={(e) => updateItem(index, "mrValidation", e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
-                      required
-                    >
-                      <option value="">Select Duration</option>
-                      <option value="5 Minutes">5 Minutes</option>
-                      <option value="10 Minutes">10 Minutes</option>
-                      <option value="1 Month">1 Month</option>
-                      <option value="2 Months">2 Months</option>
-                      <option value="3 Months">3 Months</option>
-                      <option value="6 Months">6 Months</option>
-                    </select>
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                  <button
-  onClick={() => removeItem(index)}
-  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 ease-in-out text-sm flex items-center justify-center"
->
-  ❌
-</button>
+  <tbody className="text-center bg-white">
+    {submittedItems.map((item, index) => (
+      <tr key={`submitted-${index}`} className="hover:bg-gray-50">
+        {item.isEditing ? (
+          <>
+            <td className="p-1 border border-gray-300">
+              <select
+                className="w-full px-1 py-1 border rounded"
+                value={item.mockType || ""}
+                onChange={(e) => updateSubmittedItem(index, 'mockType', e.target.value)}
+              >
+                <option value="">Select</option>
+                <option value="IELTS">IELTS</option>
+                <option value="GRE">GRE</option>
+                <option value="TOEFL">TOEFL</option>
+                <option value="Pearson PTE">Pearson PTE</option>
+              </select>
+            </td>
+            <td className="p-1 border border-gray-300">
+              <select
+                className="w-full px-1 py-1 border rounded"
+                value={item.testType || ""}
+                onChange={(e) => updateSubmittedItem(index, 'testType', e.target.value)}
+                disabled={!item.mockType}
+              >
+                <option value="">Select</option>
+                {item.mockType === "IELTS" ? (
+                  <>
+                    <option value="Paper-Based">Paper-Based</option>
+                    <option value="Computer-Based">Computer-Based</option>
+                  </>
+                ) : (
+                  <option value="Computer-Based">Computer-Based</option>
+                )}
+              </select>
+            </td>
+            <td className="p-1 border border-gray-300">
+              <select
+                className="w-full px-1 py-1 border rounded"
+                value={item.testSystem || ""}
+                onChange={(e) => updateSubmittedItem(index, 'testSystem', e.target.value)}
+                disabled={!item.mockType}
+              >
+                <option value="">Select</option>
+                {mockSystemOptions[item.mockType]?.map((system) => (
+                  <option key={system} value={system}>{system}</option>
+                ))}
+              </select>
+            </td>
+            <td className="p-1 border border-gray-300">
+              <input
+                className="w-full px-1 py-1 border rounded"
+                value={item.mock}
+                onChange={(e) => updateSubmittedItem(index, 'mock', e.target.value)}
+              />
+            </td>
+            <td className="p-1 border border-gray-300">
+              <input
+                className="w-full px-1 py-1 border rounded bg-gray-100"
+                value={item.transactionId}
+                disabled
+              />
+            </td>
+            <td className="p-1 border border-gray-300">
+              <select
+                className="w-full px-1 py-1 border rounded"
+                value={item.mrValidation || ""}
+                onChange={(e) => updateSubmittedItem(index, 'mrValidation', e.target.value)}
+              >
+                <option value="">Select Duration</option>
+                <option value="7 Days">7 Days</option>
+                <option value="14 Days">14 Days</option>
+                <option value="1 Month">1 Month</option>
+                <option value="2 Months">2 Months</option>
+                <option value="3 Months">3 Months</option>
+                <option value="6 Months">6 Months</option>
+              </select>
+            </td>
+            <td className="p-1 border border-gray-300">
+              <button
+                className="bg-green-600 text-white px-1 py-1 rounded"
+                onClick={() => toggleEditSubmittedItem(index)}
+              >
+                ✅
+              </button>
+            </td>
+          </>
+        ) : (
+          <>
+            <td className="p-1 border border-gray-300">{item.mockType}</td>
+            <td className="p-1 border border-gray-300">{item.testType}</td>
+            <td className="p-1 border border-gray-300">{item.testSystem}</td>
+            <td className="p-1 border border-gray-300">{item.mock}</td>
+            <td className="p-1 border border-gray-300">{item.transactionId}</td>
+            <td className="p-1 border border-gray-300">{item.mrValidation}</td>
+            <td className="p-1 border border-gray-300">
+              <button
+                className="bg-blue-600 text-white px-1 py-1 rounded"
+                onClick={() => toggleEditSubmittedItem(index)}
+              >
+                ✏️
+              </button>
+            </td>
+          </>
+        )}
+      </tr>
+    ))}
 
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    {items.map((item, index) => (
+      <tr key={`new-${index}`} className="hover:bg-gray-50">
+        <td className="p-1 border border-gray-300">
+          <select
+            value={item.mockType}
+            onChange={(e) => updateItem(index, "mockType", e.target.value)}
+            className="w-full px-1 py-1 border rounded"
+            required
+          >
+            <option value="">Select</option>
+            <option value="IELTS">IELTS</option>
+            <option value="GRE">GRE</option>
+            <option value="TOEFL">TOEFL</option>
+            <option value="Pearson PTE">Pearson PTE</option>
+          </select>
+        </td>
+        <td className="p-1 border border-gray-300">
+          <select
+            value={item.testType}
+            onChange={(e) => updateItem(index, "testType", e.target.value)}
+            className="w-full px-2 py-1 border rounded"
+            disabled={!item.mockType}
+            required
+          >
+            <option value="">Select</option>
+            {item.mockType === "IELTS" ? (
+              <>
+                <option value="Paper-Based">Paper-Based</option>
+                <option value="Computer-Based">Computer-Based</option>
+              </>
+            ) : (
+              <option value="Computer-Based">Computer-Based</option>
+            )}
+          </select>
+        </td>
+        <td className="p-1 border border-gray-300">
+          <select
+            value={item.testSystem}
+            onChange={(e) => updateItem(index, "testSystem", e.target.value)}
+            className="w-full px-1 py-1 border rounded"
+            disabled={!item.mockType}
+            required={item.mockType !== "IELTS"}
+          >
+            <option value="">Select</option>
+            {mockSystemOptions[item.mockType]?.map((system) => (
+              <option key={system} value={system}>{system}</option>
+            ))}
+          </select>
+        </td>
+        <td className="p-1 border border-gray-300">
+          <input
+            type="text"
+            value={item.mock}
+            onChange={(e) => updateItem(index, "mock", e.target.value)}
+            className="w-full px-1 py-1 border rounded"
+            required
+          />
+        </td>
+        <td className="p-1 border border-gray-300">
+          <input
+            type="text"
+            value={item.transactionId}
+            onChange={(e) => updateItem(index, "transactionId", e.target.value)}
+            className="w-full px-1 py-1 border rounded"
+            required
+          />
+        </td>
+        <td className="p-1 border border-gray-300">
+          <select
+            value={item.mrValidation}
+            onChange={(e) => updateItem(index, "mrValidation", e.target.value)}
+            className="w-full px-1 py-1 border rounded"
+            required
+          >
+            <option value="">Select Duration</option>
+            <option value="7 Days">7 Days</option>
+            <option value="14 Days">14 Days</option>
+            <option value="1 Month">1 Month</option>
+            <option value="2 Months">2 Months</option>
+            <option value="3 Months">3 Months</option>
+            <option value="6 Months">6 Months</option>
+          </select>
+        </td>
+        <td className="p-1 border border-gray-300">
+          <button
+            onClick={() => removeItem(index)}
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 ease-in-out text-sm flex items-center justify-center"
+          >
+            ❌
+          </button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</table>
         </div>
 {/* Spacer to push the button to the bottom */}
-<div className="flex-grow"></div>
-
-        <div className="flex justify-between items-center mt-0">
-        <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
-
+<div className="flex justify-between items-center mt-8 flex-wrap gap-4">
   {/* Left-aligned Add More button */}
-  <button
-  onClick={addItem}
-  className="bg-[#00000f] text-white px-4 py-2 rounded-xl font-semibold shadow-sm hover:bg-[#face39] hover:text-[#00000f] hover:shadow-md hover:scale-105 transition-all duration-300 ease-in-out flex items-center gap-2"
->
-  ➕ Add More
-</button>
-
+  <div>
+    <button
+      onClick={addItem}
+      className="bg-[#00000f] text-white px-4 py-2 rounded-xl font-semibold shadow-sm hover:bg-[#face39] hover:text-[#00000f] hover:shadow-md hover:scale-105 transition-all duration-300 ease-in-out flex items-center gap-2"
+    >
+      ➕ Add More
+    </button>
+  </div>
 
   {/* Right-aligned Save and Close buttons */}
-  <div className="flex items-center gap-4">
+  <div className="ml-auto flex items-center gap-4 mr-4">
     <button
-      onClick={() => {
-        const isValid = items.every(
-          (item) =>
-            item.mockType &&
-            item.testType &&
-            (item.mockType === "IELTS" || item.testSystem) &&
-            item.mock &&
-            item.transactionId
-        );
-        if (isValid) {
-          onUpdateUser();
-        } else {
-          alert("Please fill in all required fields before saving.");
-        }
-      }}
+      onClick={saveAllData}
       className="bg-green-600 text-white px-5 py-2 rounded-xl font-semibold shadow-sm hover:bg-green-700 hover:shadow-md hover:scale-105 transition-all duration-300 ease-in-out flex items-center gap-2"
     >
       ✅ Save
@@ -667,10 +841,8 @@ const TableAdmin = () => {
       ❌ Close
     </button>
   </div>
+</div>
 
-
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -683,3 +855,9 @@ const TableAdmin = () => {
 
 
 export default TableAdmin;
+
+
+
+
+
+

@@ -18,6 +18,7 @@ import { FaArrowDown } from "react-icons/fa";
 import { IoMailOutline, IoSettingsOutline, IoHomeOutline } from "react-icons/io5"; // Import the icons
 import { AiOutlineHome } from "react-icons/ai"; // Import Home icon
 import { RiHomeOfficeFill } from "react-icons/ri"; // Importing the correct icon
+import { GrAnalytics } from "react-icons/gr";
 
 const SidebarAdmin = () => {
   const [isOpen, setIsOpen] = useState(false); // State for mobile toggle
@@ -94,7 +95,7 @@ const SidebarAdmin = () => {
             }`}
           >
             <Link href="/bdm/dashboard" className="flex items-center px-4 py-3">
-              <IoHomeOutline className="h-5 w-5 mr-2" />
+              <IoHomeOutline className="h-5 w-5 mr-1" />
               <span className="inline">Dashboard</span>
             </Link>
           </li>
@@ -123,7 +124,7 @@ const SidebarAdmin = () => {
               href="/bdm/available-schedulesbdm"
               className="flex items-center px-4 py-3"
             >
-              <IoCloudDownloadOutline className="h-5 w-5 mr-2" />
+              <IoCloudDownloadOutline className="h-5 w-5 mr-1" />
               <span className="inline">Available Schedules</span>
             </Link>
           </li>
@@ -151,8 +152,8 @@ const SidebarAdmin = () => {
             }`}
           >
             <Link href="/bdm/all-usersbdm" className="flex items-center px-4 py-3">
-              <IoWalletOutline className="h-5 w-5 mr-2" />
-              <span className="inline">All Users</span>
+              <IoWalletOutline className="h-5 w-5 mr-1" />
+              <span className="inline">Bookings Details</span>
             </Link>
           </li>
       {/* Home Based Booking */}
@@ -161,10 +162,23 @@ const SidebarAdmin = () => {
                   : ""
               }`}>
   <Link href="/bdm/homebasedbdm" className="flex items-center px-4 py-3">
-    <RiHomeOfficeFill className="h-5 w-5 mr-2" /> {/* Replaced the icon here */}
+    <RiHomeOfficeFill className="h-5 w-5 mr-1" /> {/* Replaced the icon here */}
     <span className="inline">Home Based Booking</span>
   </Link>
 </li>
+{/* <li
+  className={`flex justify-center transition-all duration-200 ${
+    pathname === "/bdm/analysisbdm"
+      ? "bg-[#FACE39] text-black font-bold rounded-full"
+      : "hover:bg-[#FACE39] hover:text-black rounded-full"
+  }`}
+>
+  <Link href="/bdm/analysisbdm" className="flex items-center px-4 py-3 gap-2">
+  <GrAnalytics className="h-5 w-5 mr-1" />
+    <span className="inline">Analysis</span>
+  </Link>
+</li> */}
+
 
           {/* <li
             className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
@@ -199,7 +213,7 @@ const SidebarAdmin = () => {
               onClick={() => logout()}
               className="flex items-center px-4 py-3"
             >
-              <IoLogOutOutline className="h-5 w-5 mr-2" />
+              <IoLogOutOutline className="h-6 w-6 mr-0" />
               <span className="inline">Logout</span>
             </button>
           </li>

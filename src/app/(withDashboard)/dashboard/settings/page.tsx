@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { jwtDecode } from "jwt-decode";
 import toast from "react-hot-toast";
 
@@ -21,27 +20,15 @@ interface User {
   _id: string;
   name: string;
   email: string;
-  status: string;
-  paymentStatus: string;
-  createdAt: string;
-  mock?: number;
-  mockType?: string;
+  profileChangeRequestStatus?: string;
   passportNumber?: string;
   transactionId?: string;
-  totalMock?: number;
   contactNo?: number;
-  isDeleted: boolean;
+  mockType?: string;
   testType?: string;
-  testSystem?: string;
-}
-
-interface ItemType {
-  mockType: string;
-  testType: string;
-  testSystem: string;
-  mock: string;
-  transactionId: string;
-  mrValidation: string;
+  totalMock?: number;
+  mock?: number;
+  status?: string;
 }
 
 const getUserIdFromToken = (): string | null => {
@@ -69,67 +56,53 @@ const SettingsPage = () => {
     confirmPassword: "",
   });
 
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [submittedItems, setSubmittedItems] = useState<ItemType[]>([]);
-  const [lastMock, setLastMock] = useState<ItemType | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editRequested, setEditRequested] = useState(false);
+  const [editApproved, setEditApproved] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [submittedItems, setSubmittedItems] = useState<any[]>([]);
+  const [lastMock, setLastMock] = useState<any | null>(null);
 
-  const fetchUserProfileAndMocks = async () => {
+  const fetchUserProfile = async () => {
     try {
-      setLoading(true);
       const userId = getUserIdFromToken();
-      if (!userId) throw new Error("No user ID found in token");
-
       const profileRes = await axios.get(`https://luminedge-server.vercel.app/api/v1/profile/${userId}`);
       const mockRes = await axios.get(`https://luminedge-server.vercel.app/api/v1/user/${userId}`);
 
-      if (profileRes.data.user && mockRes.data.user) {
-        const profileUser = profileRes.data.user;
-        const mockUser = mockRes.data.user;
+      const profileUser = profileRes.data.user;
+      const mockUser = mockRes.data.user;
 
-        const mergedUser: User = {
-          ...profileUser,
-          totalMock: mockUser.totalMock ?? 0,
-          mock: mockUser.mock ?? 0,
-          status: mockUser.status ?? "active",
-          mockType: mockUser.mockType,
-          testType: mockUser.testType,
-          testSystem: mockUser.testSystem,
-          passportNumber: profileUser.passportNumber,
-          contactNo: profileUser.contactNo,
-          transactionId: mockUser.transactionId,
-        };
+      const user = {
+        ...mockUser,
+        ...profileUser, // Profile data (transactionId etc) overrides if needed
+      };
 
-        setSelectedUser(mergedUser);
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.contactNo?.toString() || "",
+        passportId: user.passportNumber || "",
+        transactionId: profileUser.transactionId || "",
+        createdAt: user.createdAt || "",
+        password: "",
+        confirmPassword: "",
+      });
 
-        setFormData(prev => ({
-          ...prev,
-          transactionId: mergedUser.transactionId || "",
-          name: mergedUser.name || "",
-          email: mergedUser.email || "",
-          phone: mergedUser.contactNo?.toString() || "",
-          passportId: mergedUser.passportNumber || "",
-          createdAt: mergedUser.createdAt || "",
-        }));
-      }
-
-      if (mockRes.data.success) {
-        setSubmittedItems(mockRes.data.mocks);
-        setLastMock(mockRes.data.lastMock);
-      }
+      setEditRequested(user.profileChangeRequestStatus === "requested");
+      setEditApproved(user.profileChangeRequestStatus === "approved");
+      setSelectedUser(user); // Set user for modal too
+      setSubmittedItems(mockRes.data.mocks || []); // Set mocks table
+      setLastMock(mockRes.data.lastMock || null);
     } catch (err) {
-      toast.error("Failed to load user data");
+      toast.error("Failed to load profile");
       console.error(err);
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUserProfileAndMocks();
+    fetchUserProfile(); // Fetch once at mount
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,13 +110,23 @@ const SettingsPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleRequestEdit = async () => {
     try {
       const userId = getUserIdFromToken();
-      if (!userId) throw new Error("No user ID found in token");
+      const res = await axios.post("https://luminedge-server.vercel.app/api/v1/user/request-profile-edit", { userId });
+      if (res.data.success) {
+        toast.success("Edit request sent");
+        setEditRequested(true);
+      }
+    } catch (err) {
+      toast.error("Failed to request change");
+    }
+  };
 
+  const handleSaveChanges = async () => {
+    try {
+      setLoading(true);
+      const userId = getUserIdFromToken();
       const updatePayload = {
         name: formData.name,
         email: formData.email,
@@ -151,19 +134,17 @@ const SettingsPage = () => {
         passportId: formData.passportId,
         transactionId: formData.transactionId,
       };
-
-      const response = await axios.put(
-        `https://luminedge-server.vercel.app/api/v1/profile/${userId}`,
-        updatePayload,
-        { headers: { "Content-Type": "application/json" } }
-      );
-
-      if (!response.data.success) throw new Error("Update failed");
-
-      toast.success("Profile updated successfully!");
-    } catch (error) {
-      console.error("Update error:", error);
-      toast.error("Error updating profile. Please try again.");
+      const res = await axios.put(`https://luminedge-server.vercel.app/api/v1/profile/${userId}`, updatePayload);
+      if (res.data.success) {
+        toast.success("Profile updated!");
+        setEditMode(false);
+        fetchUserProfile();
+      } else {
+        toast.error("Update failed");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Server error");
     } finally {
       setLoading(false);
     }
@@ -171,11 +152,15 @@ const SettingsPage = () => {
 
   return (
     <div className="space-y-6 px-2">
-      <div className="bg-white rounded-2xl p-3 shadow-xl w-full max-w-4xl ml-0">
-        <h1 className="text-2xl font-bold mb-1">Profile Settings</h1>
+    {/* Profile Settings Section */}
+    <div className="bg-white rounded-2xl p-3 shadow-xl w-full max-w-4xl ml-0">
+      <h1 className="text-2xl font-bold mb-2">Profile Settings</h1>
+  
+      {/* form and everything else goes here... */}
+  
 
-        <form onSubmit={handleSubmit} className="space-y-1">
-          {["name", "email", "phone", "passportId"].map((field) => (
+        <form onSubmit={(e) => e.preventDefault()} className="space-y-2">
+          {["name", "email", "phone", "passportId", "transactionId"].map((field) => (
             <div key={field}>
               <label htmlFor={field} className="block text-sm font-medium text-gray-700">
                 {field.charAt(0).toUpperCase() + field.slice(1)}
@@ -186,89 +171,72 @@ const SettingsPage = () => {
                 id={field}
                 value={(formData as any)[field] || ""}
                 onChange={handleChange}
-                className="mt-1 block w-full border rounded-md px-3 py-2 border-gray-300 focus:ring-[#FACE39] focus:border-[#FACE39]"
+                disabled={!editApproved || !editMode}
+                onFocus={() => {
+                  if (editApproved) setEditMode(true);
+                }}
+                className="mt-1 block w-full border rounded-md px-3 py-2 border-gray-300 focus:ring-[#FACE39] focus:border-[#FACE39] disabled:opacity-60"
               />
             </div>
           ))}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="mt-1 block w-full border rounded-md px-3 py-2 border-gray-300 focus:ring-[#FACE39] focus:border-[#FACE39]"
-              />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3">
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
+          {/* <div className="mt-4">
+            {editApproved && editMode ? (
+              <button
+                onClick={handleSaveChanges}
+                type="button"
+                disabled={loading}
+                className="w-full px-6 py-3 bg-green-600 text-white rounded-full font-semibold hover:bg-green-700 transition"
+              >
+                💾 Save Changes
               </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="mt-1 block w-full border rounded-md px-3 py-2 border-gray-300 focus:ring-[#FACE39] focus:border-[#FACE39]"
-              />
-              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-3">
-                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+            ) : editApproved ? (
+              <button
+                type="button"
+                onClick={() => setEditMode(true)}
+                className="w-full px-6 py-3 bg-[#face39] text-black rounded-full font-bold hover:bg-black hover:text-white transition"
+              >
+                ✅ Yes, click For Edit
               </button>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center gap-4">
-          <button
-  type="submit"
-  disabled={loading}
-  className="relative inline-flex items-center justify-center mt-4  mb-2 px-8 py-3 rounded-full font-bold text-sm uppercase tracking-wider bg-[#face39] text-black transition-all duration-300 ease-in-out shadow-md hover:shadow-2xl hover:bg-[#00000f] hover:text-white ring-2 ring-transparent hover:ring-[#00000f] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#00000f] disabled:opacity-60 disabled:cursor-not-allowed group"
->
-  {loading ? (
-    <>
-      <span className="animate-spin inline-block mr-2 w-4 h-3 border-2 border-t-transparent border-black rounded-full" />
-      Saving...
-    </>
-  ) : (
-    <>
-      💾<span className="ml-1">Save Changes</span>
-    </>
-  )}
-</button>
-
-
-            
-          </div>
+            ) : editRequested ? (
+              <p className="text-sm font-semibold text-orange-500">🔄 Request pending approval</p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleRequestEdit}
+                className="w-full px-6 py-3 bg-[#face39] text-black rounded-full font-bold hover:bg-black hover:text-white transition"
+              >
+                📝 Request for Changes
+              </button>
+            )}
+          </div> */}
         </form>
       </div>
+
+      {/* Services Section */}
       <div className="bg-white rounded-2xl p-4 shadow-xl w-full max-w-4xl ml-0">
-  <h1 className="text-2xl font-bold mb-0">Services</h1>
+        <h1 className="text-2xl font-bold mb-0">Services</h1>
 
-  <div className="flex items-center px-2 mb-4">
-    <p className="text-sm text-[#00000f] font-semibold">
-      Here you can view your user Services details.
-    </p>
+        <div className="flex items-center px-2 mb-4">
+          <p className="text-sm text-[#00000f] font-semibold">
+            Here you can view your user Services details.
+          </p>
 
-    <button
-      type="button"
-      onClick={() => setIsModalOpen(true)}
-      className="ml-4 px-6 py-3 rounded-full font-semibold text-sm uppercase tracking-wide transition-all duration-300 ease-in-out bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f] shadow-lg hover:shadow-xl ring-2 ring-transparent hover:ring-[#face39]"
-    >
-      🚀 View Details
-    </button>
-  </div>
-</div>
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="ml-4 px-6 py-3 rounded-full font-semibold text-sm uppercase tracking-wide transition-all duration-300 ease-in-out bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f] shadow-lg hover:shadow-xl ring-2 ring-transparent hover:ring-[#face39]"
+          >
+            🚀 View Details
+          </button>
+        </div>
+      </div>
 
-
-
-{isModalOpen && selectedUser && (
+      {/* Modal */}
+      {isModalOpen && selectedUser && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-700 bg-opacity-50 z-50 px-2 sm:px-4">
-          <div className="bg-white p-5 rounded-lg  w-full max-w-6xl flex flex-col lg:flex-row gap-3 overflow-y-auto max-h-[95vh]">
+          <div className="bg-white p-5 rounded-lg w-full max-w-6xl flex flex-col lg:flex-row gap-3 overflow-y-auto max-h-[95vh]">
+            {/* User Info */}
             <div className="w-full sm:w-1/3 bg-white rounded-xl shadow-md p-3 border border-gray-300">
               <h2 className="text-2xl font-semibold text-gray-800 mb-2">👤User Details</h2>
               <div className="space-y-2 text-sm text-gray-700">
@@ -293,7 +261,7 @@ const SettingsPage = () => {
                 <p><strong>Status:</strong> <span className={`font-semibold ${selectedUser?.status === 'blocked' ? 'text-red-500' : 'text-green-600'}`}>{selectedUser?.status || "N/A"}</span></p>
               </div>
 
-              {lastMock && (
+              {/* {lastMock && (
                 <div className="mt-4 border-t pt-3 text-sm">
                   <h3 className="text-lg font-bold mb-2">📄 Latest Mock</h3>
                   <p><strong>Mock Type:</strong> {lastMock.mockType || "N/A"}</p>
@@ -302,13 +270,15 @@ const SettingsPage = () => {
                   <p><strong>Mock #:</strong> {lastMock.mock || "N/A"}</p>
                   <p><strong>Txn ID:</strong> {lastMock.transactionId || "N/A"}</p>
                 </div>
-              )}
+              )} */}
             </div>
 
+            {/* Divider */}
             <div className="w-px bg-[#00000f]"></div>
 
+            {/* Booking Table */}
             <div className="w-full sm:w-2/3 bg-white rounded-2xl shadow-lg border border-gray-200 p-3 flex flex-col max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-2">🛠Booking Details</h2>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">🛠Services Details</h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm border border-gray-400 border-collapse rounded-lg overflow-hidden shadow-sm">
                   <thead>
@@ -337,7 +307,6 @@ const SettingsPage = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex-grow"></div>
               <div className="flex justify-end items-center mt-6">
                 <button
                   onClick={() => setIsModalOpen(false)}

@@ -60,90 +60,54 @@ export default function HomeBasedPage() {
     setError(null);
   
     try {
-      // ✅ Fetch all bookings
-      const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings");
+      const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings/home-with-users");
+      const homeBookings = response.data.bookings;
   
-      if (!response.data || !response.data.bookings) {
-        throw new Error("No bookings found");
-      }
-  
-      // ✅ Step 1: Filter home-based bookings
-      const homeBasedBookings = response.data.bookings.filter(
-        (booking: Booking) => booking.location === "Home"
-      );
-  
-      if (homeBasedBookings.length === 0) {
+      if (!homeBookings || homeBookings.length === 0) {
         setBookings([]);
         setUsers({});
         setUserAttendance({});
-        setLoading(false);
         return;
       }
   
-      // ✅ Step 2: Extract unique user IDs from home-based bookings
-      const uniqueUserIds = Array.from(new Set(homeBasedBookings.map((booking: Booking) => booking.userId)));
-  
-      if (uniqueUserIds.length === 0) {
-        setUsers({});
-        setUserAttendance({});
-        setLoading(false);
-        return;
-      }
-  
-      // ✅ Step 3: Fetch only the unique users
-      const usersResponse = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");
-  
-      if (!usersResponse.data || !usersResponse.data.users) {
-        throw new Error("No users found");
-      }
-  
-      // ✅ Store users in an object for quick lookup
       const usersMap: Record<string, any> = {};
-      usersResponse.data.users.forEach((user: any) => {
-        if (uniqueUserIds.includes(user._id)) {
-          usersMap[user._id] = user;
-        }
-      });
-  
-      // ✅ Step 4: Filter all bookings to get data only for the filtered users
-      const filteredBookings = response.data.bookings.filter((booking: Booking) =>
-        uniqueUserIds.includes(booking.userId)
-      );
-  
-      // ✅ Step 5: Calculate attendance counts for each user from **all** their bookings
-      const attendanceSummary: Record<string, { present: number; absent: number; total: number }> = {};
-  
-      filteredBookings.forEach((booking: Booking) => {
+      const attendanceSummary: Record<string, { present: number; absent: number }> = {};
+      
+      homeBookings.forEach((booking: any) => {
         const userId = booking.userId;
-        const status = booking.attendance || "N/A";
-  
-        // Initialize user's attendance tracking
+        const user = booking.user;
+      
+        usersMap[userId] = user;
+      
         if (!attendanceSummary[userId]) {
-          attendanceSummary[userId] = { present: 0, absent: 0, total: 0 };
+          attendanceSummary[userId] = { present: 0, absent: 0 };
         }
-  
-        // ✅ Count attendance
-        if (status === "present") {
+      
+        if (booking.attendance === "present") {
           attendanceSummary[userId].present += 1;
-        } else if (status === "absent") {
+        } else if (booking.attendance === "absent") {
           attendanceSummary[userId].absent += 1;
         }
-        attendanceSummary[userId].total += 1; // Track total bookings
       });
-  
-      // ✅ Step 6: Update states
-      setBookings(homeBasedBookings);
+      
+      setBookings(homeBookings);
       setUsers(usersMap);
       setUserAttendance(attendanceSummary);
-  
     } catch (error: any) {
-      setError(error.message || "Error fetching home bookings and users");
-      toast.error(error.message || "Error fetching home bookings and users");
+      console.error("❌ Fetch failed:", error);
+      toast.error(error.message || "Failed to fetch bookings");
+      setError(error.message || "Failed to fetch bookings");
     } finally {
       setLoading(false);
     }
   }, []);
   
+useEffect(() => {
+  fetchHomeBookingsAndUsers();
+}, [fetchHomeBookingsAndUsers]);
+
+
+
   useEffect(() => {
     fetchHomeBookingsAndUsers();
   }, [fetchHomeBookingsAndUsers]);
@@ -421,10 +385,8 @@ const currentSchedules = Object.values(filteredBookings).flat().slice(indexOfFir
               <td className="p-4">{user.transactionId || "N/A"}</td>
               <td className="p-4">{user.passportNumber || "N/A"}</td>
               <td className="p-4">{user.totalMock || 0}</td>
-              <td className="px-4 py-2 text-sm">
-  {userAttendance[user._id] 
-    ? userAttendance[user._id].present + userAttendance[user._id].absent 
-    : "N/A"}
+              <td className="p-4">
+  {userAttendance[booking.userId]?.present ?? 0}
 </td>
 
             </tr>

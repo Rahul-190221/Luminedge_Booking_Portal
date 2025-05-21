@@ -227,7 +227,7 @@ function AvailableSchedulesPage() {
           </thead>
           <tbody>
             {currentSchedules.map((schedule, index) => (
-              <tr key={schedule.id} className="border-b">
+            <tr key={schedule._id} className="border-b"> 
                 <td className="px-4 py-2 text-sm">{index + 1}</td>
                 <td className="px-4 py-2">{schedule.name}</td>
                 <td className="px-4 py-2">{schedule.testType}</td>
@@ -251,7 +251,7 @@ function AvailableSchedulesPage() {
                 <td className="px-4 py-2">
                   {schedule.timeSlots[0]?.slot || "N/A"}
                 </td>
-                <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                <td className="px-4 py-2 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-6">
                   {schedule && (
                     <button
                     onClick={() => router.push(`/admin/${schedule?._id}`)}

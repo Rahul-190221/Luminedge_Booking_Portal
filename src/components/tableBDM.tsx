@@ -300,8 +300,8 @@ const  TableBDM  = () => {
         </div>
 
         {lastMock && (
-          <div className="mt-1 border-t pt-3 text-sm">
-            <h3 className="text-lg font-bold mb-1">📄 Latest Mock</h3>
+          <div className="mt-1 border-t pt-0 text-sm">
+            <h3 className="text-lg font-bold mb-1">📄Latest Mock</h3>
             <p><strong>Mock Type:</strong> {lastMock.mockType || "N/A"}</p>
             <p><strong>Test Type:</strong> {lastMock.testType || "N/A"}</p>
             <p><strong>System:</strong> {lastMock.testSystem || "N/A"}</p>
@@ -315,7 +315,7 @@ const  TableBDM  = () => {
       <div className="w-px bg-[#00000f]"></div>
 
 {/* Update User Section */}
-<div className="w-full sm:w-2/3 bg-white rounded-2xl shadow-lg border border-gray-200 p-3 flex flex-col max-h-[90vh] overflow-y-auto">
+<div className="w-full sm:w-2/3 bg-white rounded-2xl shadow-lg border border-gray-200 p-2 flex flex-col max-h-[90vh] overflow-y-auto">
   <h2 className="text-2xl font-semibold text-[##00000f] mb-1">🛠Update User</h2>
 
   <div className="overflow-x-auto">

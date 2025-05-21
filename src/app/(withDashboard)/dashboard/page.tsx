@@ -85,7 +85,7 @@ const DashboardPage = () => {
 </motion.h1>
 {/* Welcome Card */}
 <div className="bg-[#FACE39] rounded-lg text-[#00000f] p-3 shadow-[0_4px_20px_rgba(250,206,57,0.5)]">
-      <h2 className="text-2xl font-bold mb-1.5">
+      <h2 className="text-2xl font-bold mb-1">
         Welcome, {userData.user.name}!
       </h2>
       <p className="text-sm md:text-base lg:text-lg mb-1.5 font-montserrat text-[#00000f]">
@@ -151,10 +151,8 @@ const DashboardPage = () => {
 
 
       {/* Exam Schedule Section */}
-<div className="w-full bg-white dark:bg-[#0f0f0f] rounded-2xl shadow-xl border border-gray-200 p-6 md:p-8 transition-all duration-300">
-  <h2 className="text-2xl md:text-3xl font-bold text-[#00000f] mb-2 tracking-tight">
-    Exam Schedule
-  </h2>
+      <div className="w-full bg-white rounded-2xl shadow-xl border border-gray-200 p-2 mt-2 transition-all duration-300">
+      <h2 className="text-2xl md:text-3xl font-bold text-[#00000f] mb-1">Exam Schedule</h2>
 
   <div className="max-h-60 overflow-y-auto custom-scrollbar rounded-lg border border-gray-100">
     <Table userId={userId || ""} />

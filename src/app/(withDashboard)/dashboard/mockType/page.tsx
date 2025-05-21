@@ -23,12 +23,22 @@ const getExpiryTime = (validation: string): number => {
     case "minute":
     case "minutes":
       return num * 60 * 1000;
+    case "day":
+    case "days":
+      return num * 24 * 60 * 60 * 1000;
     case "month":
     case "months":
       return num * 30 * 24 * 60 * 60 * 1000;
     default:
       return 0;
   }
+};
+
+// ✅ BD local time
+const getBDNow = () => {
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" })
+  ).getTime();
 };
 
 const CoursesPage = () => {
@@ -59,7 +69,7 @@ const CoursesPage = () => {
 
   return (
     <div className="flex flex-col justify-center items-start w-[90%] mx-auto">
-      <div className="w-full flex justify-center mt-[10px] lg:mt-20">
+      <div className="w-full flex justify-center mt-[8px] lg:mt-18">
         <motion.div
           className="flex flex-col mt-[10px] text-center items-center gap-1"
           initial={{ opacity: 0, y: 40 }}
@@ -79,26 +89,26 @@ const CoursesPage = () => {
         </motion.div>
       </div>
 
-      <div className="w-full max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5 mt-6 px-4">
+      <div className="w-full max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 mt-3 px-5">
         {user ? (
           courses.map((course) => {
             const isAllowed = (() => {
-              // ✅ New structure: valid non-expired mock
-              const validMocks = mocks?.filter(
+              const courseMocks = mocks?.filter(
                 (mock: Mock) => mock.mockType === course.name
               );
 
-              const mocksAllowed = validMocks?.some((mock: Mock) => {
+              const anyValidMock = courseMocks?.some((mock: Mock) => {
                 const createdAt = new Date(mock.createdAt).getTime();
-                const expiryDuration = getExpiryTime(mock.mrValidation);
-                const expiryTime = createdAt + expiryDuration;
-                return Date.now() < expiryTime;
+                const expiry = createdAt + getExpiryTime(mock.mrValidation);
+                return getBDNow() < expiry;
               });
 
-              // ✅ Old structure: root mockType match, no validation needed
-              const rootAllowed = user?.mockType === course.name;
+              // ✅ If no mocks[] exist or none valid, fallback to root-level field
+              if (!mocks?.length) {
+                return user?.mockType === course.name;
+              }
 
-              return mocksAllowed || rootAllowed;
+              return anyValidMock;
             })();
 
             return (

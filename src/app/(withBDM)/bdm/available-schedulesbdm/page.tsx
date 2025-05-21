@@ -54,7 +54,10 @@ function AvailableSchedulesBDMPage() {
 
 
   const filteredSchedules = React.useMemo(() => {
-    const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+    const today = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Dhaka",
+    }); // → Format: YYYY-MM-DD
+    
   
     return schedules.filter((schedule: Schedule) => {
       const scheduleDate = schedule.startDate.split("T")[0]; // Extract only the date (YYYY-MM-DD)

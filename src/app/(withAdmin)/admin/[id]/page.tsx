@@ -491,6 +491,7 @@ useEffect(() => {
                 <strong>Total Absent:</strong> {attendanceCounts.absent}
               </p>
             </div>
+            
           </div>
   
           {/* Users Table */}

@@ -8,6 +8,7 @@ import {
   IoLogOutOutline,
 } from "react-icons/io5";
 import { TbMoneybag, TbReport, TbBell } from "react-icons/tb";
+import { GrAnalytics } from "react-icons/gr";
 import { useState } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { usePathname } from "next/navigation";
@@ -96,7 +97,7 @@ const SidebarAdmin = () => {
             }`}
           >
             <Link href="/admin/dashboard" className="flex items-center px-4 py-3">
-              <IoHomeOutline className="h-5 w-5 mr-2" />
+              <IoHomeOutline className="h-5 w-5 mr-1" />
               <span className="inline">Dashboard</span>
             </Link>
           </li>
@@ -109,7 +110,7 @@ const SidebarAdmin = () => {
                   : ""
               }`}
             >
-              <IoBagRemoveOutline className="h-5 w-5 mr-2" />
+              <IoBagRemoveOutline className="h-5 w-5 mr-1" />
               <span className="inline">Create Schedule</span>
             </Link>
           </li>
@@ -125,7 +126,7 @@ const SidebarAdmin = () => {
               href="/admin/available-schedules"
               className="flex items-center px-4 py-3"
             >
-              <IoCloudDownloadOutline className="h-5 w-5 mr-2" />
+              <IoCloudDownloadOutline className="h-5 w-5 mr-1" />
               <span className="inline">Available Schedules</span>
             </Link>
           </li>
@@ -136,7 +137,7 @@ const SidebarAdmin = () => {
                   : ""
               }`}>
   <Link href="/admin/homebased" className="flex items-center px-4 py-3">
-    <RiHomeOfficeFill className="h-5 w-5 mr-2" /> {/* Replaced the icon here */}
+    <RiHomeOfficeFill className="h-5 w-5 mr-1" /> {/* Replaced the icon here */}
     <span className="inline">Home Based Booking</span>
   </Link>
 </li>
@@ -148,8 +149,8 @@ const SidebarAdmin = () => {
             }`}
           >
             <Link href="/admin/all-users" className="flex items-center px-4 py-3">
-              <IoWalletOutline className="h-5 w-5 mr-2" />
-              <span className="inline">All Users</span>
+              <IoWalletOutline className="h-5 w-5 mr-1" />
+              <span className="inline">Booking Details</span>
             </Link>
           </li>
             {/* Email Menu Item
@@ -208,22 +209,37 @@ const SidebarAdmin = () => {
         <span className="inline">Setting</span>
       </Link>
     </li> */}
-
-{/* <li className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${pathname === "/admin/analysis" ? "bg-[#FACE39] text-black font-bold rounded-full" : ""}`}>
+<li
+  className={`flex justify-center transition-all duration-200 ${
+    pathname === "/admin/analysis"
+      ? "bg-[#FACE39] text-black font-bold rounded-full"
+      : "hover:bg-[#FACE39] hover:text-black rounded-full"
+  }`}
+>
   <Link href="/admin/analysis" className="flex items-center px-4 py-3">
-    <TbReport className="h-5 w-5 mr-2" />
+    <GrAnalytics className="h-5 w-5 mr-1" />
     <span className="inline">Analysis</span>
   </Link>
+</li>
+
+{/* <li className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${pathname === "/admin/profileedit" ? "bg-[#FACE39] text-black font-bold rounded-full" : ""}`}>
+  <Link href="/admin/profileedit" className="flex items-center px-4 py-3">
+    <IoSettingsOutline className="h-5 w-5 mr-1" />
+    <span className="inline">Profile Edit Requests</span>
+  </Link>
 </li> */}
+
+
     <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
             <button
               onClick={() => logout()}
               className="flex items-center px-4 py-3"
             >
-              <IoLogOutOutline className="h-5 w-5 mr-2" />
+              <IoLogOutOutline className="h-6 w-6 mr-0" />
               <span className="inline">Logout</span>
             </button>
           </li>
+          
         </ul>
       </div>
     </div>

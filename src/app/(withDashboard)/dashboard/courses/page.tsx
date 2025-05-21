@@ -47,7 +47,7 @@ const Courses2Page = () => {
 
   return (
     <div className="flex flex-col gap-1 w-full">
-<div className="w-full flex justify-center mt-[10px] lg:mt-20">
+<div className="w-full flex justify-center mt-[8px] lg:mt-20">
   <motion.div
     className="flex flex-col mt-[10px] text-center items-center gap-1"
     initial={{ opacity: 0, y: 40 }}
@@ -71,7 +71,7 @@ const Courses2Page = () => {
 </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5 mt-6 mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5 mt-4 mx-auto">
         {courses2.map((course) => (
           <CourseCard2
             key={course._id}

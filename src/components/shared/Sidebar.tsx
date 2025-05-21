@@ -93,7 +93,7 @@ const Sidebar = () => {
     `}
   >
     <Link href="/dashboard" className="flex items-center px-3 py-2 md:px-4 md:py-3 text-sm md:text-base">
-      <IoHomeOutline className="h-5 w-5 mr-2" />
+      <IoHomeOutline className="h-5 w-5 mr-1" />
       <span className="truncate">Dashboard</span>
     </Link>
   </li>
@@ -105,7 +105,7 @@ const Sidebar = () => {
     `}
   >
     <Link href="/dashboard/courses" className="flex items-center px-3 py-2 md:px-4 md:py-3 text-sm md:text-base">
-      <TbReport className="h-5 w-5 mr-2" />
+      <TbReport className="h-5 w-5 mr-1" />
       <span className="truncate">Courses</span>
     </Link>
   </li>
@@ -117,7 +117,7 @@ const Sidebar = () => {
     `}
   >
     <Link href="/dashboard/terms" className="flex items-center px-3 py-2 md:px-4 md:py-3 text-sm md:text-base">
-      <IoMailOutline className="h-5 w-5 mr-2" />
+      <IoMailOutline className="h-5 w-5 mr-1" />
       <span className="truncate">Terms and Conditions</span>
     </Link>
   </li>
@@ -128,25 +128,25 @@ const Sidebar = () => {
       onClick={() => logout()}
       className="flex items-center w-full px-3 py-2 md:px-4 md:py-3 text-left text-sm md:text-base"
     >
-      <IoLogOutOutline className="h-5 w-5 mr-2" />
+        <IoLogOutOutline className="h-6 w-6 mr-1" />
       <span className="truncate">Logout</span>
     </button>
   </li>
 
   {/* Profile */}
-  {/* <li
+  <li
     className={`rounded-full transition-all duration-200 ease-in-out hover:bg-[#FACE39] hover:text-black
       ${pathname === "/dashboard/settings" ? "bg-[#FACE39] text-black font-bold" : ""}
     `}
   >
-    <Link href="/dashboard/settings" className="flex items-center px-3 py-2 md:px-4 md:py-3 gap-2 w-full">
+    <Link href="/dashboard/settings" className="flex items-center px-3 py-4 md:px-4 md:py-3 gap-3 w-full">
       <RxAvatar className="text-xl flex-shrink-0" />
-      <span className="text-sm md:text-base font-medium truncate w-full flex items-center gap-2">
-        {user?.user?.name ?? "Loading..."}
+      <span className="text-sm md:text-base font-medium truncate w-full flex items-center gap-1">
+      {user?.user?.name?.split(" ")[0] ?? "Loading..."}
         <FaArrowDown className="text-xs" />
       </span>
     </Link>
-  </li> */}
+  </li>
 </ul>
 
       </div>
