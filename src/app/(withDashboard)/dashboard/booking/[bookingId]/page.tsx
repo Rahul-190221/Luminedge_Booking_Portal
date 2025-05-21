@@ -48,7 +48,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   const [userMockType, setUserMockType] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [availableDates, setAvailableDates] = useState<string[]>([]);
-  const [userMocks, setUserMocks] = useState<{ mockType: string; mock: number }[]>([]);
+  const [userMocks, setUserMocks] = useState<{ mockType: string; mock: number; testType?: string }[]>([]);
 const [existingBookings, setExistingBookings] = useState<any[]>([]);
 
 
@@ -225,18 +225,35 @@ const [existingBookings, setExistingBookings] = useState<any[]>([]);
       return;
     }
   }
+  const currentMockType = courseName;
 
-    const currentMockType = courseName;
-    const allowedMock = userMocks.find((m) => m.mockType === currentMockType)?.mock || 0;
+  // ✅ Determine matching testType (needed for IELTS)
+  const matchTestType = userTestType;
   
-    const alreadyBookedCount = existingBookings.filter(
-      (b) => b.name === currentMockType && b._id !== oldBookingId // exclude the one being rescheduled
-    ).length;
+  // ✅ Allowed mocks logic
+  const allowedMock = userMocks
+    .filter((m) => {
+      if (currentMockType === "IELTS") {
+        return m.mockType === "IELTS" && m.testType === matchTestType;
+      }
+      return m.mockType === currentMockType;
+    })
+    .reduce((total, m) => total + (m.mock || 0), 0);
   
-    if (alreadyBookedCount >= allowedMock) {
-      toast.error(`You have already used all ${allowedMock} mocks for ${currentMockType}.`);
-      return;
+  // ✅ Booked mocks logic
+  const alreadyBookedCount = existingBookings.filter((b) => {
+    if (currentMockType === "IELTS") {
+      return b.name === "IELTS" && b.testType === matchTestType && b._id !== oldBookingId;
     }
+    return b.name === currentMockType && b._id !== oldBookingId;
+  }).length;
+  
+  // ✅ Limit enforcement
+  if (alreadyBookedCount >= allowedMock) {
+    toast.error(`You have already used all ${allowedMock} mocks for ${currentMockType} (${matchTestType}).`);
+    return;
+  }
+  
   
     const bookingPayload: any = {
       userId,
@@ -409,8 +426,8 @@ return (
 
     {/* Test Type and Test System Selection */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4 w-full">
-      {/* Test Type */}
-      <div className="w-full flex flex-col items-start">
+     {/* Test Type */}
+<div className="w-full flex flex-col items-start">
   <label htmlFor="testType" className="block mb-0 font-medium text-[#00000f]">
     Test Type
   </label>
@@ -423,6 +440,7 @@ return (
       const uniqueTestTypes = Array.from(new Set(userTestTypesForMock));
 
       if (uniqueTestTypes.length > 1) {
+        // ✅ Editable when multiple options
         return (
           <select
             className="select select-bordered bg-[#FACE39] text-[#00000f] w-full"
@@ -438,11 +456,12 @@ return (
           </select>
         );
       } else {
+        // ✅ Read-only when only one testType
         return (
           <select
-            className="select select-bordered bg-[#FACE39] text-[#00000f] w-full appearance-none"
-            value={userTestType || ""}
-            style={{ pointerEvents: "none" }}
+            className="select select-bordered bg-[#FACE39] text-[#00000f] w-full"
+            defaultValue={userTestType || ""}
+            disabled
           >
             <option value={userTestType || ""}>{userTestType || "N/A"}</option>
           </select>
@@ -450,15 +469,17 @@ return (
       }
     })()
   ) : (
+    // ✅ For non-IELTS: always read-only
     <select
-      className="select select-bordered bg-[#FACE39] text-[#00000f] w-full appearance-none"
-      value={userTestType || ""}
-      style={{ pointerEvents: "none" }} // ✅ makes it unclickable but styled
+      className="select select-bordered bg-[#FACE39] text-[#00000f] w-full"
+      defaultValue={userTestType || ""}
+      disabled
     >
       <option value={userTestType || ""}>{userTestType || "N/A"}</option>
     </select>
   )}
 </div>
+
 
 
       {/* Test System */}

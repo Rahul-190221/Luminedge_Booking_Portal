@@ -242,7 +242,7 @@ const BookingsTable = () => {
       {isModalOpen && selectedUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
           <div className="bg-white w-full max-w-5xl p-2 rounded-2xl shadow-2xl border border-[#face39] relative">
-          <h2>{selectedUser.name}&rsquo;s Booking Summary</h2>
+          <h2 className="text-[#00000f]">{selectedUser.name}&rsquo;s Booking Summary</h2>
 
             <div className="border border-gray-300 rounded-xl p-4 shadow-inner">
               <UserTable userId={selectedUser._id} />
