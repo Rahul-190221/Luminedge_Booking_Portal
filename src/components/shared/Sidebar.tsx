@@ -118,7 +118,11 @@ const Sidebar = () => {
   >
     <Link href="/dashboard/terms" className="flex items-center px-3 py-2 md:px-4 md:py-3 text-sm md:text-base">
       <IoMailOutline className="h-5 w-5 mr-1" />
-      <span className="truncate">Terms and Conditions</span>
+      <span className="break-words whitespace-normal w-full max-w-[160px] md:max-w-[200px] lg:max-w-[220px] xl:max-w-full">
+  Terms and Conditions
+</span>
+
+
     </Link>
   </li>
 

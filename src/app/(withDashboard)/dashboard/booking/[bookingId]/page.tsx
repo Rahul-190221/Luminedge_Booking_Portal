@@ -427,7 +427,7 @@ return (
     {/* Test Type and Test System Selection */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4 w-full">
      {/* Test Type */}
-<div className="w-full flex flex-col items-start">
+     <div className="w-full flex flex-col items-start">
   <label htmlFor="testType" className="block mb-0 font-medium text-[#00000f]">
     Test Type
   </label>
@@ -456,12 +456,11 @@ return (
           </select>
         );
       } else {
-        // ✅ Read-only when only one testType
+        // ✅ Visually same, not interactive (no disabled)
         return (
           <select
-            className="select select-bordered bg-[#FACE39] text-[#00000f] w-full"
-            defaultValue={userTestType || ""}
-            disabled
+            className="select select-bordered bg-[#FACE39] text-[#00000f] w-full appearance-none pointer-events-none"
+            value={userTestType || ""}
           >
             <option value={userTestType || ""}>{userTestType || "N/A"}</option>
           </select>
@@ -469,11 +468,10 @@ return (
       }
     })()
   ) : (
-    // ✅ For non-IELTS: always read-only
+    // ✅ For non-IELTS: same design, non-editable, not disabled
     <select
-      className="select select-bordered bg-[#FACE39] text-[#00000f] w-full"
-      defaultValue={userTestType || ""}
-      disabled
+      className="select select-bordered bg-[#FACE39] text-[#00000f] w-full appearance-none pointer-events-none"
+      value={userTestType || ""}
     >
       <option value={userTestType || ""}>{userTestType || "N/A"}</option>
     </select>
