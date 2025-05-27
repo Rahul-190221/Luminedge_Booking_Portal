@@ -225,34 +225,34 @@ const [existingBookings, setExistingBookings] = useState<any[]>([]);
       return;
     }
   }
-  const currentMockType = courseName;
+  // const currentMockType = courseName;
 
-  // ✅ Determine matching testType (needed for IELTS)
-  const matchTestType = userTestType;
+  // // ✅ Determine matching testType (needed for IELTS)
+  // const matchTestType = userTestType;
   
-  // ✅ Allowed mocks logic
-  const allowedMock = userMocks
-    .filter((m) => {
-      if (currentMockType === "IELTS") {
-        return m.mockType === "IELTS" && m.testType === matchTestType;
-      }
-      return m.mockType === currentMockType;
-    })
-    .reduce((total, m) => total + (m.mock || 0), 0);
+  // // ✅ Allowed mocks logic
+  // const allowedMock = userMocks
+  //   .filter((m) => {
+  //     if (currentMockType === "IELTS") {
+  //       return m.mockType === "IELTS" && m.testType === matchTestType;
+  //     }
+  //     return m.mockType === currentMockType;
+  //   })
+  //   .reduce((total, m) => total + (m.mock || 0), 0);
   
-  // ✅ Booked mocks logic
-  const alreadyBookedCount = existingBookings.filter((b) => {
-    if (currentMockType === "IELTS") {
-      return b.name === "IELTS" && b.testType === matchTestType && b._id !== oldBookingId;
-    }
-    return b.name === currentMockType && b._id !== oldBookingId;
-  }).length;
+  // // ✅ Booked mocks logic
+  // const alreadyBookedCount = existingBookings.filter((b) => {
+  //   if (currentMockType === "IELTS") {
+  //     return b.name === "IELTS" && b.testType === matchTestType && b._id !== oldBookingId;
+  //   }
+  //   return b.name === currentMockType && b._id !== oldBookingId;
+  // }).length;
   
-  // ✅ Limit enforcement
-  if (alreadyBookedCount >= allowedMock) {
-    toast.error(`You have already used all ${allowedMock} mocks for ${currentMockType} (${matchTestType}).`);
-    return;
-  }
+  // // ✅ Limit enforcement
+  // if (alreadyBookedCount >= allowedMock) {
+  //   toast.error(`You have already used all ${allowedMock} mocks for ${currentMockType} (${matchTestType}).`);
+  //   return;
+  // }
   
   
     const bookingPayload: any = {
