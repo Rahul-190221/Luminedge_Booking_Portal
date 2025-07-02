@@ -46,23 +46,23 @@ const Courses2Page = () => {
   };
 
   return (
-    <div className="flex flex-col gap-1 w-full">
-<div className="w-full flex justify-center mt-[8px] lg:mt-20">
+    <div className="p-1 sm:p-4 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl  border border-[#00000f]/10">
+<div className="w-full flex justify-center mt-[6px] lg:mt-10">
   <motion.div
     className="flex flex-col mt-[10px] text-center items-center gap-1"
     initial={{ opacity: 0, y: 40 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, ease: "easeOut" }}
   >
-    <h2 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight text-gray-800">
+    <h2 className="text-2xl md:text-4xl lg:text-5xl font-extrabold tracking-tight" style={{ color: "#00000f" }}>
       To Boost Your Preparation
     </h2>
 
-    <h2 className="text-3xl md:text-6xl lg:text-6xl font-extrabold text-[#FACE39] mt-1 mb-1">
+    <h2 className="text-3xl md:text-6xl lg:text-5xl font-extrabold text-[#FACE39] mt-1 mb-1">
       Enroll Now!
     </h2>
 
-    <h2 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight text-gray-800">
+    <h2 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight" style={{ color: "#00000f" }}>
       in Our <span className="text-[#FACE39]">Premium Venue</span>
     </h2>
 
@@ -71,7 +71,7 @@ const Courses2Page = () => {
 </div>
 
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-5 mt-4 mx-auto">
+<div className="w-full max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 mt-3 px-12">
         {courses2.map((course) => (
           <CourseCard2
             key={course._id}

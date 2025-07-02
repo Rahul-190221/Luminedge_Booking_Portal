@@ -27,6 +27,7 @@ const SidebarAdmin = () => {
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
+  const handleLinkClick = () => {};
 
   return (
     <div className="flex">
@@ -43,7 +44,7 @@ const SidebarAdmin = () => {
 
  {/* Sidebar container */}
  <div
-        className={`fixed top-0 left-0 h-full w-64 bg-white md:bg-transparent transform ${
+        className={`fixed top-0 left-0 h-full w-64 bg-white p-0 sm:p-1 md:bg-transparent transform ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-50 md:relative md:flex md:flex-col md:items-start`}
       >
@@ -86,139 +87,91 @@ const SidebarAdmin = () => {
             <FaTimes className="h-8 w-8" />
           </button>
         </div>
-        <ul className="menu min-h-screen rounded-box">
-          <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center rounded-full ${
-              pathname === "/bdm/dashboard"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link href="/bdm/dashboard" className="flex items-center px-4 py-3">
-              <IoHomeOutline className="h-5 w-5 mr-1" />
-              <span className="inline">Dashboard</span>
-            </Link>
-          </li>
-         {/* <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
-             <Link
-              href="/admin/create-schedule"
-              className={`flex items-center px-4 py-3 ${
-                pathname === "/admin/create-schedule"
-                  ? "bg-[#FACE39] text-black font-bold rounded-full"
-                  : ""
-              }`}
-            >
-              <IoBagRemoveOutline className="h-5 w-5 mr-2" />
-              <span className="inline">Create Schedule</span>
-            </Link>
-          </li> */}
+        <ul className="menu flex flex-col min-h-screen px-0 py-0 text-[#00000f] gap-0.5">
 
-          <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-              pathname === "/bdm/available-schedulesbdm"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link
-              href="/bdm/available-schedulesbdm"
-              className="flex items-center px-4 py-3"
-            >
-              <IoCloudDownloadOutline className="h-5 w-5 mr-1" />
-              <span className="inline">Available Schedules</span>
-            </Link>
-          </li>
-          {/* booking-requests
-          <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-              pathname === "/admin/booking-requests"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link
-              href="/admin/booking-requests"
-              className="flex items-center px-4 py-3"
-            >
-              <IoBagRemoveOutline className="h-5 w-5 mr-2" />
-              <span className="inline">Booking Requests</span>
-            </Link>
-          </li> */}
-          <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-              pathname === "/bdm/all-usersbdm"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link href="/bdm/all-usersbdm" className="flex items-center px-4 py-3">
-              <IoWalletOutline className="h-5 w-5 mr-1" />
-              <span className="inline">Bookings Details</span>
-            </Link>
-          </li>
-      {/* Home Based Booking */}
-<li className={`flex justify-center transition-all duration-200 
-  ${ pathname === "/bdm/homebasedbdm" ? "bg-[#FACE39] text-black font-bold rounded-full"
-                  : ""
-              }`}>
-  <Link href="/bdm/homebasedbdm" className="flex items-center px-4 py-3">
-    <RiHomeOfficeFill className="h-5 w-5 mr-1" /> {/* Replaced the icon here */}
-    <span className="inline">Home Based Booking</span>
+{/* Dashboard */}
+<li className={`group relative rounded-full overflow-hidden transition-colors duration-200 ease-in-out
+  ${pathname === "/bdm/dashboard"
+    ? "bg-[#FACE39] text-[#00000f] font-bold"
+    : "hover:text-[#00000f]"}`}>
+  {/* Liquid hover effect layer */}
+  <div className="absolute inset-0 before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#FACE39] before:rounded-full before:transition-all before:duration-500 group-hover:before:left-0 before:blur-sm z-0" />
+
+  <Link href="/bdm/dashboard" className="flex items-center gap-x-3 px-4 py-3 w-full text-sm md:text-base relative z-10">
+    <IoHomeOutline className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#00000f]" />
+    <span className="truncate w-full min-w-0 transition-all duration-200 group-hover:pl-1 group-hover:text-[#00000f]">
+      Dashboard
+    </span>
   </Link>
 </li>
-{/* <li
-  className={`flex justify-center transition-all duration-200 ${
-    pathname === "/bdm/analysisbdm"
-      ? "bg-[#FACE39] text-black font-bold rounded-full"
-      : "hover:bg-[#FACE39] hover:text-black rounded-full"
-  }`}
->
-  <Link href="/bdm/analysisbdm" className="flex items-center px-4 py-3 gap-2">
-  <GrAnalytics className="h-5 w-5 mr-1" />
-    <span className="inline">Analysis</span>
+
+{/* Available Schedules */}
+<li className={`group relative rounded-full overflow-hidden transition-colors duration-200 ease-in-out
+  ${pathname === "/bdm/available-schedulesbdm"
+    ? "bg-[#FACE39] text-[#00000f] font-bold"
+    : "hover:text-[#00000f]"}`}>
+  {/* Liquid hover effect layer */}
+  <div className="absolute inset-0 before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#FACE39] before:rounded-full before:transition-all before:duration-500 group-hover:before:left-0 before:blur-sm z-0" />
+
+  <Link href="/bdm/available-schedulesbdm" className="flex items-center gap-x-3 px-4 py-3 w-full text-sm md:text-base relative z-10">
+    <IoCloudDownloadOutline className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#00000f]" />
+    <span className="truncate w-full min-w-0 transition-all duration-200 group-hover:pl-1 group-hover:text-[#00000f]">
+      Available Schedules
+    </span>
   </Link>
-</li> */}
+</li>
 
+{/* Booking Details */}
+<li className={`group relative rounded-full overflow-hidden transition-colors duration-200 ease-in-out
+  ${pathname === "/bdm/all-usersbdm"
+    ? "bg-[#FACE39] text-[#00000f] font-bold"
+    : "hover:text-[#00000f]"}`}>
+  {/* Liquid hover effect layer */}
+  <div className="absolute inset-0 before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#FACE39] before:rounded-full before:transition-all before:duration-500 group-hover:before:left-0 before:blur-sm z-0" />
 
-          {/* <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-              pathname === "/admin/notifications"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link
-              href="/admin/notifications"
-              className="flex items-center px-4 py-3"
-            >
-              <TbBell className="h-5 w-5 mr-2" />
-              <span className="inline">Notifications</span>
-            </Link>
-          </li> */}
-            {/* Settings Menu Item */}
-    {/* <li
-      className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-        pathname === "/admin/settings"
-          ? "bg-[#FACE39] text-black font-bold rounded-full"
-          : ""
-      }`}
-    >
-      <Link href="/admin/settings" className="flex items-center px-4 py-3">
-        <IoSettingsOutline className="h-5 w-5 mr-2" />
-        <span className="inline">Setting</span>
-      </Link>
-    </li> */}
-          <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
-            <button
-              onClick={() => logout()}
-              className="flex items-center px-4 py-3"
-            >
-              <IoLogOutOutline className="h-6 w-6 mr-0" />
-              <span className="inline">Logout</span>
-            </button>
-          </li>
-         
-        </ul>
+  <Link href="/bdm/all-usersbdm" className="flex items-center gap-x-3 px-4 py-3 w-full text-sm md:text-base relative z-10">
+    <IoWalletOutline className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#00000f]" />
+    <span className="truncate w-full min-w-0 transition-all duration-200 group-hover:pl-1 group-hover:text-[#00000f]">
+      Bookings Details
+    </span>
+  </Link>
+</li>
+
+{/* Home Based Booking */}
+<li className={`group relative rounded-full overflow-hidden transition-colors duration-200 ease-in-out
+  ${pathname === "/bdm/homebasedbdm"
+    ? "bg-[#FACE39] text-[#00000f] font-bold"
+    : "hover:text-[#00000f]"}`}>
+  {/* Liquid hover effect layer */}
+  <div className="absolute inset-0 before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#FACE39] before:rounded-full before:transition-all before:duration-500 group-hover:before:left-0 before:blur-sm z-0" />
+
+  <Link href="/bdm/homebasedbdm" className="flex items-center gap-x-3 px-4 py-3 w-full text-sm md:text-base relative z-10">
+    <RiHomeOfficeFill className="h-5 w-5 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#00000f]" />
+    <span className="truncate w-full min-w-0 transition-all duration-200 group-hover:pl-1 group-hover:text-[#00000f]">
+      Home Based Booking
+    </span>
+  </Link>
+</li>
+
+{/* Logout */}
+<li className="group relative rounded-full overflow-hidden hover:text-[#00000f] transition-colors duration-200 ease-in-out">
+  {/* Liquid hover effect layer */}
+  <div className="absolute inset-0 before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#FACE39] before:rounded-full before:transition-all before:duration-500 group-hover:before:left-0 before:blur-sm z-0" />
+
+  <button
+    onClick={() => {
+      logout();
+      handleLinkClick();
+    }}
+    className="flex items-center gap-x-3 px-4 py-3 w-full text-left text-sm md:text-base relative z-10"
+  >
+    <IoLogOutOutline className="h-6 w-6 flex-shrink-0 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-[#00000f]" />
+    <span className="truncate w-full min-w-0 transition-all duration-200 group-hover:pl-1 group-hover:text-[#00000f]">
+      Logout
+    </span>
+  </button>
+</li>
+</ul>
       </div>
     </div>
   );

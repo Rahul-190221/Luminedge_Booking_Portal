@@ -68,7 +68,7 @@ const CoursesPage = () => {
   ];
 
   return (
-    <div className="flex flex-col justify-center items-start w-[90%] mx-auto">
+    <div className="p-1 sm:p-8 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl  rounded-2xl border border-[#00000f]/10">
       <div className="w-full flex justify-center mt-[8px] lg:mt-18">
         <motion.div
           className="flex flex-col mt-[10px] text-center items-center gap-1"
@@ -79,7 +79,7 @@ const CoursesPage = () => {
           <h4 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight text-gray-800">
             Book Your
           </h4>
-          <h4 className="text-3xl md:text-6xl lg:text-6xl font-extrabold text-[#FACE39] mt-1 mb-1">
+          <h4 className="text-3xl md:text-6xl lg:text-5xl font-extrabold text-[#FACE39] mt-1 mb-1">
             Mock Test Now!
           </h4>
           <h4 className="text-2xl md:text-5xl lg:text-5xl font-extrabold tracking-tight text-gray-800">
@@ -89,7 +89,7 @@ const CoursesPage = () => {
         </motion.div>
       </div>
 
-      <div className="w-full max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 mt-3 px-5">
+      <div className="w-full max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 mt-3 px-12">
         {user ? (
           courses.map((course) => {
             const isAllowed = (() => {

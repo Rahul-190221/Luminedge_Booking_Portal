@@ -294,8 +294,8 @@ const formatDate = (dateString: string) => {
 };
 
   return (
-    <div className="flex flex-col gap-1 w-full">
-<div className="bg-gray-100 p-3 h-auto mb-0 rounded shadow-sm">
+    <div className="p-1 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
+<div className="bg-gray-100 p-2 h-auto mb-0 rounded shadow-sm">
   <h3 className="font-bold text-lg mb-0">Filter by</h3>
   <div className="flex flex-col sm:flex-row gap-4 text-sm">
     {/* Name Filter */}

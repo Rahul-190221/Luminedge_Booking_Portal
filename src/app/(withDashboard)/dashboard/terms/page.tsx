@@ -23,7 +23,8 @@ const TermsPage = () => {
     }, []);
 
     return (
-        <div className="flex flex-col items-center w-full max-w-screen-xl mx-auto space-y-2 font-montserrat">
+        <div className="p-2 sm:p-6 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
+        <div className="flex flex-col  w-full max-w-screen-xl mx-auto space-y-2 font-montserrat">
             {/* Terms and Conditions Section */}
             <div className="w-full max-w-5xl bg-transparent  p-2">
             <motion.h1
@@ -186,6 +187,7 @@ const TermsPage = () => {
         </div>
       </div>
       
+        </div>
         </div>
     );
 };

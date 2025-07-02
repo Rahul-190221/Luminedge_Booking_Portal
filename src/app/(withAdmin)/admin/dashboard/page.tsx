@@ -81,7 +81,7 @@ const DashboardPage = () => {
   const currentMonthName = new Date().toLocaleString("default", { month: "long" });
 
   return (
-    <div className="flex flex-col gap-1 w-full">
+    <div className="p-1 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
       <motion.h1
   className="text-2xl font-semibold text-[#00000f] md:mt-0 lg:mt-0"
   initial={{ opacity: 0, y: 20 }}

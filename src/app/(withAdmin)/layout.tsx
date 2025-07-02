@@ -1,8 +1,7 @@
-import Sidebar from "@/components/shared/Sidebar";
+
 import SidebarAdmin from "@/components/shared/SidebarAdmin";
 import type { Metadata } from "next";
-import { useRouter } from "next/navigation";
-import { isLoggedIn } from "@/app/helpers/jwt";
+
 
 export const metadata: Metadata = {
   title: "Luminedge Booking Portal",
@@ -20,17 +19,18 @@ export default function DashboardLayout({
   //   return router.push("/login");
   // }
   return (
-    // Add the sidebar component to the layout
-    <div className="min-h-screen w-full flex flex-col md:flex-row">
+    <div className="min-h-screen w-full flex flex-col md:flex-row p-0">
       {/* Sidebar */}
-      <div className="w-full md:w-1/5 bg-gray-100 md:min-h-screen p-4">
-          <SidebarAdmin />
-          </div>
+      <div className="w-full md:w-1/5 bg-[#ffffff] text-[#00000f] shadow-1xl rounded-1xl md:rounded-2xl border md:border-2 md:min-h-screen p-3 relative">
+        <SidebarAdmin />
+        {/* Responsive divider */}
+        <div className="hidden md:block absolute right-0 top-0 bottom-0 w-px bg-gray-200"></div>
+      </div>
 
-{/* Main Content */}
-<div className="flex-1 w-full md:w-4/5 p-4">
-  <div className=" p-1">{children}</div>
-</div>
-</div>
-);
+      {/* Main Content */}
+      <div className="flex-1 w-full md:w-4/5 p-0">
+        <div className="p-0">{children}</div>
+      </div>
+    </div>
+  );
 }

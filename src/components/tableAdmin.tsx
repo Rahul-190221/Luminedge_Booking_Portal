@@ -33,6 +33,7 @@ interface ItemType {
   mock: string;
   transactionId: string;
   mrValidation: string;
+  mrValidationExpiry?: string; // Added this property
   isEditing?: boolean;
 }
 
@@ -111,40 +112,9 @@ const TableAdmin = () => {
     IELTS: ["N/A", "Academic", "General Training"],
     GRE: ["PowerPrep", "TCY"],
     TOEFL: ["TCY"],
-    "Pearson PTE": ["AIWAS", "TCY"],
+    "Pearson PTE": ["AIWAS", "TCY", "Alpha"],
   };
-  // const fetchUserMockData = async (userId: string) => {
-  //   try {
-  //     console.log("Fetching mock data for user ID:", userId);
   
-  //     const response = await axios.get(
-  //       `https://luminedge-server.vercel.app/api/v1/user/${userId}` // ✅ Fetch full user data
-  //     );
-  
-  //     console.log("API Response:", response.data);
-  
-  //     if (response.status === 200 && response.data) {
-  //       const user = response.data; // ✅ Store user data directly
-  
-  //       // ✅ Convert single fields into an array for table display
-  //       setItems([
-  //         {
-  //           mockType: user.mockType || "",
-  //           testType: user.testType || "",
-  //           testSystem: user.testSystem || "",
-  //           mock: user.mock?.toString() || "",
-  //           transactionId: user.transactionId || "",
-  //         },
-  //       ]);
-  //     } else {
-  //       setItems([]); // ✅ Clear table if no data found
-  //       toast.error("No mock data found for this user.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching user mock data:", error);
-  //     toast.error("Failed to load user mock data.");
-  //   }
-  // };
   
   const fetchUserMockData = async (userId: string) => {
     try {
@@ -605,212 +575,241 @@ const saveAllData = async () => {
       <th className="w-[10%] p-1 border border-gray-300">Mock #</th>
       <th className="w-[15%] p-1 border border-gray-300">MR Number</th>
       <th className="w-[15%] p-1 border border-gray-300">MR Validation</th>
+      <th className="w-[20%] p-1 border border-gray-300">Expired Date</th>
       <th className="w-[6%] p-1 border border-gray-300">✏️</th>
     </tr>
   </thead>
 
   <tbody className="text-center bg-white">
-    {submittedItems.map((item, index) => (
-      <tr key={`submitted-${index}`} className="hover:bg-gray-50">
-        {item.isEditing ? (
-          <>
-            <td className="p-1 border border-gray-300">
-              <select
-                className="w-full px-1 py-1 border rounded"
-                value={item.mockType || ""}
-                onChange={(e) => updateSubmittedItem(index, 'mockType', e.target.value)}
-              >
-                <option value="">Select</option>
-                <option value="IELTS">IELTS</option>
-                <option value="GRE">GRE</option>
-                <option value="TOEFL">TOEFL</option>
-                <option value="Pearson PTE">Pearson PTE</option>
-              </select>
-            </td>
-            <td className="p-1 border border-gray-300">
-              <select
-                className="w-full px-1 py-1 border rounded"
-                value={item.testType || ""}
-                onChange={(e) => updateSubmittedItem(index, 'testType', e.target.value)}
-                disabled={!item.mockType}
-              >
-                <option value="">Select</option>
-                {item.mockType === "IELTS" ? (
-                  <>
-                    <option value="Paper-Based">Paper-Based</option>
-                    <option value="Computer-Based">Computer-Based</option>
-                  </>
-                ) : (
+  {submittedItems.map((item, index) => (
+    <tr key={`submitted-${index}`} className="hover:bg-gray-50">
+      {item.isEditing ? (
+        <>
+          <td className="p-1 border border-gray-300">
+            <select
+              className="w-full px-1 py-1 border rounded"
+              value={item.mockType || ""}
+              onChange={(e) => updateSubmittedItem(index, 'mockType', e.target.value)}
+            >
+              <option value="">Select</option>
+              <option value="IELTS">IELTS</option>
+              <option value="GRE">GRE</option>
+              <option value="TOEFL">TOEFL</option>
+              <option value="Pearson PTE">Pearson PTE</option>
+            </select>
+          </td>
+          <td className="p-1 border border-gray-300">
+            <select
+              className="w-full px-1 py-1 border rounded"
+              value={item.testType || ""}
+              onChange={(e) => updateSubmittedItem(index, 'testType', e.target.value)}
+              disabled={!item.mockType}
+            >
+              <option value="">Select</option>
+              {item.mockType === "IELTS" ? (
+                <>
+                  <option value="Paper-Based">Paper-Based</option>
                   <option value="Computer-Based">Computer-Based</option>
-                )}
-              </select>
-            </td>
-            <td className="p-1 border border-gray-300">
-              <select
-                className="w-full px-1 py-1 border rounded"
-                value={item.testSystem || ""}
-                onChange={(e) => updateSubmittedItem(index, 'testSystem', e.target.value)}
-                disabled={!item.mockType}
-              >
-                <option value="">Select</option>
-                {mockSystemOptions[item.mockType]?.map((system) => (
-                  <option key={system} value={system}>{system}</option>
-                ))}
-              </select>
-            </td>
-            <td className="p-1 border border-gray-300">
-              <input
-                className="w-full px-1 py-1 border rounded"
-                value={item.mock}
-                onChange={(e) => updateSubmittedItem(index, 'mock', e.target.value)}
-              />
-            </td>
-            <td className="p-1 border border-gray-300">
-              <input
-                className="w-full px-1 py-1 border rounded bg-gray-100"
-                value={item.transactionId}
-                disabled
-              />
-            </td>
-            <td className="p-1 border border-gray-300">
-              <select
-                className="w-full px-1 py-1 border rounded"
-                value={item.mrValidation || ""}
-                onChange={(e) => updateSubmittedItem(index, 'mrValidation', e.target.value)}
-              >
-                <option value="">Select Duration</option>
-                <option value="7 Days">7 Days</option>
-                <option value="14 Days">14 Days</option>
-                <option value="1 Month">1 Month</option>
-                <option value="2 Months">2 Months</option>
-                <option value="3 Months">3 Months</option>
-                <option value="6 Months">6 Months</option>
-              </select>
-            </td>
-            <td className="p-1 border border-gray-300">
-              <button
-                className="bg-green-600 text-white px-1 py-1 rounded"
-                onClick={() => toggleEditSubmittedItem(index)}
-              >
-                ✅
-              </button>
-            </td>
-          </>
-        ) : (
-          <>
-            <td className="p-1 border border-gray-300">{item.mockType}</td>
-            <td className="p-1 border border-gray-300">{item.testType}</td>
-            <td className="p-1 border border-gray-300">{item.testSystem}</td>
-            <td className="p-1 border border-gray-300">{item.mock}</td>
-            <td className="p-1 border border-gray-300">{item.transactionId}</td>
-            <td className="p-1 border border-gray-300">{item.mrValidation}</td>
-            <td className="p-1 border border-gray-300">
-              <button
-                className="bg-blue-600 text-white px-1 py-1 rounded"
-                onClick={() => toggleEditSubmittedItem(index)}
-              >
-                ✏️
-              </button>
-            </td>
-          </>
-        )}
-      </tr>
-    ))}
-
-    {items.map((item, index) => (
-      <tr key={`new-${index}`} className="hover:bg-gray-50">
-        <td className="p-1 border border-gray-300">
-          <select
-            value={item.mockType}
-            onChange={(e) => updateItem(index, "mockType", e.target.value)}
-            className="w-full px-1 py-1 border rounded"
-            required
-          >
-            <option value="">Select</option>
-            <option value="IELTS">IELTS</option>
-            <option value="GRE">GRE</option>
-            <option value="TOEFL">TOEFL</option>
-            <option value="Pearson PTE">Pearson PTE</option>
-          </select>
-        </td>
-        <td className="p-1 border border-gray-300">
-          <select
-            value={item.testType}
-            onChange={(e) => updateItem(index, "testType", e.target.value)}
-            className="w-full px-2 py-1 border rounded"
-            disabled={!item.mockType}
-            required
-          >
-            <option value="">Select</option>
-            {item.mockType === "IELTS" ? (
-              <>
-                <option value="Paper-Based">Paper-Based</option>
+                </>
+              ) : (
                 <option value="Computer-Based">Computer-Based</option>
-              </>
-            ) : (
+              )}
+            </select>
+          </td>
+          <td className="p-1 border border-gray-300">
+            <select
+              className="w-full px-1 py-1 border rounded"
+              value={item.testSystem || ""}
+              onChange={(e) => updateSubmittedItem(index, 'testSystem', e.target.value)}
+              disabled={!item.mockType}
+            >
+              <option value="">Select</option>
+              {mockSystemOptions[item.mockType]?.map((system) => (
+                <option key={system} value={system}>{system}</option>
+              ))}
+            </select>
+          </td>
+          <td className="p-1 border border-gray-300">
+            <input
+              className="w-full px-1 py-1 border rounded"
+              value={item.mock}
+              onChange={(e) => updateSubmittedItem(index, 'mock', e.target.value)}
+            />
+          </td>
+          <td className="p-1 border border-gray-300">
+            <input
+              className="w-full px-1 py-1 border rounded bg-gray-100"
+              value={item.transactionId}
+              disabled
+            />
+          </td>
+          <td className="p-1 border border-gray-300">
+            <select
+              className="w-full px-1 py-1 border rounded"
+              value={item.mrValidation || ""}
+              onChange={(e) => updateSubmittedItem(index, 'mrValidation', e.target.value)}
+            >
+              <option value="">Select Duration</option>
+              <option value="7 Days">7 Days</option>
+              <option value="14 Days">14 Days</option>
+              <option value="1 Month">1 Month</option>
+              <option value="2 Months">2 Months</option>
+              <option value="3 Months">3 Months</option>
+              <option value="6 Months">6 Months</option>
+            </select>
+          </td>
+          <td className="p-1 border border-gray-300">
+            {item.mrValidationExpiry
+              ? new Date(item.mrValidationExpiry).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "2-digit",
+                })
+              : "N/A"}
+          </td>
+          <td className="p-1 border border-gray-300">
+            <button
+              className="bg-green-600 text-white px-1 py-1 rounded"
+              onClick={() => toggleEditSubmittedItem(index)}
+            >
+              ✅
+            </button>
+          </td>
+        </>
+      ) : (
+        <>
+          <td className="p-1 border border-gray-300">{item.mockType}</td>
+          <td className="p-1 border border-gray-300">{item.testType}</td>
+          <td className="p-1 border border-gray-300">{item.testSystem}</td>
+          <td className="p-1 border border-gray-300">{item.mock}</td>
+          <td className="p-1 border border-gray-300">{item.transactionId}</td>
+          <td className="p-1 border border-gray-300">{item.mrValidation}</td>
+          <td className="p-1 border border-gray-300">
+            {item.mrValidationExpiry
+              ? new Date(item.mrValidationExpiry).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "2-digit",
+                })
+              : "N/A"}
+          </td>
+          <td className="p-1 border border-gray-300">
+            <button
+              className="bg-blue-600 text-white px-1 py-1 rounded"
+              onClick={() => toggleEditSubmittedItem(index)}
+            >
+              ✏️
+            </button>
+          </td>
+        </>
+      )}
+    </tr>
+  ))}
+
+  {items.map((item, index) => (
+    <tr key={`new-${index}`} className="hover:bg-gray-50">
+      <td className="p-1 border border-gray-300">
+        <select
+          value={item.mockType}
+          onChange={(e) => updateItem(index, "mockType", e.target.value)}
+          className="w-full px-1 py-1 border rounded"
+          required
+        >
+          <option value="">Select</option>
+          <option value="IELTS">IELTS</option>
+          <option value="GRE">GRE</option>
+          <option value="TOEFL">TOEFL</option>
+          <option value="Pearson PTE">Pearson PTE</option>
+        </select>
+      </td>
+      <td className="p-1 border border-gray-300">
+        <select
+          value={item.testType}
+          onChange={(e) => updateItem(index, "testType", e.target.value)}
+          className="w-full px-2 py-1 border rounded"
+          disabled={!item.mockType}
+          required
+        >
+          <option value="">Select</option>
+          {item.mockType === "IELTS" ? (
+            <>
+              <option value="Paper-Based">Paper-Based</option>
               <option value="Computer-Based">Computer-Based</option>
-            )}
-          </select>
-        </td>
-        <td className="p-1 border border-gray-300">
-          <select
-            value={item.testSystem}
-            onChange={(e) => updateItem(index, "testSystem", e.target.value)}
-            className="w-full px-1 py-1 border rounded"
-            disabled={!item.mockType}
-            required={item.mockType !== "IELTS"}
-          >
-            <option value="">Select</option>
-            {mockSystemOptions[item.mockType]?.map((system) => (
-              <option key={system} value={system}>{system}</option>
-            ))}
-          </select>
-        </td>
-        <td className="p-1 border border-gray-300">
-          <input
-            type="text"
-            value={item.mock}
-            onChange={(e) => updateItem(index, "mock", e.target.value)}
-            className="w-full px-1 py-1 border rounded"
-            required
-          />
-        </td>
-        <td className="p-1 border border-gray-300">
-          <input
-            type="text"
-            value={item.transactionId}
-            onChange={(e) => updateItem(index, "transactionId", e.target.value)}
-            className="w-full px-1 py-1 border rounded"
-            required
-          />
-        </td>
-        <td className="p-1 border border-gray-300">
-          <select
-            value={item.mrValidation}
-            onChange={(e) => updateItem(index, "mrValidation", e.target.value)}
-            className="w-full px-1 py-1 border rounded"
-            required
-          >
-            <option value="">Select Duration</option>
-            <option value="7 Days">7 Days</option>
-            <option value="14 Days">14 Days</option>
-            <option value="1 Month">1 Month</option>
-            <option value="2 Months">2 Months</option>
-            <option value="3 Months">3 Months</option>
-            <option value="6 Months">6 Months</option>
-          </select>
-        </td>
-        <td className="p-1 border border-gray-300">
-          <button
-            onClick={() => removeItem(index)}
-            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 ease-in-out text-sm flex items-center justify-center"
-          >
-            ❌
-          </button>
-        </td>
-      </tr>
-    ))}
-  </tbody>
+            </>
+          ) : (
+            <option value="Computer-Based">Computer-Based</option>
+          )}
+        </select>
+      </td>
+      <td className="p-1 border border-gray-300">
+        <select
+          value={item.testSystem}
+          onChange={(e) => updateItem(index, "testSystem", e.target.value)}
+          className="w-full px-1 py-1 border rounded"
+          disabled={!item.mockType}
+          required={item.mockType !== "IELTS"}
+        >
+          <option value="">Select</option>
+          {mockSystemOptions[item.mockType]?.map((system) => (
+            <option key={system} value={system}>{system}</option>
+          ))}
+        </select>
+      </td>
+      <td className="p-1 border border-gray-300">
+        <input
+          type="text"
+          value={item.mock}
+          onChange={(e) => updateItem(index, "mock", e.target.value)}
+          className="w-full px-1 py-1 border rounded"
+          required
+        />
+      </td>
+      <td className="p-1 border border-gray-300">
+        <input
+          type="text"
+          value={item.transactionId}
+          onChange={(e) => updateItem(index, "transactionId", e.target.value)}
+          className="w-full px-1 py-1 border rounded"
+          required
+        />
+      </td>
+      <td className="p-1 border border-gray-300">
+        <select
+          value={item.mrValidation}
+          onChange={(e) => updateItem(index, "mrValidation", e.target.value)}
+          className="w-full px-1 py-1 border rounded"
+          required
+        >
+          <option value="">Select Duration</option>
+          <option value="7 Days">7 Days</option>
+          <option value="14 Days">14 Days</option>
+          <option value="1 Month">1 Month</option>
+          <option value="2 Months">2 Months</option>
+          <option value="3 Months">3 Months</option>
+          <option value="6 Months">6 Months</option>
+        </select>
+      </td>
+      <td className="p-1 border border-gray-300">
+        {item.mrValidationExpiry
+          ? new Date(item.mrValidationExpiry).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "2-digit",
+            })
+          : "N/A"}
+      </td>
+      <td className="p-1 border border-gray-300">
+        <button
+          onClick={() => removeItem(index)}
+          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 ease-in-out text-sm flex items-center justify-center"
+        >
+          ❌
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
 </table>
         </div>
 {/* Spacer to push the button to the bottom */}

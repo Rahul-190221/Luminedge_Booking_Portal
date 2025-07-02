@@ -74,9 +74,9 @@ const DashboardPage = () => {
   }
 
   return (
-    <div className="flex flex-col gap-1 w-full">
+    <div className="p-2 sm:p-2 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border   border-[#00000f]/10">
     <motion.h1
-  className="text-2xl text-[#00000f] md:mt-6 lg:mt-10"
+  className="text-2xl text-[#00000f] md:mt-4 lg:mt-4"
   initial={{ opacity: 0, y: 20 }}
   animate={{ opacity: 1, y: 0 }}
   transition={{ duration: 0.6, ease: "easeOut" }}

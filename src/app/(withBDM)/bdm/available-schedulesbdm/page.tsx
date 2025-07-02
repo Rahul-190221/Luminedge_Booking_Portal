@@ -124,7 +124,7 @@ function AvailableSchedulesBDMPage() {
   }
 
   return (
-    <div>
+    <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
            <motion.h1
         className="text-2xl font-semibold mt-0 mb-0 text-[#00000f]  p-2 rounded"
         initial={{ opacity: 0, y: 20 }}

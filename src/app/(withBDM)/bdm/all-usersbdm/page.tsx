@@ -129,6 +129,7 @@ const BookingsTable = () => {
 
   return (
     <>
+        <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
       <h1 className="text-2xl font-minibold text-[#00000f] mb-2">
         🎓 Students Booking Details
       </h1>
@@ -296,6 +297,7 @@ const BookingsTable = () => {
             Next
           </button>
         </div>
+      </div>
       </div>
     </>
   );

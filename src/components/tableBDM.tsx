@@ -33,6 +33,7 @@ interface ItemType {
   mock: string;
   transactionId: string;
   mrValidation: string;
+  mrValidationExpiry?: string; // Added property
 }
 
 const  TableBDM  = () => {
@@ -328,7 +329,7 @@ const  TableBDM  = () => {
           <th className="p-3 border border-gray-400">Mock #</th>
           <th className="p-3 border border-gray-400">MR</th>
           <th className="p-3 border border-gray-400">MR Validation</th>
-          <th className="p-3 border border-gray-400">❌</th>
+          <th className="w-[20%] p-1 border border-gray-300">Expired Date</th>
         </tr>
       </thead>
       <tbody className="text-center bg-white text-[##00000f]">
@@ -340,7 +341,15 @@ const  TableBDM  = () => {
                   <td className="p-3 border border-gray-300">{item.mock}</td>
                   <td className="p-3 border border-gray-300">{item.transactionId}</td>
                   <td className="p-3 border border-gray-300">{item.mrValidation}</td>
-                  <td className="p-3 border border-gray-300">—</td>
+                  <td className="p-1 border border-gray-300">
+            {item.mrValidationExpiry
+              ? new Date(item.mrValidationExpiry).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "long",
+                  day: "2-digit",
+                })
+              : "N/A"}
+          </td>
                 </tr>
               ))}
             </tbody>

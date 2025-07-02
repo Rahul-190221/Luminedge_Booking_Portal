@@ -193,10 +193,11 @@ const [existingBookings, setExistingBookings] = useState<any[]>([]);
   };
  
   const handleProceed = async () => {
-    if (!testSystem) {
+    if (availableTestSystems.length > 0 && !testSystem.trim()) {
       toast.error("Please select a test system.");
       return;
     }
+    
   
     if (userTestType === "Computer-Based" && !selectedLocation) {
       toast.error("Please select a location (Home or Test Center).");
@@ -225,35 +226,7 @@ const [existingBookings, setExistingBookings] = useState<any[]>([]);
       return;
     }
   }
-  // const currentMockType = courseName;
-
-  // // ✅ Determine matching testType (needed for IELTS)
-  // const matchTestType = userTestType;
-  
-  // // ✅ Allowed mocks logic
-  // const allowedMock = userMocks
-  //   .filter((m) => {
-  //     if (currentMockType === "IELTS") {
-  //       return m.mockType === "IELTS" && m.testType === matchTestType;
-  //     }
-  //     return m.mockType === currentMockType;
-  //   })
-  //   .reduce((total, m) => total + (m.mock || 0), 0);
-  
-  // // ✅ Booked mocks logic
-  // const alreadyBookedCount = existingBookings.filter((b) => {
-  //   if (currentMockType === "IELTS") {
-  //     return b.name === "IELTS" && b.testType === matchTestType && b._id !== oldBookingId;
-  //   }
-  //   return b.name === currentMockType && b._id !== oldBookingId;
-  // }).length;
-  
-  // // ✅ Limit enforcement
-  // if (alreadyBookedCount >= allowedMock) {
-  //   toast.error(`You have already used all ${allowedMock} mocks for ${currentMockType} (${matchTestType}).`);
-  //   return;
-  // }
-  
+ 
   
     const bookingPayload: any = {
       userId,
@@ -352,12 +325,16 @@ const [existingBookings, setExistingBookings] = useState<any[]>([]);
         toast.error("Bookings cannot be made less than 24 hours before.");
         return;
       }
-  
+      
       await axios.post(`https://luminedge-server.vercel.app/api/v1/user/book-slot`, {
         ...bookingPayload,
         scheduleId,
         slotId: selectedSlotId,
       });
+      if (!testSystem) {
+        toast.error("Please select a test system.");
+        return;
+      }
   
       if (oldBookingId) {
         await axios.delete(`https://luminedge-server.vercel.app/api/v1/bookings/${oldBookingId}`);
@@ -400,9 +377,10 @@ const [existingBookings, setExistingBookings] = useState<any[]>([]);
   };
   
 return (
+  <div className="p-1 sm:p-2 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl rounded-2xl border border-[#00000f]/10">
   <div className="w-full max-w-5xl mx-auto px-0">
     {/* Title Section */}
-    <div className="w-full flex justify-center mt-[8px] lg:mt-16 text-[#00000f]">
+    <div className="w-full flex justify-center mt-[8px] lg:mt-6 text-[#00000f]">
       <motion.div
         className="flex flex-col text-center items-center gap-2"
         initial={{ opacity: 0, y: 40 }}
@@ -420,12 +398,12 @@ return (
           Mock Test Date and Time
         </h1>
 
-        <div className="h-[6px] w-24 bg-[#f7cb37] rounded-full mt-1 mb-2 animate-pulse" />
+        <div className="h-[6px] w-24 bg-[#f7cb37] rounded-full mt-1 mb-2 " />
       </motion.div>
     </div>
 
     {/* Test Type and Test System Selection */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4 w-full">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-2 w-full">
      {/* Test Type */}
      <div className="w-full flex flex-col items-start">
   <label htmlFor="testType" className="block mb-0 font-medium text-[#00000f]">
@@ -483,7 +461,7 @@ return (
       {/* Test System */}
       <div className="w-full flex flex-col items-start text-[#00000f]">
         <label htmlFor="testSystem" className="block mb-0 font-medium">
-          Test System
+          Test System {courseName === "IELTS" ? <span className="text-red-500">*</span> : null}
         </label>
 
         {courseName === "IELTS" ? (
@@ -529,7 +507,7 @@ return (
 
     {/* Test Location (for Computer-Based) */}
     {userTestType === "Computer-Based" && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-4 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-2 w-full">
         <div className="w-full flex flex-col items-start">
           <label htmlFor="location" className="block mb-0 font-medium text-[#00000f]">
             Test Location
@@ -561,9 +539,9 @@ return (
               required
             />
             {!selectedSlotId && (
-              <p className="text-red-500 text-sm mt-1">
+                <p className="text-red-500 text-base mt-1">
                 Test Time is required.
-              </p>
+                </p>
             )}
           </div>
         )}
@@ -572,9 +550,9 @@ return (
 
     {/* Calendar + Slot Selection */}
     {userTestType !== "Computer-Based" || (userTestType === "Computer-Based" && selectedLocation) ? (
-      <div className="grid grid-cols-1 md:grid-cols-2 mt-4 gap-4 mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 mt-2 gap-14 mx-auto">
         {/* Calendar */}
-        <div className="w-full max-w-md mx-auto rounded-lg shadow border border-gray-200 p-4 bg-white">
+        <div className="w-full max-w-md mx-auto rounded-lg shadow border border-gray-200 p-8 pb-0 bg-white ">
           <Calendar
             onChange={onChange}
             value={value}
@@ -596,94 +574,138 @@ return (
           />
 
           {/* Legend for Test Center */}
-          {userTestType === "Computer-Based" && selectedLocation === "Test Center" && (
-            <div className="flex justify-center gap-6 mt-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-[#FACE39] rounded-full"></div>
-                <span>Available dates</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-[#FACE39] rounded-full"></div>
-                <span>Selected date</span>
-              </div>
-            </div>
+          {(userTestType === "Paper-Based" || (userTestType === "Computer-Based" && selectedLocation === "Test Center")) && (
+           <div className="flex gap-6 mt-2 text-sm">
+           <div className="flex items-center gap-1">
+             <div className="w-4 h-4 border-2 border-[#FACE39]"></div>
+             <span>Available dates</span>
+           </div>
+           <div className="flex items-center gap-1">
+             <div className="w-4 h-4 bg-[#FACE39]"></div>
+             <span>Selected date</span>
+           </div>
+           <div className="flex items-center gap-1">
+             <div className="w-4 h-4 bg-[#00000f]"></div>
+             <span>Today</span>
+           </div>
+         </div>
+         
           )}
         </div>
 
         {/* Slots */}
         <div className="mt-8 w-full mx-auto">
-          {scheduleData.length > 0 ? (
-            <>
-              {scheduleData
-                .filter(schedule => schedule.testType === userTestType && schedule.name === userMockType)
-                .map(schedule => (
-                  <div
-                    key={schedule._id}
-                    className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 rounded"
-                  >
-                    {schedule.timeSlots.map(slot => (
-                      <div
-                        key={slot.slotId}
-                        className={`mt-2 pl-4 py-2 w-full rounded-lg ${
-                          selectedSlotId === slot.slotId ? "bg-yellow-300" : "bg-gray-100"
-                        } hover:bg-[#FACE39] cursor-pointer`}
-                        onClick={() => handleSlotSelect(slot.slotId, schedule._id, schedule.testType)}
-                      >
-                        <div className="grid grid-cols-2">
-                          <div>
-                            <h3 className="text-sm font-semibold text-gray-800">
-                              {slot.startTime.slice(0, 5)}
-                              <p className="text-xs text-gray-500">Start</p>
-                            </h3>
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-semibold text-gray-800">
-                              {slot.endTime.slice(0, 5)}
-                              <p className="text-xs text-gray-500">End</p>
-                            </h3>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 mt-3 text-xs">
-                          <MdOutlinePersonOutline />
-                          <p className="text-gray-800 mr-8">Available Seats</p>
-                          {slot.slot}
-                        </div>
-                        <h4 className="text-xs font-semibold mt-2">
-                          Test Type:{" "}
-                          <span className="text-red-500">{schedule.testType}</span>
-                        </h4>
-                      </div>
-                    ))}
+  {scheduleData.length > 0 ? (
+    <>
+      {scheduleData
+        .filter(schedule => schedule.testType === userTestType && schedule.name === userMockType)
+        .map(schedule => (
+          <div
+            key={schedule._id}
+            className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
+          >
+            {schedule.timeSlots.map(slot => {
+              const isSelected = selectedSlotId === slot.slotId;
+              return (
+                <div
+                  key={slot.slotId}
+                  onClick={() => handleSlotSelect(slot.slotId, schedule._id, schedule.testType)}
+                  className={`
+                    mt-2 w-full px-4 py-4 rounded-xl cursor-pointer transition-all duration-300
+                    ${isSelected ? "bg-yellow-300 shadow-md scale-[1.01]" : "bg-gray-100"}
+                    hover:bg-[#FACE39] hover:shadow-lg
+                  `}
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <h3 className="text-base font-bold text-[#00000f]">
+                        {slot.startTime.slice(0, 5)}
+                        <p className="text-xs text-[#00000f] font-medium">Start</p>
+                      </h3>
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-[#00000f]">
+                        {slot.endTime.slice(0, 5)}
+                        <p className="text-xs text-[#00000f] font-medium">End</p>
+                      </h3>
+                    </div>
                   </div>
-                ))}
-            </>
-          ) : (
-            <p className="text-base font-medium text-[#00000f]">
-              {selectedLocation === "Home"
-                ? "You can choose any date for home-based booking."
-                : "No schedules available for this date."}
-            </p>
-          )}
-        </div>
+
+                  <div className="flex items-center gap-1 mt-0 text-sm text-[#00000f]">
+                    <MdOutlinePersonOutline className="text-lg" />
+                    <span className="font-medium">Available Seats:</span>
+                    <span className="font-bold">{slot.slot}</span>
+                  </div>
+
+                  <h4 className="text-sm font-medium mt-2 text-[#00000f]">
+                    Test Type:{" "}
+                    <span className="font-bold text-[#00000f]">{schedule.testType}</span>
+                  </h4>
+                  <h4 className="text-sm font-medium mt-1 text-[#00000f]">
+                    Course:{" "}
+                    <span className="font-bold text-[#00000f]">{schedule.name}</span>
+                  </h4>
+
+                </div>
+              );
+            })}
+          </div>
+        ))}
+    </>
+  ) : (
+    <p className="text-base font-medium text-[#00000f] mt-0">
+      {selectedLocation === "Home"
+        ? "You can choose any date for home-based booking. Select your date and test time, then click Proceed."
+        : "No schedules available for this date."}
+    </p>
+  )}
+</div>
+
       </div>
     ) : (
       <div className="my-4">
-        <p className="text-lg font-semibold text-center">
+        <p className="text-lg font-medium text-[#00000f]">
           Please select a location to view available schedules.
         </p>
       </div>
     )}
 
-    {/* Proceed Button */}
-    <div className="w-full flex justify-end mt-4">
-      <button
-        disabled={!selectedSlotId}
-        onClick={handleProceed}
-        className="btn bg-[#FACE39] text-black hover:bg-white hover:border-2 hover:border-[#FACE39] hover:text-black rounded-full px-8 shadow-lg mt-4"
-      >
-        Proceed
-      </button>
-    </div>
+{/* Proceed Button - INTENSE */}
+<div className="w-full flex justify-end mt-6 mb-4">
+<button
+  disabled={!selectedSlotId}
+  onClick={handleProceed}
+  className={`
+    group relative inline-flex items-center justify-center px-10 py-3 rounded-full font-semibold text-base uppercase tracking-wide transition-all duration-300 ease-in-out
+    ${selectedSlotId
+      ? `
+        bg-[#facc15] text-[#00000f] 
+        shadow-[0_8px_24px_rgba(250,204,21,0.4)]
+        hover:bg-[#00000f] hover:text-[#facc15] hover:shadow-[0_10px_30px_rgba(0,0,0,0.4)] hover:scale-[1.04]
+
+        focus:bg-[#00000f] focus:text-[#facc15] focus:shadow-[0_10px_30px_rgba(0,0,0,0.4)] focus:scale-[1.04]
+
+        active:bg-[#00000f] active:text-[#facc15] active:scale-[0.97]
+        focus:outline-none focus:ring-4 focus:ring-[#facc15]/50
+      `
+      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+    }
+  `}
+>
+  <span className="z-10">Proceed</span>
+  {selectedSlotId && (
+    <span className="absolute inset-0 rounded-full ring-2 ring-[#FACE39] opacity-0 
+      group-hover:opacity-100 group-focus:opacity-100 group-active:opacity-100 
+      transition-opacity duration-300 pointer-events-none" 
+    />
+  )}
+</button>
+
+</div>
+
+
+
+  </div>
   </div>
 );
 

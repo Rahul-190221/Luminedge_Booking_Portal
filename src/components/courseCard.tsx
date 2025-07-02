@@ -59,43 +59,48 @@ const CourseCard = ({
     ? "animate-pulse border-2 border-[#FACE39] shadow-lg shadow-yellow-300"
     : "";
 
-  const hoverClass = oldBookingId
-    ? allowed
-      ? "hover:text-black hover:bg-[#FACE39] cursor-pointer"
-      : "cursor-not-allowed opacity-80"
-    : "hover:text-black hover:bg-[#FACE39] cursor-pointer";
-
   return (
     <div
       onClick={handleCardClick}
-      className={`card bg-base-100 w-[280px] h-[300px] rounded-lg text-white transition-all duration-300 ease-in-out ${hoverClass} ${glowClass}`}
+      className={`
+        group w-[280px] h-[300px] cursor-pointer 
+        transform transition-transform duration-300 hover:scale-105
+        rounded-2xl shadow-xl bg-[#00000f]
+        border border-gray-700 text-white ${glowClass}
+      `}
     >
-      <figure>
+      <figure className="overflow-hidden rounded-t-2xl">
         <Image
           src={course.image || "/default-image.jpg"}
           alt={course.name}
-          width={308}
-          height={268}
-          className="rounded-t-lg object-cover"
+          width={320}
+          height={180}
+          className="w-full h-[180px] object-cover transition-transform duration-300 group-hover:scale-105"
         />
       </figure>
 
-      <div className="card-body bg-black text-gray-400 rounded-b-lg transition-all duration-300 ease-in-out">
-        <p className="text-xs font-medium leading-snug">
-          {courseDescriptions[course.name]}
+      <div className="p-4 flex flex-col justify-between h-[120px] text-white group-hover:text-black group-hover:bg-[#FACE39] rounded-b-2xl transition-all duration-300">
+        <p className="text-xs font-medium leading-snug text-gray-300 group-hover:text-black mb-2">
+          {courseDescriptions[course.name] ||
+            "Explore your path to success with Luminedge’s premium mock tests."}
         </p>
-        <div className="card-actions justify-start">
-          <div className="flex items-center gap-2 mt-3 font-semibold uppercase text-sm tracking-wide">
-            {allowed ? (
-              <>
-                Book Now <FaLongArrowAltRight />
-              </>
-            ) : (
-              <>
-                Learn More <FaLongArrowAltRight />
-              </>
-            )}
-          </div>
+
+        <div className="flex items-center gap-2 mt-auto font-semibold text-sm uppercase tracking-wide text-yellow-400 group-hover:text-[#00000f]">
+          {allowed ? (
+            <>
+              <span className="transition-colors duration-300 group-hover:text-[#00000f]">
+                Book Now
+              </span>
+              <FaLongArrowAltRight className="transition-colors duration-300 group-hover:text-[#00000f]" />
+            </>
+          ) : (
+            <>
+              <span className="transition-colors duration-300 group-hover:text-[#00000f]">
+                Learn More
+              </span>
+              <FaLongArrowAltRight className="transition-colors duration-300 group-hover:text-[#00000f]" />
+            </>
+          )}
         </div>
       </div>
     </div>

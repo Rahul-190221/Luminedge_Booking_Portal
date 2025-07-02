@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 BarChart, XAxis, YAxis, Tooltip, Bar } from "recharts";
 
+
 const AnalysisPage = () => {
   const [users, setUsers] = useState([]);
   const [dailyRequests, setDailyRequests] = useState<number>(0);
@@ -353,54 +354,139 @@ const AnalysisPage = () => {
     });
   })();
   
+  const [monthlyCourseAttendance, setMonthlyCourseAttendance] = useState<
+  Record<
+    string,
+    Record<string, { present: number; absent: number; notUpdated: number }>
+  >
+>({});
+
+const [groupedChartData, setGroupedChartData] = useState<Record<string, any>[]>([]);
+const [allKeys, setAllKeys] = useState<Set<string>>(new Set());
+
   const [uniqueUserCount, setUniqueUserCount] = useState(0);
-  const fetchAttendanceStats = async () => {
+  const fetchGroupedAttendanceStats = async () => {
     try {
       const res = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings");
       const bookings = res.data.bookings || [];
+  
+      const monthlyGrouped: Record<string, Record<string, number>> = {};
+  
+      bookings.forEach((booking: any) => {
+        const course = booking.name || "Unknown";
+        const status = (booking.attendance || "Not Updated").toLowerCase();
+        const date = new Date(booking.bookingDate);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  
+        const key = `${course} ${status.charAt(0).toUpperCase() + status.slice(1)}`; // e.g., "IELTS Present"
+  
+        if (!monthlyGrouped[monthKey]) monthlyGrouped[monthKey] = {};
+        if (!monthlyGrouped[monthKey][key]) monthlyGrouped[monthKey][key] = 0;
+  
+        monthlyGrouped[monthKey][key]++;
+      });
+  
+      const formatted = Object.entries(monthlyGrouped).map(([month, counts]) => ({
+        month,
+        ...counts,
+      }));
+  
+      const uniqueKeys: Set<string> = new Set<string>();
+      formatted.forEach((entry) => {
+        Object.keys(entry).forEach((key) => {
+          if (key !== "month") uniqueKeys.add(key);
+        });
+      });
+  
+      setGroupedChartData(formatted);
+      setAllKeys(uniqueKeys);
+    } catch (error) {
+      console.error("Error loading grouped attendance stats:", error);
+    }
+  };
+  
+  const fetchAttendanceStats = async () => {
+    try {
+      const res = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings"); // ⬅️ switch to local if needed
+      const bookings = res.data.bookings || [];
+  
+      console.log("✅ Bookings fetched for attendance summary:", bookings);
   
       let presentCount = 0;
       let absentCount = 0;
       let notUpdatedCount = 0;
       const userSet = new Set();
   
-      interface Booking {
-        attendance?: string;
-        userId?: string;
-      }
-
-      bookings.forEach((booking: Booking) => {
+      bookings.forEach((booking: { name?: string; attendance?: string; bookingDate: string; userId?: string }) => {
         const status = booking.attendance?.toLowerCase();
         const userId = booking.userId;
-      
+  
         if (userId) userSet.add(userId);
-      
+  
         if (status === "present") presentCount++;
         else if (status === "absent") absentCount++;
         else notUpdatedCount++;
       });
   
-      setUniqueUserCount(userSet.size); // ✅ 1620 users if matched correctly
+      setUniqueUserCount(userSet.size);
       setAttendanceData([
         { name: "Present", value: presentCount },
         { name: "Absent", value: absentCount },
         { name: "Not Updated", value: notUpdatedCount },
       ]);
     } catch (error) {
-      console.error("Error fetching attendance stats:", error);
+      console.error("❌ Error fetching attendance stats:", error);
     }
   };
   
+
   useEffect(() => {
-    fetchAttendanceStats();
+    fetchGroupedAttendanceStats();
+  }, []);
+  useEffect(() => {
+    fetchGroupedAttendanceStats();
+    fetchAttendanceStats(); // ✅ must run to set pie chart data
   }, []);
   
+
     return (
-      <div className="flex flex-col gap-1 w-full">
+      <div className="p-1 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
         <h1 className="text-2xl font-bold text-[#00000f] mb-0">Booking Analysis</h1>
 
+        <div className="p-1 space-y-1">
+      <h2 className="text-xl font-bold text-[#00000f]">📊Extended Booking Analytics</h2>
+
+      <ResponsiveContainer width="100%" height={350}>
+  <BarChart
+    data={[...monthlyMockCounts].sort((a, b) => new Date(b.month).getTime() - new Date(a.month).getTime())}
+    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+  >
+    <XAxis
+      dataKey="month"
+      tickFormatter={(month) =>
+        new Date(month + "-01").toLocaleString("default", { month: "short", year: "2-digit" })
+      }
+      stroke="#00000f"
+    />
+    <YAxis stroke="#00000f" />
+    <Tooltip />
+    <Legend />
+    {allMockTypes.map((type, index) => (
+      <Bar
+        key={type}
+        dataKey={type}
+        fill={mockColors[index]}
+        barSize={32}
+        radius={[0, 0, 0, 0]}
+      />
+    ))}
+  </BarChart>
+</ResponsiveContainer>
+    </div>
+
+
       {/* 📦 Row 1 - Date Range & Today */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-2 rounded-lg shadow-md">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow-md">
 
   {/* Range-based mock type chart */}
   <div>
@@ -429,7 +515,7 @@ const AnalysisPage = () => {
   <div>
     <h3 className="text-lg font-semibold text-[#00000f] mb-0">Select Date (Today)</h3>
     <div className="flex gap-2 mb-0">
-      <DatePicker selected={todayStatDate} onChange={setTodayStatDate} className="border p-1 rounded w-full" placeholderText="Today Date" />
+      <DatePicker selected={todayStatDate} onChange={setTodayStatDate} className="border p-2 rounded w-full" placeholderText="Today Date" />
       <button
   onClick={handleTodaySearch}
 className="w-40 px-1 py-1 rounded-full font-extrabold text-sm uppercase tracking-widest bg-gradient-to-r from-[#00000f] to-[#1a1a2e] text-white shadow-md hover:from-[#face39] hover:to-[#fce77d] hover:text-[#00000f] hover:shadow-2xl hover:scale-105 ring-2 ring-[#00000f] hover:ring-[#face39] transition-all duration-300 ease-in-out flex items-center justify-center gap-1"
@@ -448,7 +534,7 @@ className="w-40 px-1 py-1 rounded-full font-extrabold text-sm uppercase tracking
 
 
       {/* 📦 Row 2 - Monthly and Yearly */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-2 rounded-lg shadow-md">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow-md">
 
   {/* Monthly Count Section */}
   <div>
@@ -506,16 +592,65 @@ className="w-40 px-1 py-1 rounded-full font-extrabold text-sm uppercase tracking
       </div>
 
 
-      {/* Overall mock distribution */}
-      <div className="mt-4">
-  <h3 className="text-xl font-semibold text-[#00000f] mb-0">Mock Analysis Overview</h3>
+{/* 🔍 Overall Mock Analysis Section */}
+<div className="mt-4">
+  <h1 className="text-xl font-semibold text-[#00000f] mb-1">Mock Analysis Overview</h1>
 
-  {/* Side-by-side pie charts */}
+  {/* 📊 Monthly Course & Attendance Bar Chart */}
+  <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+  <h3 className="text-2xl font-bold text-[#00000f] mb-2">
+    Extended Booking Analytics (Monthly by Course & Attendance)
+  </h3>
+
+  <ResponsiveContainer width="100%" height={500}>
+    <BarChart
+      data={[...groupedChartData].sort((a, b) => new Date(b.month).getTime() - new Date(a.month).getTime())}
+      margin={{ top: 20, right: 30, bottom: 5, left: 10 }}
+    >
+      <XAxis
+        dataKey="month"
+        stroke="#00000f"
+        tickFormatter={(month) =>
+          new Date(month + "-01").toLocaleString("default", {
+            month: "short",
+            year: "2-digit",
+          })
+        }
+      />
+      <YAxis stroke="#00000f" />
+      <Tooltip />
+      {/* ❌ Legend removed to avoid long multi-row labels */}
+      {/* <Legend /> */}
+
+      {Array.from(allKeys).map((key) => {
+        let fillColor = "#ccc"; // default color
+
+        if (key.toLowerCase().includes("present")) fillColor = attendanceColors[0]; // 🟡
+        else if (key.toLowerCase().includes("absent")) fillColor = attendanceColors[1]; // ⚫
+        else if (key.toLowerCase().includes("not updated")) fillColor = attendanceColors[2]; // 🔴
+
+        return (
+          <Bar
+            key={key}
+            dataKey={key}
+            stackId={undefined}
+            fill={fillColor}
+          />
+        );
+      })}
+    </BarChart>
+  </ResponsiveContainer>
+</div>
+
+
+  {/* 📈 Side-by-side Pie Charts */}
   <div className="flex flex-col md:flex-row gap-6 justify-center items-start">
     
-    {/* Mock Type Distribution */}
-    <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md p-2">
-      <h4 className="text-lg font-semibold text-[#00000f] text-center mb-1">MockType Distribution (All)</h4>
+    {/* 🟠 Mock Type Distribution Pie */}
+    <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md p-4">
+      <h4 className="text-lg font-semibold text-[#00000f] text-center mb-2">
+        MockType Distribution (All)
+      </h4>
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie
@@ -527,7 +662,10 @@ className="w-40 px-1 py-1 rounded-full font-extrabold text-sm uppercase tracking
             label
           >
             {mockTypeDistribution.map((_entry, index) => (
-              <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
+              <Cell
+                key={`cell-${index}`}
+                fill={pieColors[index % pieColors.length]}
+              />
             ))}
           </Pie>
           <Legend />
@@ -535,70 +673,46 @@ className="w-40 px-1 py-1 rounded-full font-extrabold text-sm uppercase tracking
       </ResponsiveContainer>
     </div>
 
-    {/* Attendance Summary */}
-    <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md p-2">
-    <h4 className="text-lg font-semibold text-[#00000f] text-center mb-1">
-  Total {attendanceData.reduce((acc, item) => acc + item.value, 0)} bookings and Attendance Summary for {overallSchedule.reduce((acc, item) => acc + item.count, 0)}(users)
-<span className="text-sm font-medium text-[#00000f]"></span>
-</h4>
-<ResponsiveContainer width="100%" height={300}>
-  <PieChart>
-    <Pie
-      dataKey="value"
-      data={attendanceData}
-      cx="50%"
-      cy="50%"
-      outerRadius={100}
-      label
-    >
-      {attendanceData.map((_entry, index) => (
-        <Cell key={`cell-att-${index}`} fill={attendanceColors[index % attendanceColors.length]} />
-      ))}
-    </Pie>
-    <Legend />
-  </PieChart>
-</ResponsiveContainer>
+    {/* 🧾 Attendance Summary Pie */}
+<div className="w-full md:w-1/2 bg-white rounded-lg shadow-md p-4">
+  <h4 className="text-lg font-semibold text-[#00000f] text-center mb-2">
+    Attendance Summary of{" "}
+    <span className="font-bold">
+      {attendanceData.reduce((acc, item) => acc + item.value, 0)} bookings
+    </span>{" "}
+    across{" "}
+    <span className="font-bold">{uniqueUserCount}</span> users
+  </h4>
 
-    </div>
+  <ResponsiveContainer width="100%" height={300}>
+    <PieChart>
+      <Pie
+        dataKey="value"
+        data={attendanceData}
+        cx="50%"
+        cy="50%"
+        outerRadius={100}
+        label
+      >
+        {attendanceData.map((_entry, index) => (
+          <Cell
+            key={`cell-att-${index}`}
+            fill={attendanceColors[index % attendanceColors.length]}
+          />
+        ))}
+      </Pie>
+      <Legend />
+    </PieChart>
+  </ResponsiveContainer>
+</div>
+
 
   </div>
 </div>
 
+  
 
-      <div className="p-4 space-y-4">
-      <h2 className="text-xl font-bold text-[#00000f]">📊 Extended Booking Analytics</h2>
-
-      <ResponsiveContainer width="100%" height={350}>
-  <BarChart
-    data={[...monthlyMockCounts].sort((a, b) => new Date(b.month).getTime() - new Date(a.month).getTime())}
-    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-  >
-    <XAxis
-      dataKey="month"
-      tickFormatter={(month) =>
-        new Date(month + "-01").toLocaleString("default", { month: "short", year: "2-digit" })
-      }
-      stroke="#00000f"
-    />
-    <YAxis stroke="#00000f" />
-    <Tooltip />
-    <Legend />
-    {allMockTypes.map((type, index) => (
-      <Bar
-        key={type}
-        dataKey={type}
-        fill={mockColors[index]}
-        barSize={35}
-        radius={[0, 0, 0, 0]}
-      />
-    ))}
-  </BarChart>
-</ResponsiveContainer>
-
-
-    </div>
-
-      {/* Booking stat cards */}
+      {/* Booking stat cards
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         <div className="stat bg-white shadow-md rounded-lg p-4 text-center max-h-[380px] text-[#00000f]">
           <div className="stat-title text-[#00000f] font-medium mb-1 text-center sm:text-left">
@@ -647,9 +761,11 @@ className="w-40 px-1 py-1 rounded-full font-extrabold text-sm uppercase tracking
             totalCount={overallSchedule.reduce((acc, item) => acc + item.count, 1)}
           />
         </div>
-      </div>
+      </div> */}
+      
     </div>
   );
 };
 
 export default AnalysisPage;
+

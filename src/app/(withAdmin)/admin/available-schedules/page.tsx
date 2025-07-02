@@ -152,9 +152,9 @@ function AvailableSchedulesPage() {
   }
 
   return (
-    <div>
+    <div className="p-1 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
       <motion.h1
-        className="text-2xl font-semibold mt-0 mb-0 text-[#00000f]  p-2 rounded"
+        className="text-2xl font-semibold mt-0 mb-0 text-[#00000f]  p-1 rounded"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}

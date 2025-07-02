@@ -7,23 +7,21 @@ import {
   IoCloudDownloadOutline,
   IoLogOutOutline,
 } from "react-icons/io5";
-import { TbMoneybag, TbReport, TbBell } from "react-icons/tb";
+
 import { GrAnalytics } from "react-icons/gr";
 import { useState } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/utils/actions/logout";
-import GetMe from "@/app/helpers/getme";
-import { RxAvatar } from "react-icons/rx";
-import { FaArrowDown } from "react-icons/fa";
-import { IoMailOutline, IoSettingsOutline, IoHomeOutline } from "react-icons/io5"; // Import the icons
-import { AiOutlineHome } from "react-icons/ai"; // Import Home icon
-import { RiHomeOfficeFill } from "react-icons/ri"; // Importing the correct icon
 
+import { IoMailOutline, IoSettingsOutline, IoHomeOutline } from "react-icons/io5";
 
+import { RiHomeOfficeFill } from "react-icons/ri";
+
+const handleLinkClick = () => {};
 
 const SidebarAdmin = () => {
-  const [isOpen, setIsOpen] = useState(false); // State for mobile toggle
+  const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
 
   const toggleSidebar = () => {
@@ -33,19 +31,22 @@ const SidebarAdmin = () => {
   return (
     <div className="flex">
       {/* Toggle button for mobile view */}
-      <button onClick={toggleSidebar} className="p-2 md:hidden z-50">
+      <button
+        onClick={toggleSidebar}
+        className="p-2 md:hidden z-50 flex items-center border-r border-gray-200"
+      >
         {isOpen ? (
           <FaTimes className="h-6 w-6" />
         ) : (
-          <div className="flex border-r border-gray-200 gap-4 items-center">
+          <div className="flex items-center gap-4">
             <FaBars className="h-6 w-6" />
           </div>
         )}
       </button>
 
- {/* Sidebar container */}
- <div
-        className={`fixed top-0 left-0 h-full w-64 bg-white md:bg-transparent transform ${
+      {/* Sidebar container */}
+      <div
+        className={`fixed top-0 left-0 h-screen w-64 bg-white p-0 sm:p-1 text-[#00000f] shadow-1xl rounded-2xl md:bg-transparent transform ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 transition-transform duration-300 ease-in-out z-50 md:relative md:flex md:flex-col md:items-start`}
       >
@@ -88,158 +89,55 @@ const SidebarAdmin = () => {
             <FaTimes className="h-8 w-8" />
           </button>
         </div>
-        <ul className="menu min-h-screen rounded-box">
-          <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center rounded-full ${
-              pathname === "/admin/dashboard"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link href="/admin/dashboard" className="flex items-center px-4 py-3">
-              <IoHomeOutline className="h-5 w-5 mr-1" />
-              <span className="inline">Dashboard</span>
-            </Link>
-          </li>
-          <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
-            <Link
-              href="/admin/create-schedule"
-              className={`flex items-center px-4 py-3 ${
-                pathname === "/admin/create-schedule"
-                  ? "bg-[#FACE39] text-black font-bold rounded-full"
-                  : ""
-              }`}
+        <ul className="menu flex flex-col min-h-screen px-2 py-0 text-[#00000f] gap-0.5 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
+          {[
+            { href: "/admin/dashboard", label: "Dashboard", icon: <IoHomeOutline className="h-5 w-5" /> },
+            { href: "/admin/create-schedule", label: "Create Schedule", icon: <IoBagRemoveOutline className="h-5 w-5" /> },
+            { href: "/admin/available-schedules", label: "Available Schedules", icon: <IoCloudDownloadOutline className="h-5 w-5" /> },
+            { href: "/admin/homebased", label: "Home Based Booking", icon: <RiHomeOfficeFill className="h-5 w-5" /> },
+            { href: "/admin/all-users", label: "Booking Details", icon: <IoWalletOutline className="h-5 w-5" /> },
+            { href: "/admin/analysis", label: "Analysis", icon: <GrAnalytics className="h-5 w-5" /> },
+            { href: "/admin/profileedit", label: "Profile Edit Requests", icon: <IoSettingsOutline className="h-5 w-5" /> },
+          ].map(({ href, label, icon }) => (
+            <li
+              key={href}
+              className={`group relative rounded-full overflow-hidden transition-colors duration-300 ease-in-out
+                ${pathname === href ? "bg-[#FACE39] text-[#00000f] font-bold" : "hover:text-[#00000f]"}`}
             >
-              <IoBagRemoveOutline className="h-5 w-5 mr-1" />
-              <span className="inline">Create Schedule</span>
-            </Link>
-          </li>
+              {/* Liquid hover effect layer */}
+              <div className="absolute inset-0 before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#FACE39] before:rounded-full before:transition-all before:duration-500 group-hover:before:left-0 before:blur-sm z-0" />
 
-          <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-              pathname === "/admin/available-schedules"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link
-              href="/admin/available-schedules"
-              className="flex items-center px-4 py-3"
-            >
-              <IoCloudDownloadOutline className="h-5 w-5 mr-1" />
-              <span className="inline">Available Schedules</span>
-            </Link>
-          </li>
+              <Link
+                href={href}
+                onClick={handleLinkClick}
+                className="relative z-10 flex items-center gap-x-3 px-4 py-3 w-full text-sm md:text-base"
+              >
+                <span className="transform transition-transform duration-200 group-hover:translate-x-1">{icon}</span>
+                <span className="truncate w-full min-w-0 transition-all duration-200 group-hover:pl-1">
+                  {label}
+                </span>
+              </Link>
+            </li>
+          ))}
 
-{/* Home Based Booking */}
-<li className={`flex justify-center transition-all duration-200 
-  ${pathname === "/admin/homebased" ? "bg-[#FACE39] text-black font-bold rounded-full"
-                  : ""
-              }`}>
-  <Link href="/admin/homebased" className="flex items-center px-4 py-3">
-    <RiHomeOfficeFill className="h-5 w-5 mr-1" /> {/* Replaced the icon here */}
-    <span className="inline">Home Based Booking</span>
-  </Link>
-</li>
-        <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-              pathname === "/admin/all-users"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link href="/admin/all-users" className="flex items-center px-4 py-3">
-              <IoWalletOutline className="h-5 w-5 mr-1" />
-              <span className="inline">Booking Details</span>
-            </Link>
-          </li>
-            {/* Email Menu Item
-    <li
-      className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-        pathname === ""
-          ? "bg-[#FACE39] text-black font-bold rounded-full"
-          : ""
-      }`}
-    >
-      <Link href="" className="flex items-center px-4 py-3">
-        <IoMailOutline className="h-5 w-5 mr-2" />
-        <span className="inline">Email</span>
-      </Link>
-    </li> */}
-    
-    {/* Settings Menu Item */}
-    {/* <li
-      className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-        pathname === "/admin/settings"
-          ? "bg-[#FACE39] text-black font-bold rounded-full"
-          : ""
-      }`}
-    >
-      <Link href="/admin/settings" className="flex items-center px-4 py-3">
-        <IoSettingsOutline className="h-5 w-5 mr-2" />
-        <span className="inline">Setting</span>
-      </Link>
-    </li> */}
-          {/* <li
-            className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-              pathname === "/admin/notifications"
-                ? "bg-[#FACE39] text-black font-bold rounded-full"
-                : ""
-            }`}
-          >
-            <Link
-              href="/admin/notifications"
-              className="flex items-center px-4 py-3"
-            >
-              <TbBell className="h-5 w-5 mr-2" />
-              <span className="inline">Notifications</span>
-            </Link>
-          </li> */}
-         
-           {/* Settings Menu Item */}
-    {/* <li
-      className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${
-        pathname === "/admin/settings"
-          ? "bg-[#FACE39] text-black font-bold rounded-full"
-          : ""
-      }`}
-    >
-      <Link href="" className="flex items-center px-4 py-3">
-        <IoSettingsOutline className="h-5 w-5 mr-2" />
-        <span className="inline">Setting</span>
-      </Link>
-    </li> */}
-<li
-  className={`flex justify-center transition-all duration-200 ${
-    pathname === "/admin/analysis"
-      ? "bg-[#FACE39] text-black font-bold rounded-full"
-      : "hover:bg-[#FACE39] hover:text-black rounded-full"
-  }`}
->
-  <Link href="/admin/analysis" className="flex items-center px-4 py-3">
-    <GrAnalytics className="h-5 w-5 mr-1" />
-    <span className="inline">Analysis</span>
-  </Link>
-</li>
+          {/* Logout */}
+          <li className="group relative rounded-full overflow-hidden hover:text-[#00000f] transition-colors duration-300 ease-in-out">
+            {/* Liquid hover effect layer */}
+            <div className="absolute inset-0 before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#FACE39] before:rounded-full before:transition-all before:duration-500 group-hover:before:left-0 before:blur-sm z-0" />
 
-{/* <li className={`hover:bg-[#FACE39] hover:text-black flex justify-center ${pathname === "/admin/profileedit" ? "bg-[#FACE39] text-black font-bold rounded-full" : ""}`}>
-  <Link href="/admin/profileedit" className="flex items-center px-4 py-3">
-    <IoSettingsOutline className="h-5 w-5 mr-1" />
-    <span className="inline">Profile Edit Requests</span>
-  </Link>
-</li> */}
-
-
-    <li className="hover:bg-[#FACE39] hover:text-black flex justify-center">
             <button
-              onClick={() => logout()}
-              className="flex items-center px-4 py-3"
+              onClick={() => {
+                logout();
+                handleLinkClick();
+              }}
+              className="relative z-10 flex items-center gap-x-3 px-4 py-3 w-full text-left text-sm md:text-base"
             >
-              <IoLogOutOutline className="h-6 w-6 mr-0" />
-              <span className="inline">Logout</span>
+              <IoLogOutOutline className="h-6 w-6 transform transition-transform duration-200 group-hover:translate-x-1" />
+              <span className="truncate w-full min-w-0 transition-all duration-200 group-hover:pl-1">
+                Logout
+              </span>
             </button>
           </li>
-          
         </ul>
       </div>
     </div>

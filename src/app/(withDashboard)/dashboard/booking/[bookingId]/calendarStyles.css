@@ -1,22 +1,87 @@
-.available-date {
-  border: 2px solid #FACE39 !important;
-  border-radius: 50% !important;
-  padding: 10px;
-  color: #00000f !important; /* Day number color */
-  font-weight: bold;
+.react-calendar {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  border: none;
+  font-family: inherit;
 }
 
-.selected-date {
-  background-color: #FACE39 !important;
-  color: #00000f !important; /* Day number color */
-  border-radius: 50% !important;
-  padding: 10px;
-  font-weight: bold;
+/* Remove red styling on weekends */
+.react-calendar__month-view__weekdays__weekday abbr,
+.react-calendar__tile {
+  color: #00000f !important;
 }
-.unavailable-date {
-  background-color: #00000f !important;
-  color: #ffffff !important; /* Day number color */
-  border-radius: 50% !important;
-  padding: 6px;
+
+/* Already-defined grid layout for consistent spacing */
+.react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.react-calendar__tile {
+  aspect-ratio: 1 / 1;
+  text-align: center;
+  border-radius: 8px;
+  padding: 2px;
   font-weight: bold;
+  color: #00000f !important; /* override any red/gray */
+  transition: all 0.3s ease;
+}
+
+/* Available date */
+.available-date {
+  border: 1px solid #FACE39 !important;
+  color: #00000f !important;
+ 
+}
+
+/* Hover */
+.available-date:hover {
+  background-color: #00000f !important;
+  color: #ffffff !important;
+}
+
+/* Hover effect on selected date */
+.selected-date:hover {
+  background-color: #00000f !important;
+  color: #FACE39 !important;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Today */
+.react-calendar__tile--now {
+  background-color: #00000f !important;
+  color: #ffffff !important;
+}
+
+/* Today + selected */
+.react-calendar__tile--now.selected-date {
+  background-color: #FACE39 !important;
+  color: #00000f !important;
+}
+
+/* Dates from other months (grayed out) */
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: #9ca3af !important; /* Tailwind slate-400 */
+}
+
+/* Override the active/selected date style */
+.react-calendar__tile--active {
+  background-color: #FACE39 !important;
+  color: #00000f !important;
+  border: 1px solid #FACE39 !important;
+}
+
+/* Ensure hover effect still applies */
+.react-calendar__tile--active:hover {
+  background-color: #00000f !important;
+  color: #ffffff !important;
+}
+
+/* Combine with selected-date if needed */
+.selected-date.react-calendar__tile--active {
+  background-color: #FACE39 !important;
+  color: #00000f !important;
 }

@@ -133,202 +133,134 @@ export default function CreateSchedulePage() {
   }, [pathname]);
 
   return (
-    <div className="p-6 max-w-full sm:max-w-[80%] shadow-lg rounded-lg">
-      <h1 className="text-2xl font-bold mb-6">Create Test Schedule</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Course ID */}
-        <div>
-          <label className="block mb-2 font-medium text-[#00000f]">Course ID</label>
-          <select
-            value={formData.courseId}
-            onChange={(e) =>
-              setFormData({ ...formData, courseId: e.target.value })
-            }
-            className="border p-2 rounded w-full"
-          >
-            <option value="" disabled>
-              Select a course
-            </option>
-            <option value="67337c880794d577cd982b75">IELTS Paper Based</option>
-            <option value="6742b783d2f5950620f6df21">
-              IELTS Computer Based
-            </option>
-            <option value="67337c880794d577cd982b76">Pearson PTE</option>
-            <option value="67337c880794d577cd982b77">GRE</option>
-            <option value="67337c880794d577cd982b78">TOEFL</option>
-          </select>
-        </div>
 
-        {/* Date Picker */}
-        <div>
-          <label className="block mb-2 font-medium text-[#00000f]">Select Dates</label>
-          <MultiDatePicker
-            value={formData.dates as any}
-            onChange={(dates) =>
-              setFormData({
-                ...formData,
-                dates: dates as unknown as DateObject[],
-              })
-            }
-          />
-        </div>
+    <div className="p-1 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
+  <h1 className="text-2xl font-extrabold mb-6 border-b pb-1 border-[#FACE39]">Create Test Schedule</h1>
 
-        {/* Time Slots */}
-        {formData.dates.map((date) => {
-          const dateKey = date.format("YYYY-MM-DD");
-          return (
-            <div key={dateKey} className="mb-6">
-              <h3 className="font-semibold mb-2">Time Slots for {dateKey}</h3>
-              {(formData.timeSlots[dateKey] || []).map((slot, index) => (
-                <div
-                  key={index}
-                  className="w-full mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"
-                >
-                  {/* Start Time */}
-                  <div>
-                    <label
-                      htmlFor={`start-time-${dateKey}-${index}`}
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Start time:
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 end-0 top-0 flex items-center pe-3.5 pointer-events-none"></div>
-                      <input
-                        type="time"
-                        id={`start-time-${dateKey}-${index}`}
-                        className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                        value={slot.startTime}
-                        onChange={(e) =>
-                          handleTimeSlotChange(
-                            dateKey,
-                            index,
-                            "startTime",
-                            e.target.value
-                          )
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
+  <form onSubmit={handleSubmit} className="space-y-8">
 
-                  {/* End Time */}
-                  <div>
-                    <label
-                      htmlFor={`end-time-${dateKey}-${index}`}
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      End time:
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 end-0 top-0 flex items-center pe-3.5 pointer-events-none"></div>
-                      <input
-                        type="time"
-                        id={`end-time-${dateKey}-${index}`}
-                        className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                        value={slot.endTime}
-                        onChange={(e) =>
-                          handleTimeSlotChange(
-                            dateKey,
-                            index,
-                            "endTime",
-                            e.target.value
-                          )
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  {/* Slot Selection */}
-                  <div>
-                    <label
-                      htmlFor={`slot-${dateKey}-${index}`}
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Slot:
-                    </label>
-                    <input
-                      type="number"
-                      id={`slot-${dateKey}-${index}`}
-                      className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      value={slot.slot || 20}
-                      onChange={(e) =>
-                        handleTimeSlotChange(
-                          dateKey,
-                          index,
-                          "slot",
-                          e.target.value
-                        )
-                      }
-                      min="1"
-                      required
-                    />
-                  </div>
-                  {/* Total Slot Selection */}
-                  <div>
-                    <label
-                      htmlFor={`totalSlot-${dateKey}-${index}`}
-                      className="block mb-2 text-sm font-medium text-gray-900"
-                    >
-                      Total Slot:
-                    </label>
-                    <input
-                      type="number"
-                      id={`totalSlot-${dateKey}-${index}`}
-                      className="bg-gray-50 border leading-none border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
-                      value={slot.totalSlot || 20} // Display the initial value or default value
-                      onChange={(e) =>
-                        handleTimeSlotChange(
-                          dateKey,
-                          index,
-                          "totalSlot",
-                          e.target.value
-                        )
-                      }
-                      min="1"
-                      required
-                    />
-                  </div>
-                </div>
-              ))}
-
-              {/* Add Time Slot Button */}
-              <button
-                type="button"
-                onClick={() => addTimeSlot(dateKey)}
-                className="flex items-center gap-2 text-blue-500 hover:underline"
-              >
-                <svg
-                  className="w-5 h-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Add Time Slot
-              </button>
-            </div>
-          );
-        })}
-
-        {/* Submit */}
-        <button
-  type="submit"
-  onClick={() => router.push('/admin/available-schedules')}
-  className="px-7 py-3 mt-0 rounded-xl bg-[#00000f] text-white font-semibold text-sm tracking-wide shadow-md hover:bg-[#face39] hover:text-[#00000f] hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out"
->
-  ➕ Create Schedule
-</button>
-
-      </form>
+    {/* Course Selection */}
+    <div className="space-y-1">
+      <label className="text-lg font-semibold">Select Course</label>
+      <select
+        value={formData.courseId}
+        onChange={(e) =>
+          setFormData({ ...formData, courseId: e.target.value })
+        }
+        className="w-full border border-[#00000f]/20 rounded-xl px-4 py-2 text-base shadow-inner focus:outline-none focus:ring-2 focus:ring-[#FACE39]"
+      >
+        <option value="" disabled>Select a course</option>
+        <option value="67337c880794d577cd982b75">IELTS Paper Based</option>
+        <option value="6742b783d2f5950620f6df21">IELTS Computer Based</option>
+        <option value="67337c880794d577cd982b76">Pearson PTE</option>
+        <option value="67337c880794d577cd982b77">GRE</option>
+        <option value="67337c880794d577cd982b78">TOEFL</option>
+      </select>
     </div>
+
+    {/* Date Picker */}
+    <div className="space-y-1.5">
+  <label className="text-lg font-semibold text-[#00000f]">📅Select Dates</label>
+  <div className="w-full">
+    <MultiDatePicker
+      value={formData.dates as any}
+      onChange={(dates) =>
+        setFormData({
+          ...formData,
+          dates: dates as unknown as DateObject[],
+        })
+      }
+      className="!w-full !border !border-[#00000f]/20 !rounded-xl !px-4 !py-0 !text-base !shadow-inner focus:!outline-none focus:!ring-1 focus:!ring-[#FACE39]"
+    />
+  </div>
+</div>
+
+
+    {/* Time Slot Sections */}
+    {formData.dates.map((date) => {
+      const dateKey = date.format("YYYY-MM-DD");
+      return (
+        <div key={dateKey} className="p-4 mt-6 bg-[#f8f8f8] rounded-xl border border-[#00000f]/10 shadow">
+          <h3 className="font-bold text-lg mb-4 text-[#00000f]">⏰Time Slots for {dateKey}</h3>
+
+          {(formData.timeSlots[dateKey] || []).map((slot, index) => (
+            <div key={index} className="grid sm:grid-cols-4 gap-4 mb-4">
+
+              <div>
+                <label className="block mb-1 text-sm font-medium">Start Time</label>
+                <input
+                  type="time"
+                  className="w-full border rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FACE39]"
+                  value={slot.startTime}
+                  onChange={(e) =>
+                    handleTimeSlotChange(dateKey, index, "startTime", e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-sm font-medium">End Time</label>
+                <input
+                  type="time"
+                  className="w-full border rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FACE39]"
+                  value={slot.endTime}
+                  onChange={(e) =>
+                    handleTimeSlotChange(dateKey, index, "endTime", e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-sm font-medium">Slot</label>
+                <input
+                  type="number"
+                  className="w-full border rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FACE39]"
+                  value={slot.slot || 20}
+                  onChange={(e) =>
+                    handleTimeSlotChange(dateKey, index, "slot", e.target.value)
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 text-sm font-medium">Total Slot</label>
+                <input
+                  type="number"
+                  className="w-full border rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FACE39]"
+                  value={slot.totalSlot || 20}
+                  onChange={(e) =>
+                    handleTimeSlotChange(dateKey, index, "totalSlot", e.target.value)
+                  }
+                  required
+                />
+              </div>
+            </div>
+          ))}
+
+            <button
+            type="button"
+            onClick={() => addTimeSlot(dateKey)}
+            className="mt-2 text-sm font-medium flex items-center gap-2 text-[#00000f] hover:text-[#00000f] hover:scale-105 transition-transform duration-300 ease-in-out"
+            >
+            <span className="text-xl">➕</span> Add Time Slot
+            </button>
+        </div>
+      );
+    })}
+
+    {/* Submit Button */}
+    <button
+      type="submit"
+      onClick={() => router.push("/admin/available-schedules")}
+      className="w-full sm:w-auto px-6 py-3 bg-[#00000f] text-white font-semibold rounded-xl shadow-md hover:bg-[#FACE39] hover:text-[#00000f] transition-all duration-300 ease-in-out hover:scale-105"
+    >
+      ➕Create Schedule
+    </button>
+  </form>
+</div>
+
   );
 }
