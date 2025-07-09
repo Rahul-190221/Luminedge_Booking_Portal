@@ -54,36 +54,44 @@ function AvailableSchedulesBDMPage() {
 
 
   const filteredSchedules = React.useMemo(() => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Dhaka",
+    }); // → Format: YYYY-MM-DD
+    
   
     return schedules.filter((schedule: Schedule) => {
-      if (!schedule || typeof schedule.startDate !== "string") {
-        console.warn("Skipping schedule due to invalid startDate:", schedule);
-        return false;
-      }
+      const scheduleDate = schedule.startDate.split("T")[0]; // Extract only the date (YYYY-MM-DD)
   
-      // Accept "YYYY-MM-DD" or full ISO strings like "YYYY-MM-DDTHH:mm:ss.sssZ"
-      const scheduleDate = schedule.startDate.includes("T")
-        ? schedule.startDate.split("T")[0]
-        : schedule.startDate;
+      // Test type filter
+      const isTestTypeMatch = testTypeFilter
+        ? schedule.name === testTypeFilter
+        : true;
   
-      const isTestTypeMatch = !testTypeFilter || schedule.name === testTypeFilter;
-      const isScheduleTypeMatch = !scheduletestType || schedule.testType === scheduletestType;
-      const isStartDateMatch = !startDateFilter || scheduleDate === startDateFilter;
+      // Schedule type filter
+      const isScheduleTypeMatch = scheduletestType
+        ? schedule.testType === scheduletestType
+        : true;
   
+      // Date filter
       let isDateMatch = true;
-      if (dateFilter === "past") {
-        isDateMatch = scheduleDate < today;
-      } else if (dateFilter === "upcoming") {
-        isDateMatch = scheduleDate >= today;
+      switch (dateFilter) {
+        case "past":
+          isDateMatch = scheduleDate < today; // Dates strictly before today
+          break;
+        case "upcoming":
+          isDateMatch = scheduleDate >= today; // Include today and future dates
+          break;
+        default: // If "all" or no valid filter
+          isDateMatch = true;
+          break;
       }
   
-      return (
-        isTestTypeMatch &&
-        isScheduleTypeMatch &&
-        isDateMatch &&
-        isStartDateMatch
-      );
+      // Start date filter
+      const isStartDateMatch = startDateFilter
+        ? scheduleDate === startDateFilter
+        : true;
+  
+      return isTestTypeMatch && isScheduleTypeMatch && isDateMatch && isStartDateMatch;
     });
   }, [schedules, testTypeFilter, scheduletestType, dateFilter, startDateFilter]);
   
@@ -220,7 +228,7 @@ function AvailableSchedulesBDMPage() {
                 <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                   {schedule && (
                     <button
-                    onClick={() => router.push(`/bdm/${schedule?._id}`)}
+                    onClick={() => router.push(`/teacher/${schedule?._id}`)}
                     className="px-5 py-2 rounded-xl bg-[#00000f] text-white font-medium shadow-md hover:bg-[#face39] hover:text-[#00000f] hover:font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out"
                   >
                     View Bookings

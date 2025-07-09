@@ -54,6 +54,10 @@ const LoginPage = () => {
         else if (user.role === "user") {
           router.push("/dashboard");
         }
+        else if (user.role === "teacher") {
+          router.push("teacher/dashboard");
+        }
+
       }, 500); // Delay to ensure state update
     }
   }, [user]);

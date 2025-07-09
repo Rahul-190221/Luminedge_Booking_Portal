@@ -83,43 +83,37 @@ function AvailableSchedulesPage() {
       console.error("Error deleting schedule:", error);
     }
   };
-
   const filteredSchedules = React.useMemo(() => {
-    const today = new Date().toISOString().split("T")[0]; // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0];
   
     return schedules.filter((schedule: Schedule) => {
-      const scheduleDate = schedule.startDate.split("T")[0]; // Extract only the date (YYYY-MM-DD)
-  
-      // Test type filter
-      const isTestTypeMatch = testTypeFilter
-        ? schedule.name === testTypeFilter
-        : true;
-  
-      // Schedule type filter
-      const isScheduleTypeMatch = scheduletestType
-        ? schedule.testType === scheduletestType
-        : true;
-  
-      // Date filter
-      let isDateMatch = true;
-      switch (dateFilter) {
-        case "past":
-          isDateMatch = scheduleDate < today; // Dates strictly before today
-          break;
-        case "upcoming":
-          isDateMatch = scheduleDate >= today; // Include today and future dates
-          break;
-        default: // If "all" or no valid filter
-          isDateMatch = true;
-          break;
+      if (!schedule || typeof schedule.startDate !== "string") {
+        console.warn("Skipping schedule due to invalid startDate:", schedule);
+        return false;
       }
   
-      // Start date filter
-      const isStartDateMatch = startDateFilter
-        ? scheduleDate === startDateFilter
-        : true;
+      // Accept "YYYY-MM-DD" or full ISO strings like "YYYY-MM-DDTHH:mm:ss.sssZ"
+      const scheduleDate = schedule.startDate.includes("T")
+        ? schedule.startDate.split("T")[0]
+        : schedule.startDate;
   
-      return isTestTypeMatch && isScheduleTypeMatch && isDateMatch && isStartDateMatch;
+      const isTestTypeMatch = !testTypeFilter || schedule.name === testTypeFilter;
+      const isScheduleTypeMatch = !scheduletestType || schedule.testType === scheduletestType;
+      const isStartDateMatch = !startDateFilter || scheduleDate === startDateFilter;
+  
+      let isDateMatch = true;
+      if (dateFilter === "past") {
+        isDateMatch = scheduleDate < today;
+      } else if (dateFilter === "upcoming") {
+        isDateMatch = scheduleDate >= today;
+      }
+  
+      return (
+        isTestTypeMatch &&
+        isScheduleTypeMatch &&
+        isDateMatch &&
+        isStartDateMatch
+      );
     });
   }, [schedules, testTypeFilter, scheduletestType, dateFilter, startDateFilter]);
   
@@ -145,12 +139,26 @@ function AvailableSchedulesPage() {
   );
 
   function formatTime(time: string) {
-    const [hour, minute] = time.split(":").map(Number);
+    // ✅ Defensive checks
+    if (!time || typeof time !== "string" || !time.includes(":")) {
+      return "Invalid time";
+    }
+  
+    const [hourStr, minuteStr] = time.split(":");
+  
+    const hour = Number(hourStr);
+    const minute = Number(minuteStr);
+  
+    // ✅ Check if values are valid numbers
+    if (isNaN(hour) || isNaN(minute)) {
+      return "Invalid time";
+    }
+  
     const period = hour >= 12 ? "PM" : "AM";
     const formattedHour = hour % 12 || 12;
     return `${formattedHour}:${minute.toString().padStart(2, "0")} ${period}`;
   }
-
+  
   return (
     <div className="p-1 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
       <motion.h1
