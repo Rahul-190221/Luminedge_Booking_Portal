@@ -9,7 +9,10 @@ import { registerUser } from "../utils/actions/registerUser";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-// import { signIn } from "next-auth/react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { FaRegCalendarAlt } from "react-icons/fa";
+
 export type UserData = {
   firstName: string;
   lastName: string;
@@ -20,7 +23,10 @@ export type UserData = {
   password: string;
   confirmPassword: string;
   terms: boolean;
+  sex: string;
+  dateOfBirth: string;
 };
+
 export type formatData = {
   name: string;
   email: string;
@@ -34,16 +40,18 @@ export type formatData = {
 };
 const britishLogo = '/assets/british-logos.svg';
 const RegisterPage = () => {
+
+  const router = useRouter();
+
+  // Watch password to validate confirm password
   const {
     register,
     handleSubmit,
     formState: { errors },
     watch,
-  } = useForm<UserData>();
+    setValue,                         // needed for the datepicker
+  } = useForm<UserData>({ defaultValues: { dateOfBirth: "" } });
 
-  const router = useRouter();
-
-  // Watch password to validate confirm password
   const password = watch("password");
   console.log(password);
 
@@ -63,10 +71,13 @@ const RegisterPage = () => {
         contactNo: data.phoneNumber,
         transactionId: data.transactionId,
         passportNumber: data.passportNumber,
-        mock: 5, // You can adjust this based on actual data
-        result: [], // Empty array as per the provided structure
-        isDeleted: false, // Default value for isDeleted
+        sex: data.sex,
+        dateOfBirth: data.dateOfBirth,
+        mock: 5,
+        result: [],
+        isDeleted: false,
       };
+      
 
       // Add registration logic here (e.g., API call)
       // Assuming you are using a function like `registerUser` to send the data
@@ -93,9 +104,22 @@ const RegisterPage = () => {
     }
   };
 
+
+  const formatYMD = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  
+  const parseYMD = (s?: string) => {
+    if (!s) return null;
+    const [y, m, d] = s.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  };
+
+
+  
   return (
     // need to responsive
-    <div className="my-4 px-2 md:px-4 lg:px-6">
+    <div className="my-2 px-2 md:px-4 lg:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="hidden lg:block w-full lg:w-[80%] h-[70%] m-auto">
         <svg
@@ -210,252 +234,290 @@ const RegisterPage = () => {
               alt={""}                />
                 </p>
           </div>
-          <h1 className="text-2xl md:text-3xl text-amber-500 font-bold mt-2 mb-0">
+          <h1 className="text-2xl md:text-3xl text-amber-500 font-bold mt-0 mb-0">
   Sign Up
 </h1>
 <form
   onSubmit={handleSubmit(onSubmit)}
   onKeyDown={(e) => {
     if (e.key === "Enter") {
-      e.preventDefault();  // Prevent default Enter key behavior (form reset or submitting multiple times)
-      const form = (e.target as HTMLElement).closest("form");  // Cast to HTMLElement and use closest method
-      form?.requestSubmit();  // Programmatically trigger form submission
+      e.preventDefault();
+      const form = (e.target as HTMLElement).closest("form");
+      form?.requestSubmit();
     }
   }}
-  className="w-full max-w-4xl mx-auto"
+  className="space-y-2.5
+             [&_.label]:py-0 [&_.label]:min-h-0 [&_.label]:pb-1
+             [&_.label-text]:leading-tight"
 >
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mt-0 mb-0">
-    {/* First Name */}
-    <div className="form-control ">
-    <label className="label pt-0 pb-1 mt-2">
 
-        <span className="label-text text-gray-600 ml-0 font-semibold whitespace-nowrap text-sm sm:text-base">
-          First Name*
-        </span>
-      </label>
-      <input
-        type="text"
-        {...register("firstName", {
-          required: "First name is required",
-        })}
-        placeholder="(As per Passport/NID)"
-        className="input bg-gray-50 h-[40px] w-full text-sm sm:text-base"
-      />
-      {errors.firstName && (
-        <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
-      )}
-    </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* First Name */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text text-gray-700 font-semibold text-sm">First Name*</span>
+                </label>
+                <input
+                  type="text"
+                  {...register("firstName", { required: "First name is required" })}
+                  placeholder="(As per Passport/NID)"
+                  className="input bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300"
+                />
+                {errors.firstName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
+                )}
+              </div>
 
-    {/* Last Name */}
-    <div className="form-control ">
-    <label className="label pt-0 pb-1 mt-2">
-        <span className="label-text text-gray-600 ml-0 font-semibold whitespace-nowrap text-sm sm:text-base">
-          Last Name*
-        </span>
-      </label>
-      <input
-        type="text"
-        {...register("lastName", {
-          required: "Last name is required",
-        })}
-        placeholder="(As per Passport/NID)"
-        className="input bg-gray-50 h-[40px] w-full text-sm sm:text-base"
-      />
-      {errors.lastName && (
-        <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
-      )}
-    </div>
-  </div>
+              {/* Last Name */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text text-gray-700 font-semibold text-sm">Last Name*</span>
+                </label>
+                <input
+                  type="text"
+                  {...register("lastName", { required: "Last name is required" })}
+                  placeholder="(As per Passport/NID)"
+                  className="input bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300"
+                />
+                {errors.lastName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+                )}
+              </div>
+            </div>
 
-  {/* Phone Number */}
-  <div className="form-control ">
-  <label className="label pt-0 pb-1 mt-2">
-      <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
-        Phone Number*
-      </span>
-    </label>
-    <input
-      type="tel"
-      {...register("phoneNumber", {
-        required: "Phone number is required",
-      })}
-      placeholder="01400403474"
-      className="input bg-gray-50 h-[40px] w-full text-sm sm:text-base"
-    />
-    {errors.phoneNumber && (
-      <p className="text-red-500 text-sm">{errors.phoneNumber.message}</p>
-    )}
-  </div>
+            {/* Phone Number */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-gray-700 font-semibold text-sm">Phone Number*</span>
+              </label>
+              <input
+                type="tel"
+                {...register("phoneNumber", { required: "Phone number is required" })}
+                placeholder="01400403474"
+                className="input bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300"
+              />
+              {errors.phoneNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.phoneNumber.message}</p>
+              )}
+            </div>
 
-  {/* Passport Number */}
-  <div className="form-control">
-  <label className="label pt-0 pb-1 mt-2">
+            {/* Passport Number */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-gray-700 font-semibold text-sm">Passport / NID Number*</span>
+              </label>
+              <input
+                type="text"
+                {...register("passportNumber", { required: "Passport number is required" })}
+                placeholder="Must be valid"
+                className="input bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300"
+              />
+              {errors.passportNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.passportNumber.message}</p>
+              )}
+            </div>
 
-      <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
-        Passport / NID Number*
-      </span>
-    </label>
-    <input
-      type="text"
-      {...register("passportNumber", {
-        required: "Passport number is required",
-      })}
-      placeholder="Must be valid"
-      className="input bg-gray-50 h-[40px] w-full text-sm sm:text-base"
-    />
-    {errors.passportNumber && (
-      <p className="text-red-500 text-sm">{errors.passportNumber.message}</p>
-    )}
-  </div>
-{/* Money Receipt Number */}
+            {/* Money Receipt Number */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-gray-700 font-semibold text-sm">Money Receipt Number*</span>
+              </label>
+              <input
+                type="text"
+                {...register("transactionId", { required: "Transaction ID is required" })}
+                placeholder=""
+                className="input bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300"
+              />
+              {errors.transactionId && (
+                <p className="text-red-500 text-sm mt-1">{errors.transactionId.message}</p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-gray-700 font-semibold text-sm">Email*</span>
+              </label>
+              <input
+                type="email"
+                {...register("email", { required: "Email is required" })}
+                placeholder=""
+                className="input bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300"
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Password */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text text-gray-700 font-semibold text-sm">Password*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    {...register("password", {
+                      required: "Password is required",
+                      minLength: { value: 8, message: "Password must be at least 8 characters" },
+                    })}
+                    className="input bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300"
+                    placeholder=""
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? (
+                      <FaEyeSlash className="w-5 h-5 text-gray-600" />
+                    ) : (
+                      <FaEye className="w-5 h-5 text-gray-600" />
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text text-gray-700 font-semibold text-sm">Confirm Password*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    {...register("confirmPassword", {
+                      required: "Confirm Password is required",
+                      validate: (value) => value === password || "Passwords do not match",
+                    })}
+                    className="input bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300"
+                    placeholder=""
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  >
+                    {showConfirmPassword ? (
+                      <FaEyeSlash className="w-5 h-5 text-gray-600" />
+                    ) : (
+                      <FaEye className="w-5 h-5 text-gray-600" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.confirmPassword.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Sex Dropdown */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text text-gray-700 font-semibold text-sm">Sex*</span>
+              </label>
+              <select
+                {...register("sex", { required: "Sex is required" })}
+                className="select bg-gray-100 h-10 w-full rounded-lg border-gray-300 focus:border-amber-400 transition-all duration-300 text-gray-700"
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  Select your sex
+                </option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+              {errors.sex && (
+                <p className="text-red-500 text-sm mt-1">{errors.sex.message}</p>
+              )}
+            </div>
+
+            {/* Date of Birth */}
 <div className="form-control">
-<label className="label pt-0 pb-1 mt-2">
+  <label className="label" htmlFor="dateOfBirth">
+    <span className="label-text text-gray-700 font-semibold text-sm">Date of Birth*</span>
+  </label>
 
-      <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
-        Money Receipt Number*
-      </span>
-    </label>
-    <input
-      type="text"
-      {...register("transactionId", {
-        required: "Transaction ID is required",
-      })}
-      placeholder=""
-      className="input bg-gray-100 h-[40px] w-full text-sm sm:text-base"
+  {/* keep the field registered for RHF validation */}
+  <input type="hidden" {...register("dateOfBirth", { required: "Date of Birth is required" })} />
+
+  <div className="relative">
+    <DatePicker
+      id="dateOfBirth"
+      selected={parseYMD(watch("dateOfBirth"))}
+      onChange={(d) => setValue("dateOfBirth", d ? formatYMD(d as Date) : "", { shouldValidate: true })}
+      placeholderText="dd/mm/yyyy"
+      dateFormat="dd/MM/yyyy"
+      showMonthDropdown
+      showYearDropdown
+      dropdownMode="select"
+      scrollableYearDropdown
+      yearDropdownItemNumber={140}
+      maxDate={new Date()}
+      minDate={new Date(1900, 0, 1)}
+      autoComplete="bday"
+      // 👇 identical look to your other inputs
+      className={`input bg-gray-100 h-10 w-full rounded-lg border border-gray-300 text-gray-700 placeholder-gray-400 pr-10 focus:border-amber-400 transition-all duration-300 ${
+        errors.dateOfBirth ? "border-rose-400" : ""
+      }`}
+      wrapperClassName="w-full"
+      popperClassName="!z-[9999]"
     />
-    {errors.transactionId && (
-      <p className="text-red-500 text-sm">{errors.transactionId.message}</p>
-    )}
-  </div>
-  {/* Email */}
-  <div className="form-control ">
-  <label className="label pt-0 pb-1 mt-2">
-
-      <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
-        Email*
-      </span>
-    </label>
-    <input
-      type="email"
-      {...register("email", { required: "Email is required" })}
-      placeholder=""
-      className="input bg-gray-100 h-[40px] w-full text-sm sm:text-base"
-    />
-    {errors.email && (
-      <p className="text-red-500 text-sm">{errors.email.message}</p>
-    )}
+    <FaRegCalendarAlt className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-600" />
   </div>
 
-  
+  {errors.dateOfBirth && (
+    <p className="text-red-500 text-sm mt-1">{errors.dateOfBirth.message}</p>
+  )}
+</div>
 
-  <div className="grid md:grid-cols-2 gap-4 mt-2">
-    {/* Password Field */}
-    <div className="form-control ">
-    <label className="label pt-0 pb-1 mt-2">
 
-        <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
-          Password*
-        </span>
-      </label>
-      <div className="relative">
-        <input
-          type={showPassword ? "text" : "password"}
-          {...register("password", {
-            required: "Password is required",
-            minLength: {
-              value: 8,
-              message: "Password must be at least 8 characters",
-            },
-          })}
-          className="input bg-gray-50 h-[40px] w-full text-sm sm:text-base"
-          placeholder=""
-        />
-        <button
-          type="button"
-          className="absolute right-3 top-1/2 transform -translate-y-1/2"
-          onClick={() => setShowPassword((prev) => !prev)}
-        >
-          {showPassword ? (
-            <FaEyeSlash className="w-5 h-5 text-gray-600" />
-          ) : (
-            <FaEye className="w-5 h-5 text-gray-600" />
-          )}
-        </button>
-      </div>
-      {errors.password && (
-        <p className="text-red-500 text-sm">{errors.password.message}</p>
-      )}
-    </div>
+            {/* Agree to Terms */}
+            <div className="form-control mt-1">
+              <label className="cursor-pointer flex items-center">
+                <input
+                  type="checkbox"
+                  {...register("terms", { required: "You must agree to the terms" })}
+                  className="checkbox checkbox-warning mr-2 border-amber-400"
+                />
+                <span className="label-text text-gray-700 text-sm">
+                  I agree to all{" "}
+                  <Link href="/terms-and-conditions" className="text-amber-400 font-semibold hover:underline">
+                    terms and conditions
+                  </Link>
+                </span>
+              </label>
+              {errors.terms && (
+                <p className="text-red-500 text-sm mt-1">{errors.terms.message}</p>
+              )}
+            </div>
 
-    {/* Confirm Password Field */}
-    <div className="form-control ">
-    <label className="label pt-0 pb-1 mt-2">
+ {/* extra space above CTA (robust against space-y and margin collapse) */}
+<div className="h-7 sm:h-4 md:h-3 lg:h-3" aria-hidden />
 
-        <span className="label-text text-gray-600 ml-0 font-semibold text-sm sm:text-base">
-          Confirm Password*
-        </span>
-      </label>
-      <div className="relative">
-        <input
-          type={showConfirmPassword ? "text" : "password"}
-          {...register("confirmPassword", {
-            required: "Confirm Password is required",
-            validate: (value) =>
-              value === password || "Passwords do not match",
-          })}
-          className="input bg-gray-50 h-[40px] w-full text-sm sm:text-base"
-          placeholder=""
-        />
-        <button
-          type="button"
-          className="absolute right-3 top-1/2 transform -translate-y-1/2"
-          onClick={() => setShowConfirmPassword((prev) => !prev)}
-        >
-          {showConfirmPassword ? (
-            <FaEyeSlash className="w-5 h-5 text-gray-600" />
-          ) : (
-            <FaEye className="w-5 h-5 text-gray-600" />
-          )}
-        </button>
-      </div>
-      {errors.confirmPassword && (
-        <p className="text-red-500 text-sm">{errors.confirmPassword.message}</p>
-      )}
-    </div>
-  </div>
+{/* Sign Up Button */}
+<div className="form-control">
+  <button
+    type="submit"
+    className="btn w-full h-11 sm:h-12 rounded-xl font-semibold text-white
+               bg-gradient-to-r from-amber-400 via-amber-400 to-yellow-500
+               shadow-[0_10px_30px_rgba(250,206,57,0.35)]
+               hover:from-amber-500 hover:to-yellow-500
+               hover:shadow-[0_16px_48px_rgba(250,206,57,0.55)]
+               focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-1
+               active:scale-[0.99] transition-all duration-300 disabled:opacity-60"
+  >
+    Sign Up
+  </button>
+</div>
 
-  {/* Agree to Terms */}
-  <div className="form-control mb-6 mt-1">
-    <label className="cursor-pointer flex items-center">
-      <input
-        type="checkbox"
-        {...register("terms", {
-          required: "You must agree to the terms",
-        })}
-        className="checkbox checkbox-warning mr-2"
-      />
-      <span className="label-text ml-0 mt-1.5 text-sm sm:text-base">
-        I agree to all{" "}
-        <span className="text-[#FACE39] font-semibold">
-          <Link href="/terms-and-conditions">
-            terms and conditions
-          </Link>
-        </span>
-      </span>
-    </label>
-    {errors.terms && (
-      <p className="text-red-500 text-sm">{errors.terms.message}</p>
-    )}
-  </div>
 
-  {/* Sign Up Button */}
-  <div className="form-control mt-10">
-    <button type="submit" className="btn bg-[#FACE39] w-full sm:w-auto">
-      Sign Up
-    </button>
-  </div>
-</form>
-
+          </form>
           {/* Google Sign Up */}
           {/* <div
             onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
@@ -465,7 +527,7 @@ const RegisterPage = () => {
             <span className="font-semibold">Sign up with Google</span>
           </div> */}
           {/* Add this sign in message for all screen sizes */}
-          <div className="text-center mt-4 text-sm text-[#00000f]">
+          <div className="text-center mt-2 text-sm text-[#00000f]">
             Already have an account?{" "}
             <Link
               href="/login"

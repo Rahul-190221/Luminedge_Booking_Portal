@@ -9,53 +9,61 @@ type TimeSlot = {
   slotId: string;
   startTime: string;
   endTime: string;
-  totalSlot?: number;
-  slot?: string; // available seats
+  totalSlot?: number; // Optional
+  slot?: string;      // Available seats?
 };
 
 type Schedule = {
   _id?: string;
   id?: string;
-  name: string;
-  testType: string;
-  startDate?: unknown; // API can vary; we normalize
+  name?: string;
+  testType?: string;
+  startDate?: unknown; // API may vary; we normalize
   status?: string;
   timeSlots?: TimeSlot[];
   [x: string]: any;
 };
 
-// ---------- Dhaka helpers ----------
+// ---------- Dhaka date helpers ----------
 const ymdDhaka = (d: Date) =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Dhaka",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(d); // YYYY-MM-DD
+  }).format(d); // -> YYYY-MM-DD
 
-// Normalize many shapes to YYYY-MM-DD (Asia/Dhaka)
+// Accepts many shapes and returns YYYY-MM-DD in Asia/Dhaka
 const toYMD = (v: unknown): string | null => {
   if (!v) return null;
 
+  // Strings: prefer leading YYYY-MM-DD if present
   if (typeof v === "string") {
-    const m = v.match(/^(\d{4}-\d{2}-\d{2})/); // "YYYY-MM-DD" or ISO prefix
+    const m = v.match(/^(\d{4}-\d{2}-\d{2})/);
     if (m) return m[1];
     const d = new Date(v);
     return isNaN(+d) ? null : ymdDhaka(d);
   }
+
+  // Numbers: epoch ms
   if (typeof v === "number") {
     const d = new Date(v);
     return isNaN(+d) ? null : ymdDhaka(d);
   }
+
+  // Date object
   if (v instanceof Date) return isNaN(+v) ? null : ymdDhaka(v);
+
+  // Mongo-style {$date: "..."}
   if (typeof v === "object" && v && "$date" in (v as any)) {
     const d = new Date((v as any).$date);
     return isNaN(+d) ? null : ymdDhaka(d);
   }
+
   return null;
 };
 
-// Pick a start date from various possible shapes
+// Try common shapes your API may use
 const getStartDateYMD = (s: any): string | null =>
   toYMD(
     s?.startDate ??
@@ -66,28 +74,27 @@ const getStartDateYMD = (s: any): string | null =>
       s?.schedule?.startDate
   );
 
-const displayDate = (v: unknown): string => {
-  const ymd = toYMD(v);
+const displayDate = (src: unknown): string => {
+  const ymd = toYMD(src);
   if (!ymd) return "—";
   const [y, m, d] = ymd.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
+  // Render stable text (not used for comparisons)
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "long",
     year: "numeric",
-  }).format(dt);
+  }).format(new Date(Date.UTC(y, m - 1, d)));
 };
 
-const safeRowKey = (s: Schedule, fallback: number) =>
-  s._id ?? s.id ?? `${s.name}-${getStartDateYMD(s) ?? "na"}-${fallback}`;
-
-// Consider it a schedule only if it has a usable date and some identifying fields
 const isScheduleLike = (x: any): boolean => {
   if (!x || typeof x !== "object") return false;
   const ymd = getStartDateYMD(x);
   const hasNameOrType = typeof x?.name === "string" || typeof x?.testType === "string";
   return !!ymd && hasNameOrType;
 };
+
+const safeRowKey = (s: Schedule, idx: number) =>
+  s._id ?? s.id ?? `${s.name ?? "unknown"}-${getStartDateYMD(s) ?? "na"}-${idx}`;
 
 // ---------- Component ----------
 function TrfAvailableSchedulesBDMPage() {
@@ -99,7 +106,7 @@ function TrfAvailableSchedulesBDMPage() {
   // UI controls (some are enforced/disabled)
   const [testTypeFilter, setTestTypeFilter] = useState<string>("IELTS"); // enforced
   const [dateSortOrder, setDateSortOrder] = useState<"ascending" | "descending">("descending");
-  const [scheduletestType, setscheduletestType] = useState<string>(""); // Paper/Computer
+  const [scheduletestType, setscheduletestType] = useState<string>(""); // paper/computer (optional)
   const [dateFilter, setDateFilter] = useState<"all" | "past" | "upcoming">("past"); // enforced
   const [startDateFilter, setStartDateFilter] = useState<string>("");
 
@@ -119,26 +126,27 @@ function TrfAvailableSchedulesBDMPage() {
     fetchSchedules();
   }, []);
 
-  // Enforce IELTS-only + today/past (Asia/Dhaka)
+  // --- Enforced filters: IELTS only + today/past (Asia/Dhaka) ---
   const filteredSchedules = useMemo(() => {
-    const today = ymdDhaka(new Date());
-
+    const today = ymdDhaka(new Date()); // Dhaka "today" as YYYY-MM-DD
     return schedules.filter((schedule) => {
       const ymd = getStartDateYMD(schedule);
       if (!ymd) return false;
 
-      // Enforce IELTS by name (case-insensitive, partial match)
-      const isIELTS = String(schedule.name || "").toLowerCase().includes("ielts");
+      // Enforce IELTS only (robust, case-insensitive, handles 'ielts mock', etc.)
+      const name = String(schedule?.name || "").toLowerCase();
+      const isIELTS = name.includes("ielts");
       if (!isIELTS) return false;
 
-      // Enforce today/past
-      if (ymd > today) return false; // hide future
+      // Enforce past/today only
+      const isPastOrToday = ymd <= today;
+      if (!isPastOrToday) return false;
 
-      // Optional user filters (within enforced subset)
-      const typeOk = !scheduletestType || schedule.testType === scheduletestType;
-      const startOk = !startDateFilter || ymd === startDateFilter;
+      // Optional extra filters still apply (but only to the IELTS+past/today subset)
+      const isScheduleTypeMatch = !scheduletestType || schedule.testType === scheduletestType;
+      const isStartDateMatch = !startDateFilter || ymd === startDateFilter;
 
-      return typeOk && startOk;
+      return isScheduleTypeMatch && isStartDateMatch;
     });
   }, [schedules, scheduletestType, startDateFilter]);
 
@@ -181,7 +189,7 @@ function TrfAvailableSchedulesBDMPage() {
       <div className="bg-gray-100 p-2 h-22 mb-0 text-[#00000f]">
         <h3 className="font-semibold">Filter by</h3>
         <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
-          {/* Locked to IELTS */}
+          {/* Enforced to IELTS only */}
           <select
             value={testTypeFilter}
             onChange={(e) => setTestTypeFilter(e.target.value)}
@@ -204,16 +212,14 @@ function TrfAvailableSchedulesBDMPage() {
 
           <select
             value={dateSortOrder}
-            onChange={(e) =>
-              setDateSortOrder(e.target.value as "ascending" | "descending")
-            }
+            onChange={(e) => setDateSortOrder(e.target.value as "ascending" | "descending")}
             className="px-2 py-1 border rounded w-full sm:w-auto"
           >
             <option value="ascending">Start Date Ascending</option>
             <option value="descending">Start Date Descending</option>
           </select>
 
-          {/* Locked to past/today */}
+          {/* Enforced to past/today only */}
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as "all" | "past" | "upcoming")}
@@ -257,9 +263,7 @@ function TrfAvailableSchedulesBDMPage() {
                 <td className="px-4 py-2">
                   {schedule.timeSlots?.length
                     ? schedule.timeSlots.map((slot, i) => (
-                        <div
-                          key={`${schedule._id ?? schedule.id ?? idx}-slot-${slot.slotId ?? i}`}
-                        >
+                        <div key={`${schedule._id ?? schedule.id ?? idx}-slot-${slot.slotId ?? i}`}>
                           {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
                         </div>
                       ))
@@ -268,14 +272,14 @@ function TrfAvailableSchedulesBDMPage() {
                 <td className="px-4 py-2">{schedule.timeSlots?.[0]?.totalSlot ?? "N/A"}</td>
                 <td className="px-4 py-2">{schedule.timeSlots?.[0]?.slot ?? "N/A"}</td>
                 <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                  <button
-                    onClick={() =>
-                      router.push(`/teacher/teacherTRF/${schedule?._id ?? schedule?.id}`)
-                    }
-                    className="px-5 py-2 rounded-xl bg-[#00000f] text-white font-medium shadow-md hover:bg-[#face39] hover:text-[#00000f] hover:font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out"
-                  >
-                    View Bookings
-                  </button>
+                  {!!(schedule?._id ?? schedule?.id) && (
+                    <button
+                      onClick={() => router.push(`/admin/TRF/${schedule?._id ?? schedule?.id}`)}
+                      className="px-5 py-2 rounded-xl bg-[#00000f] text-white font-medium shadow-md hover:bg-[#face39] hover:text-[#00000f] hover:font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out"
+                    >
+                      View Bookings
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

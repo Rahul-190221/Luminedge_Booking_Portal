@@ -131,6 +131,8 @@ const Sidebar = () => {
   </Link>
 </li>
 
+
+
 {/* Terms */}
 <li
   className={`group relative rounded-full overflow-hidden transition-colors duration-300 ease-in-out

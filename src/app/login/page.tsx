@@ -198,58 +198,61 @@ const LoginPage = () => {
               width={90} // Add width property
               height={35} // Add height property
               className="inline-block ml-0 h-10 w-auto" // Increased height to 10
-              alt={""}                />
+              alt={""}             />
                 </p>
             </div>
-            <h1 className="  text-2xl md:text-3xl font-bold mt-8 lg:mt-7">
-              Sign in
-            </h1>
-            <div className="form-control mt-4 mb-1">
-              <label className="label">
-                <span className="label-text font-bold ml-0">Email*</span>
-              </label>
-              <input
-                type="email"
-                {...register("email")}
-                placeholder="enter your email"
-                className="input input-bordered border-[#FACE39]"
-                required
-              />
-            </div>
+            
+  <h1 className="text-2xl md:text-3xl font-bold mt-8">Sign in</h1>
 
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-bold ml-0">Password*</span>
-              </label>
-              <div className="relative">
-                <input
-                  {...register("password")}
-                  type={showPassword ? "text" : "password"}
-                  placeholder="********"
-                  className="input w-full input-bordered border-[#FACE39]"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
-              </div>
-            </div>
-            <Link href="/forget-password">
-              <p className="text-xs text-end text-[#00000f] mt-2 mb-10">
-                Forgot password?
-              </p>
-            </Link>
+{/* Email */}
+<div className="form-control">
+  <label className="label">
+    <span className="label-text font-bold ml-0">Email*</span>
+  </label>
+  <input
+    type="email"
+    {...register("email")}
+    placeholder="enter your email"
+    className="input input-bordered border-[#FACE39] w-full"
+    required
+  />
+</div>
 
-            <div className="form-control mt-8 lg:mt-12">
-              <button type="submit" className="btn bg-[#FACE39]">
-                Sign in
-              </button>
-            </div>
-          </form>
+{/* Password */}
+<div className="form-control">
+  <label className="label">
+    <span className="label-text font-bold ml-0">Password*</span>
+  </label>
+  <div className="relative">
+    <input
+      {...register("password")}
+      type={showPassword ? "text" : "password"}
+      placeholder="********"
+      className="input input-bordered border-[#FACE39] w-full pr-10"
+      required
+    />
+    <button
+      type="button"
+      onClick={() => setShowPassword(!showPassword)}
+      className="absolute right-3 top-1/2 -translate-y-1/2"
+      aria-label={showPassword ? 'Hide password' : 'Show password'}
+    >
+      {showPassword ? <FaEyeSlash /> : <FaEye />}
+    </button>
+  </div>
+</div>
+
+<Link href="/forget-password">
+  <p className="text-xs text-end text-[#00000f] mt-2">Forgot password?</p>
+</Link>
+
+{/* Sign in button */}
+<div className="form-control mt-8 lg:mt-12">
+  <button type="submit" className="btn bg-[#FACE39] w-full">
+    Sign in
+  </button>
+</div>
+</form>
           {/* <p className="text-center">OR </p>
           <div className="border-2 border-[#FACE39] rounded-xl py-2 my-4 lg:my-6 mx-auto w-full flex justify-center">
             <span

@@ -1,76 +1,54 @@
 // jwt.ts
 import { jwtDecode } from "jwt-decode";
-import { getFromLocalStorage, removeFromLocalStorage } from "../utils/local-storage";
+import {
+  getFromLocalStorage,
+  removeFromLocalStorage,
+} from "../utils/local-storage";
+
 export const authKey = "accessToken";
 
 interface CustomJwtPayload {
   userId: string;
   role: string;
-  [key: string]: any;  // for other potential payload properties
+  email?: string;
+  [key: string]: any;
 }
 
-export const isLoggedIn = () => {
-  const authToken = getFromLocalStorage(authKey);
-  if (authToken) {
-     return !!authToken;
-  }
+export const isLoggedIn = (): boolean => {
+  const token = getFromLocalStorage(authKey);
+  return !!token;
 };
 
 export const removeUser = () => {
-  return removeFromLocalStorage(authKey);
+  removeFromLocalStorage(authKey);
+  localStorage.removeItem("adminEmail");     // 👈 cleanup
+  localStorage.removeItem("adminName");
 };
 
-export const getUserIdFromToken = () => {
-  // Ensure that the code runs only on the client side
-  if (typeof window === "undefined") {
-    return null; // If running server-side, return null (or handle as needed)
+export const getUserIdFromToken = (): CustomJwtPayload | null => {
+  if (typeof window === "undefined") return null;
+
+  const token = localStorage.getItem(authKey);
+  if (!token) {
+    console.warn("No token found in localStorage.");
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    return null;
   }
 
-  console.log("getUserIdFromToken");
-
-  // Access the localStorage on the client side
-  const accessToken = localStorage.getItem("accessToken");
-
-  if (!accessToken) {
-    console.error("No access token found in localStorage.");
-    //redirect to login
-    window.location.href = "/login";
-    return null; // No token found
-  }
-
-  // Decode the token with type
-  const decoded = jwtDecode<CustomJwtPayload>(accessToken);
-
-  if (decoded && decoded.userId) {
-    return decoded;
-  } else {
-    console.error("userId not found in the token.");
+  try {
+    const decoded = jwtDecode<CustomJwtPayload>(token);
+    if (decoded?.userId) return decoded;
+    console.error("Decoded token missing userId.");
+    return null;
+  } catch (err) {
+    console.error("Token decoding failed:", err);
     return null;
   }
 };
-export const getUserIdOnlyFromToken = () => {
-  // Ensure that the code runs only on the client side
-  if (typeof window === "undefined") {
-    return null; // If running server-side, return null (or handle as needed)
-  }
 
-  // Access the localStorage on the client side
-  const accessToken = localStorage.getItem("accessToken");
-
-  if (!accessToken) {
-    console.error("No access token found in localStorage.");
-    //redirect to login
-    window.location.href = "/login";
-    return null; // No token found
-  }
-
-  // Decode the token with type
-  const decoded = jwtDecode<CustomJwtPayload>(accessToken);
-
-  if (decoded && decoded.userId) {
-    return decoded.userId;
-  } else {
-    console.error("userId not found in the token.");
-    return null;
-  }
+export const getUserIdOnlyFromToken = (): string | null => {
+  const user = getUserIdFromToken();
+  return user?.userId || null;
 };
