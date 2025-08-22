@@ -112,7 +112,7 @@ const TableAdmin = () => {
     IELTS: ["N/A", "Academic", "General Training"],
     GRE: ["PowerPrep", "TCY"],
     TOEFL: ["TCY"],
-    "Pearson PTE": ["AIWAS", "TCY", "Alpha"],
+    "Pearson PTE": ["AIWAS", "TCY", "Alfa"],
   };
   
   
