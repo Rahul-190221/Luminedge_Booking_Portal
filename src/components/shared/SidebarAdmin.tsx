@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -9,24 +10,66 @@ import {
 } from "react-icons/io5";
 
 import { GrAnalytics } from "react-icons/gr";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { usePathname } from "next/navigation";
 import { logout } from "@/app/utils/actions/logout";
 
-import { IoMailOutline, IoSettingsOutline, IoHomeOutline } from "react-icons/io5";
+import {
+  IoMailOutline,
+  IoHomeOutline,
+  IoNotificationsOutline, // 🔔 added
+} from "react-icons/io5";
 
 import { RiHomeOfficeFill } from "react-icons/ri";
+import axios from "axios";
 
 const handleLinkClick = () => {};
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://luminedge-server.vercel.app";
+
 const SidebarAdmin = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState<number>(0);
   const pathname = usePathname();
 
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
+
+  // fetch pending profile edit requests count (no design changes, just data)
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchPending = async () => {
+      try {
+        const { data } = await axios.get(
+          `${API_BASE}/api/v1/users/with-profile-request`,
+          { timeout: 10000 }
+          // { withCredentials: true } // enable if your API uses cookie auth
+        );
+        if (!mounted) return;
+        setPendingCount(data?.success && Array.isArray(data.users) ? data.users.length : 0);
+      } catch {
+        if (!mounted) return;
+        setPendingCount(0);
+      }
+    };
+
+    fetchPending();
+    const id = setInterval(fetchPending, 60 * 60 * 1000); // ⏱️ 1 hour
+    const onVis = () => {
+      if (document.visibilityState === "visible") fetchPending();
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      mounted = false;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
 
   return (
     <div className="flex">
@@ -95,12 +138,11 @@ const SidebarAdmin = () => {
             { href: "/admin/create-schedule", label: "Create Schedule", icon: <IoBagRemoveOutline className="h-5 w-5" /> },
             { href: "/admin/available-schedules", label: "Available Schedules", icon: <IoCloudDownloadOutline className="h-5 w-5" /> },
             { href: "/admin/homebased", label: "Home Based Booking", icon: <RiHomeOfficeFill className="h-5 w-5" /> },
-             { href: "/admin/TRF", label: "TRF", icon: <IoMailOutline className="h-5 w-5" /> },
+            { href: "/admin/TRF", label: "TRF", icon: <IoMailOutline className="h-5 w-5" /> },
             { href: "/admin/all-users", label: "Booking Details", icon: <IoWalletOutline className="h-5 w-5" /> },
             { href: "/admin/analysis", label: "Analysis", icon: <GrAnalytics className="h-5 w-5" /> },
-            { href: "/admin/profileedit", label: "Profile Edit Requests", icon: <IoSettingsOutline className="h-5 w-5" /> },
-            
-
+            // Use the notification bell for Profile Edit Requests
+            { href: "/admin/profileedit", label: "Profile Edit Requests", icon: <IoNotificationsOutline className="h-5 w-5" /> },
           ].map(({ href, label, icon }) => (
             <li
               key={href}
@@ -115,10 +157,29 @@ const SidebarAdmin = () => {
                 onClick={handleLinkClick}
                 className="relative z-10 flex items-center gap-x-3 px-4 py-3 w-full text-sm md:text-base"
               >
-                <span className="transform transition-transform duration-200 group-hover:translate-x-1">{icon}</span>
+                {/* icon (unchanged layout) */}
+                <span className="transform transition-transform duration-200 group-hover:translate-x-1 relative">
+                  {icon}
+                  {href === "/admin/profileedit" && pendingCount > 0 && (
+                    <span
+                      className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-600"
+                      aria-hidden="true"
+                    />
+                  )}
+                </span>
+
                 <span className="truncate w-full min-w-0 transition-all duration-200 group-hover:pl-1">
                   {label}
                 </span>
+
+                {href === "/admin/profileedit" && pendingCount > 0 && (
+                  <span
+                    className="ml-auto inline-flex items-center justify-center rounded-full bg-red-600 text-white text-xs font-bold px-2 py-0.5"
+                    aria-label={`${pendingCount} pending profile edit request${pendingCount > 1 ? "s" : ""}`}
+                  >
+                    {pendingCount > 99 ? "99+" : pendingCount}
+                  </span>
+                )}
               </Link>
             </li>
           ))}
@@ -148,3 +209,4 @@ const SidebarAdmin = () => {
 };
 
 export default SidebarAdmin;
+
