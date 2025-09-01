@@ -8,7 +8,8 @@ import autoTable from "jspdf-autotable";
 import { useRouter } from "next/navigation";
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://luminedge-server.vercel.app";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://luminedge-server.vercel.app";
 
 type Booking = {
   id: string;
@@ -64,6 +65,11 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
     Neelima: "neelima.luminedge2023@gmail.com",
     Tamim: "tamim.luminedge@gmail.com",
     Raisa: "raisa.luminedge@gmail.com",
+    Rafi: "rafi.luminedge@gmail.com",
+    Saiham: "saiham.luminedge@gmail.com",
+    Tanvir: "tanvirkhan.luminedge@gmail.com",
+    Iffat: "iffat.luminedge@gmail.com",
+    Najia: "najia.luminedge@gmail.com",
   };
 
   // Pull per-schedule feedback flags
@@ -273,7 +279,7 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
       }),
       theme: "grid",
       styles: { fontSize: 10, overflow: "linebreak" },
-      headStyles: { fillColor: "#face39" },
+      headStyles: { fillColor: [250, 206, 57] }, // safer RGB
       columnStyles: {
         0: { cellWidth: 10 },
         1: { cellWidth: 35 },
@@ -336,7 +342,11 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
     attendanceFilter
   );
 
-  const onChangeTeacher = async (userId: string, skill: "L" | "W" | "R" | "S", newTeacher: string) => {
+  const onChangeTeacher = async (
+    userId: string,
+    skill: "L" | "W" | "R" | "S",
+    newTeacher: string
+  ) => {
     const email = teacherEmailMap[newTeacher];
     if (!email) {
       toast.error(`No email mapped for teacher ${newTeacher}`);
@@ -376,7 +386,7 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
     onChange,
     feedbackSaved,
     tooltipText,
-    disabled = false,              // ← add this
+    disabled = false,
   }: {
     value: string;
     userId: string;
@@ -384,24 +394,27 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
     onChange: (userId: string, skill: keyof typeof segmentMap, newTeacher: string) => void;
     feedbackSaved?: boolean;
     tooltipText?: string;
-    disabled?: boolean;            // ← and this
+    disabled?: boolean;
   }) => {
     return (
       <div className="relative w-full">
         <select
           value={value || ""}
           onChange={(e) => onChange(userId, skill, e.target.value)}
-          disabled={disabled}      // ← use it here
-          className={`w-full px-2 py-1 pr-6 border rounded text-sm font-semibold ${getTeacherBgClass(value)}`}
+          disabled={disabled}
+          className={`w-full px-2 py-1 pr-6 border rounded text-sm font-semibold ${getTeacherBgClass(
+            value
+          )} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
         >
           <option value="">Select</option>
-          <option value="Prima">Prima</option>
-          <option value="Neelima">Neelima</option>
-          <option value="Tamim">Tamim</option>
-          <option value="Raisa">Raisa</option>
+          {Object.keys(teacherEmailMap).map((code) => (
+            <option key={code} value={code}>
+              {code}
+            </option>
+          ))}
         </select>
-  
-        {feedbackSaved && !disabled && ( // optional: hide badge when disabled
+
+        {feedbackSaved && !disabled && (
           <div
             title={tooltipText || "Feedback saved"}
             className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 bg-[#face39] text-[#00000f] text-[10px] font-bold rounded-full shadow-md border border-[#00000f]"
@@ -412,22 +425,20 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
       </div>
     );
   };
-  
 
-  const getTeacherBgClass = (value: string) => {
-    switch (value) {
-      case "Prima":
-        return "bg-green-500 text-white";
-      case "Neelima":
-        return "bg-blue-600 text-white";
-      case "Tamim":
-        return "bg-yellow-500 text-black";
-      case "Raisa":
-        return "bg-red-600 text-white";
-      default:
-        return "bg-white text-black";
-    }
+  const teacherColorMap: Record<string, string> = {
+    Prima: "bg-green-500 text-white",
+    Neelima: "bg-blue-600 text-white",
+    Tamim: "bg-yellow-500 text-black",
+    Raisa: "bg-red-600 text-white",
+    Rafi: "bg-indigo-600 text-white",
+    Saiham: "bg-emerald-600 text-white",
+    Tanvir: "bg-purple-600 text-white",
+    Iffat: "bg-pink-600 text-white",
+    Najia: "bg-cyan-600 text-white",
   };
+
+  const getTeacherBgClass = (value: string) => teacherColorMap[value] || "bg-white text-black";
 
   // Helper: are all 4 segments saved for THIS schedule?
   const isFeedbackComplete = (u: any) =>
@@ -438,34 +449,34 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
       u?.feedbackStatus?.speaking
     );
 
-    // --- TRF visibility + (optional) per-course route mapping ---
-const canonicalizeCourse = (raw?: string) => {
-  const n = String(raw || "").trim().toLowerCase();
-  if (n.includes("ielts")) return "ielts";
-  if (n.includes("pte")) return "pearson pte";   // covers "pte", "pte academic", "pearson pte"
-  if (n.includes("gre")) return "gre";
-  if (n.includes("toefl")) return "toefl";       // covers "toefl ibt"
-  return n;
-};
+  // --- TRF visibility + (optional) per-course route mapping ---
+  const canonicalizeCourse = (raw?: string) => {
+    const n = String(raw || "").trim().toLowerCase();
+    if (n.includes("ielts")) return "ielts";
+    if (n.includes("pte")) return "pearson pte"; // covers "pte", "pte academic", "pearson pte"
+    if (n.includes("gre")) return "gre";
+    if (n.includes("toefl")) return "toefl"; // covers "toefl ibt"
+    return n;
+  };
 
-const TRF_ELIGIBLE = new Set(["ielts", "pearson pte", "gre", "toefl"]);
+  const TRF_ELIGIBLE = new Set(["ielts", "pearson pte", "gre", "toefl"]);
 
-const canShowTrfFor = (courseName?: string) =>
-  TRF_ELIGIBLE.has(canonicalizeCourse(courseName));
+  const canShowTrfFor = (courseName?: string) => TRF_ELIGIBLE.has(canonicalizeCourse(courseName));
 
-// If you later split TRF pages per course, just change these routes:
-const TRF_ROUTE_BY_COURSE: Record<string, string> = {
-  ielts: "/admin/form",
-  "pearson pte": "/admin/form",
-  gre: "/admin/form",
-  toefl: "/admin/form",
-};
+  // If you later split TRF pages per course, just change these routes:
+  const TRF_ROUTE_BY_COURSE: Record<string, string> = {
+    ielts: "/admin/form",
+    "pearson pte": "/admin/form",
+    gre: "/admin/form",
+    toefl: "/admin/form",
+  };
 
-const getTrfRoute = (courseName?: string) =>
-  TRF_ROUTE_BY_COURSE[canonicalizeCourse(courseName)] ?? "/admin/form";
+  const getTrfRoute = (courseName?: string) =>
+    TRF_ROUTE_BY_COURSE[canonicalizeCourse(courseName)] ?? "/admin/form";
 
   return (
     <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
+      {/* Keep a single <Toaster /> globally in app/layout.tsx to avoid duplicate toasts */}
       {loading ? (
         <p>Loading...</p>
       ) : (
@@ -578,66 +589,68 @@ const getTrfRoute = (courseName?: string) =>
                       <td className="px-4 py-2 text-sm">{user?.contactNo || "N/A"}</td>
 
                       <td>
-                      <TeacherSelect
-  value={user.teacherL || ""}
-  userId={user._id}
-  skill="L"
-  onChange={onChangeTeacher}
-  feedbackSaved={user.feedbackStatus?.listening}
-  tooltipText={user.teacherLEmail || "Saved"}
-  disabled={isAbsent}
-/>
+                        <TeacherSelect
+                          value={user.teacherL || ""}
+                          userId={user._id}
+                          skill="L"
+                          onChange={onChangeTeacher}
+                          feedbackSaved={user.feedbackStatus?.listening}
+                          tooltipText={user.teacherLEmail || "Saved"}
+                          disabled={isAbsent}
+                        />
                       </td>
                       <td>
-                      <TeacherSelect
-  value={user.teacherW || ""}
-  userId={user._id}
-  skill="W"
-  onChange={onChangeTeacher}
-  feedbackSaved={user.feedbackStatus?.writing}
-  tooltipText={user.teacherWEmail || "Saved"}
-  disabled={isAbsent}
-/>
+                        <TeacherSelect
+                          value={user.teacherW || ""}
+                          userId={user._id}
+                          skill="W"
+                          onChange={onChangeTeacher}
+                          feedbackSaved={user.feedbackStatus?.writing}
+                          tooltipText={user.teacherWEmail || "Saved"}
+                          disabled={isAbsent}
+                        />
                       </td>
                       <td>
-                      <TeacherSelect
-  value={user.teacherR || ""}
-  userId={user._id}
-  skill="R"
-  onChange={onChangeTeacher}
-  feedbackSaved={user.feedbackStatus?.reading}
-  tooltipText={user.teacherREmail || "Saved"}
-  disabled={isAbsent}
-/>
+                        <TeacherSelect
+                          value={user.teacherR || ""}
+                          userId={user._id}
+                          skill="R"
+                          onChange={onChangeTeacher}
+                          feedbackSaved={user.feedbackStatus?.reading}
+                          tooltipText={user.teacherREmail || "Saved"}
+                          disabled={isAbsent}
+                        />
                       </td>
                       <td>
-                      <TeacherSelect
-  value={user.teacherS || ""}
-  userId={user._id}
-  skill="S"
-  onChange={onChangeTeacher}
-  feedbackSaved={user.feedbackStatus?.speaking}
-  tooltipText={user.teacherSEmail || "Saved"}
-  disabled={isAbsent}
-/>
+                        <TeacherSelect
+                          value={user.teacherS || ""}
+                          userId={user._id}
+                          skill="S"
+                          onChange={onChangeTeacher}
+                          feedbackSaved={user.feedbackStatus?.speaking}
+                          tooltipText={user.teacherSEmail || "Saved"}
+                          disabled={isAbsent}
+                        />
                       </td>
 
                       <td className="px-4 py-2 text-sm">{attendance[user._id] || "N/A"}</td>
 
                       <td className="px-4 py-2">
-  {canShowTrfFor(bookings[0]?.name) ? (
-    <button
-      onClick={() =>
-        router.push(
-          `${getTrfRoute(bookings[0]?.name)}?userId=${encodeURIComponent(
-            user._id
-          )}&scheduleId=${encodeURIComponent(scheduleId)}&course=${encodeURIComponent(
-            canonicalizeCourse(bookings[0]?.name)
-          )}`
-        )
-      }
-      disabled={isAbsent}
-      className={`px-5 py-2 rounded-xl font-medium shadow-md transition-all duration-300 ease-in-out
+                        {canShowTrfFor(bookings[0]?.name) ? (
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `${getTrfRoute(bookings[0]?.name)}?userId=${encodeURIComponent(
+                                  user._id
+                                )}&scheduleId=${encodeURIComponent(
+                                  scheduleId
+                                )}&course=${encodeURIComponent(
+                                  canonicalizeCourse(bookings[0]?.name)
+                                )}`
+                              )
+                            }
+                            disabled={isAbsent}
+                            className={`px-5 py-2 rounded-xl font-medium shadow-md transition-all duration-300 ease-in-out
         ${
           isAbsent
             ? "bg-red-500 text-white cursor-not-allowed"
@@ -646,14 +659,13 @@ const getTrfRoute = (courseName?: string) =>
             : "bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f] hover:font-semibold hover:shadow-xl hover:scale-105"
         }
       `}
-    >
-      View TRF
-    </button>
-  ) : (
-    <span className="text-gray-400 italic">N/A</span>
-  )}
-</td>
-
+                          >
+                            View TRF
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 italic">N/A</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
