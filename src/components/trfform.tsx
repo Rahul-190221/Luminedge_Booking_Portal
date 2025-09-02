@@ -212,79 +212,80 @@ const TestReportForm = () => {
     setScheduleId(sid);
   }, [searchParams]);
 
-  // auto-calc speaking total (average of 4 subscores)
-  useEffect(() => {
-    const { speakingFC, speakingLR, speakingGRA, speakingPRO } = formData;
-    const nums = [speakingFC, speakingLR, speakingGRA, speakingPRO].map(Number);
-    const valid = nums.every((n) => Number.isFinite(n));
-    if (valid) {
-      const avg = (nums.reduce((a, b) => a + b, 0) / 4).toFixed(1); // IELTS rounding (.0/.5)
-      setFormData((prev) => ({ ...prev, speakingTotal: avg, speakingMarks: avg }));
-    } else {
-      setFormData((prev) => ({ ...prev, speakingTotal: "", speakingMarks: "" }));
+ 
+// fetch status + teachers for this (userId, scheduleId)
+useEffect(() => {
+  if (!userId || !scheduleId) return;
+
+  const fetchStatus = async () => {
+    try {
+      const [statusRes, teacherRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/v1/admin/feedback-status/${userId}/${scheduleId}`),
+        axios.get(`${API_BASE}/api/v1/admin/assigned-teachers/${userId}/${scheduleId}`),
+      ]);
+
+      const status = statusRes.data?.status || {};
+      const teachers = teacherRes.data || {};
+      setAssignedTeachers(teachers);
+
+      // Coalesce exact saved total from any backend shape
+      const rawTotal =
+        status?.speakingTotal ??
+        status?.speakingMarks ??
+        status?.marks?.Total;
+      const fetchedSpeakingTotal =
+        rawTotal === null || rawTotal === undefined ? "" : String(rawTotal).trim();
+
+      setFormData((prev) => ({
+        ...prev,
+        ...status, // keep spreading status, then override below
+
+        // ✅ ensure Total is set explicitly regardless of status shape
+        speakingTotal: fetchedSpeakingTotal || prev.speakingTotal || "",
+        speakingMarks: fetchedSpeakingTotal || prev.speakingMarks || prev.speakingTotal || "",
+
+        feedback: {
+          writingScores:
+            status.writingScores || {
+              task1_overall: "",
+              task1_TA: "",
+              task1_CC: "",
+              task1_LR: "",
+              task1_GRA: "",
+              task2_overall: "",
+              task2_TR: "",
+              task2_CC: "",
+              task2_LR: "",
+              task2_GRA: "",
+            },
+          writingTask1: status.writingTask1 || [],
+          writingTask2: status.writingTask2 || [],
+          task1Notes: status.task1Notes || ["", "", "", "", ""],
+          task2Notes: status.task2Notes || ["", "", "", "", ""],
+        },
+        examinerSignature:
+          (typeof status.speakingSign === "string" && status.speakingSign.trim()) ||
+          (prev.examinerSignature && prev.examinerSignature.trim()) ||
+          DEFAULT_SPEAKING_SIGN,
+        examinerNotes:
+          (typeof status.writingSign === "string" && status.writingSign.trim()) ||
+          (prev.examinerNotes && prev.examinerNotes.trim()) ||
+          DEFAULT_WRITING_SIGN,
+      }));
+
+      setLockedSegments({
+        listening: !!status.listening,
+        reading: !!status.reading,
+        writing: !!status.writing,
+        speaking: !!status.speaking,
+      });
+    } catch (err) {
+      console.error("Error fetching status/teachers:", err);
     }
-  }, [formData.speakingFC, formData.speakingLR, formData.speakingGRA, formData.speakingPRO]);
+  };
 
-  // fetch status + teachers for this (userId, scheduleId)
-  useEffect(() => {
-    if (!userId || !scheduleId) return;
-
-    const fetchStatus = async () => {
-      try {
-        const [statusRes, teacherRes] = await Promise.all([
-          axios.get(`${API_BASE}/api/v1/admin/feedback-status/${userId}/${scheduleId}`),
-          axios.get(`${API_BASE}/api/v1/admin/assigned-teachers/${userId}/${scheduleId}`),
-        ]);
-
-        const status = statusRes.data?.status || {};
-        const teachers = teacherRes.data || {};
-        setAssignedTeachers(teachers);
-
-        setFormData((prev) => ({
-          ...prev,
-          ...status,
-          feedback: {
-            writingScores:
-              status.writingScores || {
-                task1_overall: "",
-                task1_TA: "",
-                task1_CC: "",
-                task1_LR: "",
-                task1_GRA: "",
-                task2_overall: "",
-                task2_TR: "",
-                task2_CC: "",
-                task2_LR: "",
-                task2_GRA: "",
-              },
-            writingTask1: status.writingTask1 || [],
-            writingTask2: status.writingTask2 || [],
-            task1Notes: status.task1Notes || ["", "", "", "", ""],
-            task2Notes: status.task2Notes || ["", "", "", "", ""],
-          },
-          examinerSignature:
-            (typeof status.speakingSign === "string" && status.speakingSign.trim()) ||
-            (prev.examinerSignature && prev.examinerSignature.trim()) ||
-            DEFAULT_SPEAKING_SIGN,
-          examinerNotes:
-            (typeof status.writingSign === "string" && status.writingSign.trim()) ||
-            (prev.examinerNotes && prev.examinerNotes.trim()) ||
-            DEFAULT_WRITING_SIGN,
-        }));
-
-        setLockedSegments({
-          listening: !!status.listening,
-          reading: !!status.reading,
-          writing: !!status.writing,
-          speaking: !!status.speaking,
-        });
-      } catch (err) {
-        console.error("Error fetching status/teachers:", err);
-      }
-    };
-
-    fetchStatus();
-  }, [userId, scheduleId]);
+  fetchStatus();
+}, [userId, scheduleId]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -347,6 +348,7 @@ useEffect(() => {
   formData.speakingLR,
   formData.speakingGRA,
   formData.speakingPRO,
+  formData.speakingTotal,
   formData.feedback.writingScores,
   formData.listeningMarks,
   formData.readingMarks,
@@ -384,23 +386,42 @@ useEffect(() => {
     let marksPayload: any = "";
 
     if (selectedSegment === "speaking") {
-      const { speakingFeedback, speakingFC, speakingLR, speakingGRA, speakingPRO, speakingMarks } = formData;
-
-      // require integers 0..9 for subscores
+      const {
+        speakingFeedback,
+        speakingFC,
+        speakingLR,
+        speakingGRA,
+        speakingPRO,
+        speakingTotal, // ✅ manual total field
+      } = formData;
+    
+      // validate subscores: 0–9, one decimal allowed
       const subs = [speakingFC, speakingLR, speakingGRA, speakingPRO];
       if (subs.some((v) => !isValidMark(v, /*allowEmpty*/ false))) {
-        setSaveStatus("❌ Invalid input for marks (use 0–9; decimals allowed).");
+        setSaveStatus("❌ Invalid input for marks (use 0–9; one decimal allowed).");
         return;
       }
-      
-      if (!speakingFeedback.trim() || !speakingMarks.trim()) {
+    
+      // require feedback + manual total
+      if (!speakingFeedback.trim() || !speakingTotal.trim()) {
         setSaveStatus("❌ Please enter both feedback and total marks.");
         return;
       }
-
+      if (!isValidMark(speakingTotal, /*allowEmpty*/ false)) {
+        setSaveStatus("❌ Invalid input for total (use 0–9; one decimal allowed).");
+        return;
+      }
+    
       feedbackPayload = speakingFeedback;
-      marksPayload = { FC: speakingFC, LR: speakingLR, GRA: speakingGRA, PRO: speakingPRO, Total: speakingMarks };
-    } else if (selectedSegment === "writing") {
+      marksPayload = {
+        FC: speakingFC,
+        LR: speakingLR,
+        GRA: speakingGRA,
+        PRO: speakingPRO,
+        Total: speakingTotal, // ✅ send manual total
+      };
+    }
+     else if (selectedSegment === "writing") {
       const {
         feedback: { writingScores, writingTask1, writingTask2, task1Notes, task2Notes },
       } = formData;
@@ -596,17 +617,21 @@ useEffect(() => {
                           />
                         </td>
                       ))}
-                      {/* Total (read-only, auto-calculated) */}
-                      <td className="border px-2 py-1">
-                        <input
-                          type="text"
-                          name="speakingTotal"
-                          value={formData.speakingTotal || ""}
-                          readOnly
-                          disabled
-                          className="w-16 px-1 py-0.5 border border-gray-200 text-sm text-center text-gray-500 bg-gray-100"
-                        />
-                      </td>
+                    {/* Total (manual, editable) */}
+<td className="border px-2 py-1">
+  <input
+    type="number"
+    step={0.5}          // allow 0.5 increments; use "any" if you want any decimal
+    min={0}
+    max={9}
+    name="speakingTotal"
+    value={formData.speakingTotal ?? ""}
+    onChange={handleChange}
+    disabled={lockedSegments.speaking}
+    className="w-16 px-1 py-0.5 border border-gray-300 text-sm text-center text-red-600"
+  />
+</td>
+
                     </tr>
                   </tbody>
                 </table>

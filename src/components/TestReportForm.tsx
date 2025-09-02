@@ -116,6 +116,7 @@ const TestReportForm = () => {
     speakingLR: "",
     speakingGRA: "",
     speakingPRO: "",
+    speakingTotal: "",  
     writingTask1TA: "",
     writingTask1CC: "",
     writingTask1LR: "",
@@ -208,27 +209,37 @@ const TestReportForm = () => {
         );
         const status = res.data?.status || {};
         if (!mounted) return;
-
+        
+        // Coalesce speaking total from multiple possible server fields
+        const fetchedSpeakingTotal =
+          (typeof status.speakingTotal === "string" && status.speakingTotal) ||
+          (typeof status.speakingMarks === "string" && status.speakingMarks) ||
+          (status?.marks && typeof status.marks.Total === "string" && status.marks.Total) ||
+          "";
+        
         setFormData((prev) => ({
           ...prev,
-
+        
           // feedback texts
           listeningFeedback: status.listeningFeedback ?? prev.listeningFeedback ?? "",
           readingFeedback:   status.readingFeedback   ?? prev.readingFeedback   ?? "",
-          writingFeedback:   prev.writingFeedback ?? "",
+          writingFeedback:   status.writingFeedback   ?? prev.writingFeedback   ?? "",   // ✅ fix
           speakingFeedback:  status.speakingFeedback  ?? prev.speakingFeedback  ?? "",
-
+        
           // marks/bands
           listeningMarks: status.listeningMarks ?? prev.listeningMarks ?? "",
           readingMarks:   status.readingMarks   ?? prev.readingMarks   ?? "",
-          speakingMarks:  status.speakingMarks  ?? prev.speakingMarks  ?? "",
-
+          // ✅ keep legacy speakingMarks in sync with the exact saved total
+          speakingMarks:  fetchedSpeakingTotal || prev.speakingMarks || "",
+        
           // speaking subscores
-          speakingFC:  status.speakingFC  ?? prev.speakingFC  ?? "",
-          speakingLR:  status.speakingLR  ?? prev.speakingLR  ?? "",
-          speakingGRA: status.speakingGRA ?? prev.speakingGRA ?? "",
-          speakingPRO: status.speakingPRO ?? prev.speakingPRO ?? "",
-
+          speakingFC:     status.speakingFC     ?? prev.speakingFC     ?? "",
+          speakingLR:     status.speakingLR     ?? prev.speakingLR     ?? "",
+          speakingGRA:    status.speakingGRA    ?? prev.speakingGRA    ?? "",
+          speakingPRO:    status.speakingPRO    ?? prev.speakingPRO    ?? "",
+          // ✅ exact total from server (no auto-calc)
+          speakingTotal:  fetchedSpeakingTotal || prev.speakingTotal || "",
+        
           // candidate/admin meta
           centreName:  status.centreName  ?? prev.centreName  ?? "",
           testDate:    status.testDate    ?? prev.testDate    ?? "",
@@ -237,11 +248,11 @@ const TestReportForm = () => {
           dateOfBirth: status.dateOfBirth ?? prev.dateOfBirth ?? "",
           sex:         status.sex         ?? prev.sex         ?? "",
           schemeCode:  status.schemeCode  ?? prev.schemeCode  ?? "",
-
-          // signatures hydrated from backend
+        
+          // signatures
           examinerSignature: status.speakingSign ?? prev.examinerSignature ?? "",
           examinerNotes:     status.writingSign  ?? prev.examinerNotes     ?? "",
-
+        
           // writing nested data
           feedback: {
             writingScores: status.writingScores ?? prev.feedback.writingScores,
@@ -251,6 +262,7 @@ const TestReportForm = () => {
             task2Notes:    status.task2Notes    ?? prev.feedback.task2Notes,
           },
         }));
+        
 
         setLockedSegments({
           listening: !!status.listening,
@@ -283,28 +295,8 @@ const TestReportForm = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // speaking total → speakingMarks
-  useEffect(() => {
-    const { speakingFC, speakingLR, speakingGRA, speakingPRO } = formData;
-    const scores = [speakingFC, speakingLR, speakingGRA, speakingPRO].map(Number);
 
-    const isValid = scores.every((v) => !isNaN(v) && v >= 0 && v <= 9);
-    if (isValid) {
-      const avg = (scores.reduce((a, b) => a + b, 0) / 4).toFixed(1);
-      setFormData((prev) => ({
-        ...prev,
-        speakingTotal: avg,
-        speakingMarks: avg,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        speakingTotal: "",
-        speakingMarks: "",
-      }));
-    }
-  }, [formData.speakingFC, formData.speakingLR, formData.speakingGRA, formData.speakingPRO]);
-
+  
   // set default result date once
   useEffect(() => {
     if (!formData.resultDate) {
