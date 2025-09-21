@@ -12,7 +12,7 @@ const API_BASE =
   "https://luminedge-server.vercel.app";
 
 /** Fetch *all* users by paging through /api/v1/admin/users */
-export async function fetchAllUsers(params?: {
+async function fetchAllUsers(params?: {
   search?: string;
   status?: string;
   role?: string;
@@ -50,7 +50,7 @@ export async function fetchAllUsers(params?: {
 }
 
 /** Fetch *all* bookingMock rows by paging through /api/v1/admin/bookings */
-export async function fetchAllBookings(params?: {
+async function fetchAllBookings(params?: {
   status?: string;
   location?: "Home" | "Test Center";
   pageSize?: number; // default 2000 (API max)
