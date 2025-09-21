@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import TrfForm from "@/components/trfform"; // ✅ Capitalized
-
+import TrfForm from "@/components/trfform";
 import axios from "axios";
 
 type User = {
@@ -13,6 +12,10 @@ type User = {
   [key: string]: any;
 };
 
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://luminedge-server.vercel.app";
+
 export default function TRFPage() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
@@ -21,24 +24,43 @@ export default function TRFPage() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchUsersPaged = async () => {
       if (!userId) {
         setLoading(false);
         return;
       }
 
       try {
-        const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");
-        const allUsers: User[] = response.data.users;
+        const limit = 500; // backend default cap is fine
+        // page 1: get users + total
+        const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+          params: { page: 1, limit }
+        });
 
-        // Find specific user by ID
-        const matchedUser = allUsers.find((u) => u._id === userId);
+        const total: number =
+          typeof first.data?.total === "number"
+            ? first.data.total
+            : (first.data?.users?.length || 0);
+        const totalPages = Math.max(1, Math.ceil(total / limit));
 
-        if (!matchedUser) {
-          console.warn("User ID not found in user list.");
+        // try to find in page 1
+        let found: User | null =
+          (first.data?.users || []).find((u: User) => u._id === userId) || null;
+
+        // if not found and more pages, scan subsequent pages
+        for (let page = 2; !found && page <= totalPages; page++) {
+          const res = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+            params: { page, limit }
+          });
+          const hit =
+            (res.data?.users || []).find((u: User) => u._id === userId) || null;
+          if (hit) found = hit;
         }
 
-        setUser(matchedUser || null);
+        setUser(found);
+        if (!found) {
+          console.warn("User ID not found across all pages.");
+        }
       } catch (error) {
         console.error("Error fetching users:", error);
         setUser(null);
@@ -47,7 +69,7 @@ export default function TRFPage() {
       }
     };
 
-    fetchUsers();
+    fetchUsersPaged();
   }, [userId]);
 
   if (!userId) {
@@ -69,7 +91,7 @@ export default function TRFPage() {
         Candidate Name: <strong>{user?.name || "N/A"}</strong>
       </p>
 
-      <TrfForm /> {/* ✅ Capitalized usage */}
+      <TrfForm />
     </div>
   );
 }

@@ -305,52 +305,110 @@ const TestReportForm = () => {
     }
   }, [formData.resultDate]);
 
+  // // auto calc overall & proficiency from 4 bands
+  // useEffect(() => {
+  //   const parseScore = (val: any): number | null => {
+  //     const parsed = parseFloat(val);
+  //     return !isNaN(parsed) && parsed >= 0 && parsed <= 9 ? parsed : null;
+  //   };
+
+  //   const listening = parseScore(formData.listeningMarks);
+  //   const reading = parseScore(formData.readingMarks);
+  //   const writing = parseScore(formData.writingMarks);
+  //   const speaking = parseScore(formData.speakingMarks);
+
+  //   const scores = [listening, reading, writing, speaking];
+  //   const isComplete = scores.every((s) => s !== null);
+
+  //   if (isComplete) {
+  //     const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
+  //     const overall = Math.round(average * 2) / 2;
+
+  //     const getCEFR = (score: number): string => {
+  //       if (score >= 8.5) return "C2";
+  //       if (score >= 7.0) return "C1";
+  //       if (score >= 5.5) return "B2";
+  //       if (score >= 4.0) return "B1";
+  //       return "A2";
+  //     };
+
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       overall: overall.toFixed(1),
+  //       proficiency: getCEFR(overall),
+  //     }));
+  //   } else {
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       overall: "",
+  //       proficiency: "",
+  //     }));
+  //   }
+  // }, [
+  //   formData.listeningMarks,
+  //   formData.readingMarks,
+  //   formData.writingMarks,
+  //   formData.speakingMarks,
+  // ]);
+
   // auto calc overall & proficiency from 4 bands
-  useEffect(() => {
-    const parseScore = (val: any): number | null => {
-      const parsed = parseFloat(val);
-      return !isNaN(parsed) && parsed >= 0 && parsed <= 9 ? parsed : null;
+useEffect(() => {
+  const parseScore = (val: any): number | null => {
+    const parsed = parseFloat(val);
+    return !isNaN(parsed) && parsed >= 0 && parsed <= 9 ? parsed : null;
+  };
+
+  const listening = parseScore(formData.listeningMarks);
+  const reading = parseScore(formData.readingMarks);
+  const writing = parseScore(formData.writingMarks);
+  const speaking = parseScore(formData.speakingMarks);
+
+  const scores = [listening, reading, writing, speaking];
+  const isComplete = scores.every((s) => s !== null);
+
+  if (isComplete) {
+    const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
+
+    // IELTS-specific rounding
+    const roundIELTS = (avg: number): number => {
+      const floor = Math.floor(avg);
+      const decimal = avg - floor;
+
+      if (decimal < 0.25) return floor;
+      if (decimal < 0.75) return floor + 0.5;
+      return floor + 1;
     };
 
-    const listening = parseScore(formData.listeningMarks);
-    const reading = parseScore(formData.readingMarks);
-    const writing = parseScore(formData.writingMarks);
-    const speaking = parseScore(formData.speakingMarks);
+    const overall = roundIELTS(average);
 
-    const scores = [listening, reading, writing, speaking];
-    const isComplete = scores.every((s) => s !== null);
+    const getCEFR = (score: number): string => {
+      if (score >= 8.5) return "C2";
+      if (score >= 6.5) return "C1"; // shifted closer to common IELTS–CEFR mapping
+      if (score >= 5.5) return "B2";
+      if (score >= 4.0) return "B1";
+      return "A2";
+    };
 
-    if (isComplete) {
-      const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
-      const overall = Math.round(average * 2) / 2;
+    setFormData((prev) => ({
+      ...prev,
+      overall: overall.toFixed(1),
+      proficiency: getCEFR(overall),
+    }));
+  } else {
+    setFormData((prev) => ({
+      ...prev,
+      overall: "",
+      proficiency: "",
+    }));
+  }
+}, [
+  formData.listeningMarks,
+  formData.readingMarks,
+  formData.writingMarks,
+  formData.speakingMarks,
+]);
 
-      const getCEFR = (score: number): string => {
-        if (score >= 8.5) return "C2";
-        if (score >= 7.0) return "C1";
-        if (score >= 5.5) return "B2";
-        if (score >= 4.0) return "B1";
-        return "A2";
-      };
-
-      setFormData((prev) => ({
-        ...prev,
-        overall: overall.toFixed(1),
-        proficiency: getCEFR(overall),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        overall: "",
-        proficiency: "",
-      }));
-    }
-  }, [
-    formData.listeningMarks,
-    formData.readingMarks,
-    formData.writingMarks,
-    formData.speakingMarks,
-  ]);
-
+  
   // auto calc writing band (task2 double weight)
   useEffect(() => {
     const { feedback } = formData;

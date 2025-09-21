@@ -14,14 +14,26 @@ interface CourseCard2Props {
   course: Course2;
   isRegistered: boolean;
   onClick: () => void;
+  /** mark as above the fold to improve LCP */
+  priority?: boolean;
+  /** responsive sizes hint for next/image */
+  sizes?: string;
 }
 
-const CourseCard2 = ({ course, isRegistered, onClick }: CourseCard2Props) => {
+const CourseCard2 = ({
+  course,
+  isRegistered,
+  onClick,
+  priority = false,
+  sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw",
+}: CourseCard2Props) => {
   const fallbackImage = "/default-image.jpg";
 
   const courseDescriptions: Record<string, string> = {
-    IELTS: "Book Your IELTS Test with Confidence – Convenient, Reliable, and Trusted by Thousands.",
-    "Pearson PTE": "Book Your PTE Mock Test – Practice, Prepare, and Excel!",
+    IELTS:
+      "Book Your IELTS Test with Confidence – Convenient, Reliable, and Trusted by Thousands.",
+    "Pearson PTE":
+      "Book Your PTE Mock Test – Practice, Prepare, and Excel!",
     GRE: "Book Your GRE General Mock Test – Ace Your Preparation!",
     TOEFL: "Book Your TOEFL iBT Mock Test – Get Ready to Succeed!",
   };
@@ -29,21 +41,22 @@ const CourseCard2 = ({ course, isRegistered, onClick }: CourseCard2Props) => {
   return (
     <div
       onClick={onClick}
-      className={`
+      className="
         group w-[280px] h-[300px] cursor-pointer
-        transition-transform duration-300 ease-in-out
-        transform hover:scale-105
-        rounded-2xl shadow-xl bg-[#00000f]
-        border border-gray-700 text-white
-      `}
+        transition-transform duration-300 ease-in-out hover:scale-105
+        rounded-2xl shadow-xl bg-[#00000f] border border-gray-700 text-white
+      "
     >
-      <figure className="overflow-hidden rounded-t-2xl">
+      {/* Give the container explicit width & height; use Image `fill` to avoid width/height override warnings */}
+      <figure className="relative overflow-hidden rounded-t-2xl w-full h-[180px]">
         <Image
           src={course.image || fallbackImage}
           alt={course.name}
-          width={320}
-          height={180}
-          className="w-full h-[180px] object-cover transition-transform duration-300 group-hover:scale-105"
+          fill
+          sizes={sizes}
+          priority={priority}
+          loading={priority ? "eager" : "lazy"}
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       </figure>
 
@@ -54,16 +67,17 @@ const CourseCard2 = ({ course, isRegistered, onClick }: CourseCard2Props) => {
         </p>
 
         <div className="flex items-center gap-2 mt-auto font-semibold text-sm uppercase tracking-wide text-yellow-400 group-hover:text-[#00000f]">
-  {isRegistered ? (
-    <>
-      <span className="transition-colors duration-300 group-hover:text-[#00000f]">Learn More</span>
-      <FaLongArrowAltRight className="transition-colors duration-300 group-hover:text-[#00000f]" />
-    </>
-  ) : (
-    <span className="text-sm text-red-500">Register to access</span>
-  )}
-</div>
-
+          {isRegistered ? (
+            <>
+              <span className="transition-colors duration-300 group-hover:text-[#00000f]">
+                Learn More
+              </span>
+              <FaLongArrowAltRight className="transition-colors duration-300 group-hover:text-[#00000f]" />
+            </>
+          ) : (
+            <span className="text-sm text-red-500">Register to access</span>
+          )}
+        </div>
       </div>
     </div>
   );

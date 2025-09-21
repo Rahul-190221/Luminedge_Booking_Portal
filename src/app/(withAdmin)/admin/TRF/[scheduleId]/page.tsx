@@ -12,7 +12,8 @@ const API_BASE =
   "https://luminedge-server.vercel.app";
 
 type Booking = {
-  id: string;
+  id?: string;
+  _id?: string;
   name: string;
   testType: string;
   testSystem: string;
@@ -22,7 +23,7 @@ type Booking = {
   startTime: string;
   endTime: string;
   userId: string[] | string;
-  userCount: number;
+  userCount?: number;
   attendance?: string;
 };
 
@@ -44,7 +45,52 @@ type ApiFeedbackStatusResponse = {
   };
 };
 
-const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) => {
+// ---------- helpers for id handling & user fetching (fixes 6/10 issue) ----------
+const toId = (v: any) => String(v ?? "").trim();
+const hasUserInBooking = (b: Booking, userId: string) =>
+  Array.isArray(b.userId)
+    ? b.userId.map(toId).includes(userId)
+    : toId(b.userId) === userId;
+
+/** Page through /admin/users until we've collected all of the ids needed */
+async function fetchUsersByIds(userIds: string[], pageSize = 500) {
+  const need = new Set(userIds.map(toId));
+  const found = new Map<string, any>();
+
+  // page 1 to get total
+  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    params: { page: 1, limit: pageSize },
+  });
+  const total: number = first.data?.total ?? (first.data?.users?.length || 0);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const ingest = (usersPage: any[]) => {
+    for (const u of usersPage || []) {
+      const id = toId(u._id);
+      if (need.has(id) && !found.has(id)) found.set(id, u);
+    }
+  };
+
+  ingest(first.data?.users || []);
+  if (found.size === need.size) return Array.from(found.values());
+
+  for (let page = 2; page <= totalPages; page++) {
+    const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+      params: { page, limit: pageSize },
+    });
+    ingest(pageRes.data?.users || []);
+    if (found.size === need.size) break;
+  }
+
+  return Array.from(found.values());
+}
+// -------------------------------------------------------------------------------
+
+const TrfBookingRequestsPage = ({
+  params,
+}: {
+  params: { scheduleId: string };
+}) => {
   const { scheduleId } = params || {};
   const router = useRouter();
 
@@ -55,11 +101,21 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
   const [filter, setFilter] = useState<string>("");
   const [testTypeFilter, setTestTypeFilter] = useState<string>("");
   const [testSystemFilter, setTestSystemFilter] = useState<string>("");
-  const [userAttendance, setUserAttendance] = useState<Record<string, number | null>>({});
-  const [attendanceFilter, setAttendanceFilter] = useState<string>(""); // (kept for parity)
-  const [attendanceCounts, setAttendanceCounts] = useState({ present: 0, absent: 0 });
+  const [userAttendance, setUserAttendance] = useState<
+    Record<string, number | null>
+  >({});
+  const [attendanceFilter, setAttendanceFilter] = useState<string>("");
+  const [attendanceCounts, setAttendanceCounts] = useState({
+    present: 0,
+    absent: 0,
+  });
 
-  // Map teacher code -> email (adjust to your real map)
+  // TRF email sent status map (for yellow "Done" badge)
+  const [trfEmailSentByUser, setTrfEmailSentByUser] = useState<
+    Record<string, boolean>
+  >({});
+
+  // Map teacher code -> email
   const teacherEmailMap: Record<string, string> = {
     Prima: "prima.luminedge@gmail.com",
     Neelima: "neelima.luminedge2023@gmail.com",
@@ -70,6 +126,7 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
     Tanvir: "tanvirkhan.luminedge@gmail.com",
     Iffat: "iffat.luminedge@gmail.com",
     Najia: "najia.luminedge@gmail.com",
+    Rahul: "rahul1921@cseku.ac.bd",
   };
 
   // Pull per-schedule feedback flags
@@ -114,55 +171,91 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
     [scheduleId]
   );
 
+  // Hydrate TRF "sent" status for each user
+  const hydrateTrfSentStatus = useCallback(
+    async (userIds: string[]) => {
+      if (!scheduleId || !userIds?.length) return;
+      try {
+        const results = await Promise.all(
+          userIds.map(async (uid) => {
+            try {
+              const { data } = await axios.get<{
+                sent: boolean;
+                lastSentAt?: string;
+              }>(`${API_BASE}/api/v1/admin/trf-email-status/${uid}/${scheduleId}`);
+              return { uid, sent: !!data?.sent };
+            } catch (e) {
+              console.error("trf-email-status fetch failed:", uid, e);
+              return { uid, sent: false };
+            }
+          })
+        );
+        setTrfEmailSentByUser((prev) => {
+          const next = { ...prev };
+          results.forEach(({ uid, sent }) => {
+            next[uid] = sent;
+          });
+          return next;
+        });
+      } catch (e) {
+        console.error("hydrateTrfSentStatus error:", e);
+      }
+    },
+    [scheduleId]
+  );
+
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
 
     try {
       setLoading(true);
 
-      // 1) Fetch bookings, filter by schedule
-      const { data: bookingsData } = await axios.get(`${API_BASE}/api/v1/admin/bookings`);
-      const filteredBookings: Booking[] = bookingsData.bookings.filter(
-        (b: Booking) => b.scheduleId === scheduleId
+      // 1) Fetch bookings (use a big page size)
+      const { data: bookingsData } = await axios.get(
+        `${API_BASE}/api/v1/admin/bookings`,
+        { params: { page: 1, limit: 2000 } }
       );
 
-      // 2) Unique userIds from these bookings
+      // 2) Only keep bookings for this scheduleId
+      const filteredBookings: Booking[] = (bookingsData?.bookings || []).filter(
+        (b: Booking) => toId(b.scheduleId) === toId(scheduleId)
+      );
+
+      // 3) Collect unique user ids
       const userIds: string[] = Array.from(
         new Set(
-          filteredBookings.flatMap((b) => (Array.isArray(b.userId) ? b.userId : [b.userId]))
+          filteredBookings.flatMap((b: Booking) =>
+            Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)]
+          )
         )
       );
 
-      // 3) Fetch users; enrich with schedule-scoped teacher fields (fallback to legacy)
-      const { data: usersData } = await axios.get(`${API_BASE}/api/v1/admin/users`);
-      const matchedUsers = usersData.users
-        .filter((u: any) => userIds.includes(u._id))
-        .map((u: any) => {
-          const sched = u.teachersBySchedule?.[scheduleId] || {};
-          return {
-            ...u,
-            // schedule-scoped teacher codes (fallback to legacy fields if missing)
-            teacherL: sched.teacherL ?? u.teacherL ?? "",
-            teacherLEmail: sched.teacherLEmail ?? u.teacherLEmail ?? "",
-            teacherW: sched.teacherW ?? u.teacherW ?? "",
-            teacherWEmail: sched.teacherWEmail ?? u.teacherWEmail ?? "",
-            teacherR: sched.teacherR ?? u.teacherR ?? "",
-            teacherREmail: sched.teacherREmail ?? u.teacherREmail ?? "",
-            teacherS: sched.teacherS ?? u.teacherS ?? "",
-            teacherSEmail: sched.teacherSEmail ?? u.teacherSEmail ?? "",
-            feedbackStatus: u.feedbackStatus || {}, // will be hydrated per-schedule next
-          };
-        });
+      // 4) Fetch ONLY the users we need (page through users API until done)
+      const baseUsers = userIds.length ? await fetchUsersByIds(userIds) : [];
 
-      // 4) Attendance mapping from bookings
-      const initialAttendance: Record<string, string> = {};
-      filteredBookings.forEach((b) => {
-        const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
-        ids.forEach((uid) => {
-          initialAttendance[uid] = b.attendance || "N/A";
-        });
+      // 4b) Enrich with schedule-scoped teacher fields (fallback to legacy)
+      const matchedUsers = baseUsers.map((u: any) => {
+        const sched = u.teachersBySchedule?.[scheduleId] || {};
+        return {
+          ...u,
+          teacherL: sched.teacherL ?? u.teacherL ?? "",
+          teacherLEmail: sched.teacherLEmail ?? u.teacherLEmail ?? "",
+          teacherW: sched.teacherW ?? u.teacherW ?? "",
+          teacherWEmail: sched.teacherWEmail ?? u.teacherWEmail ?? "",
+          teacherR: sched.teacherR ?? u.teacherR ?? "",
+          teacherREmail: sched.teacherREmail ?? u.teacherREmail ?? "",
+          teacherS: sched.teacherS ?? u.teacherS ?? "",
+          teacherSEmail: sched.teacherSEmail ?? u.teacherSEmail ?? "",
+          feedbackStatus: u.feedbackStatus || {},
+        };
       });
 
+      // 5) Seed attendance map & counts
+      const initialAttendance: Record<string, string> = {};
+      for (const bk of filteredBookings) {
+        const ids = Array.isArray(bk.userId) ? bk.userId.map(toId) : [toId(bk.userId)];
+        for (const uid of ids) initialAttendance[uid] = bk.attendance || "N/A";
+      }
       const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
       const absentCount = Object.values(initialAttendance).filter((s) => s === "absent").length;
 
@@ -171,38 +264,35 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
       setAttendance(initialAttendance);
       setAttendanceCounts({ present: presentCount, absent: absentCount });
 
-      // 5) Bulk attendance (unchanged backend)
-      if (userIds.length > 0) {
+      // 6) Bulk attendance summary
+      if (userIds.length) {
         try {
-          const { data: attendanceResponse } = await axios.post(
+          const { data: attRes } = await axios.post(
             `${API_BASE}/api/v1/user/attendance/bulk`,
             { userIds },
             { headers: { "Content-Type": "application/json" } }
           );
-          const attendanceData: Record<string, number | null> = {};
-          userIds.forEach((uid) => {
-            attendanceData[uid] = attendanceResponse.attendance?.[uid] ?? null;
-          });
-          setUserAttendance(attendanceData);
-        } catch (error) {
-          console.error("Error fetching bulk attendance:", error);
-          if (axios.isAxiosError(error) && error.response) {
-            toast.error(`Attendance API error: ${error.response.data.message || "Check the API"}`);
-          } else {
-            toast.error("An unexpected error occurred.");
-          }
+          const attMap: Record<string, number | null> = {};
+          for (const id of userIds) attMap[id] = attRes.attendance?.[id] ?? null;
+          setUserAttendance(attMap);
+        } catch (err) {
+          console.error("Error fetching bulk attendance:", err);
+          toast.error("Attendance lookup failed.");
         }
       }
 
-      // 6) Hydrate schedule-scoped feedback flags
+      // 7) Hydrate schedule-scoped feedback flags
       await hydrateFeedbackStatus(userIds);
+
+      // 8) Hydrate TRF sent status for Done badge
+      await hydrateTrfSentStatus(userIds);
     } catch (err) {
       console.error(err);
       toast.error("Error fetching data. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [scheduleId, hydrateFeedbackStatus]);
+  }, [scheduleId, hydrateFeedbackStatus, hydrateTrfSentStatus]);
 
   useEffect(() => {
     fetchBookingsAndUsers();
@@ -232,14 +322,24 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
       return;
     }
 
-    const bookingToDownload = bookings[0];
+    const b0 = bookings[0];
     const doc = new jsPDF({ orientation: "landscape", format: "a4" });
 
     doc.setFontSize(10);
     doc.text("Booking Details", 10, 15);
-    doc.text(`Test Name: ${bookingToDownload.name}`, 10, 20);
-    doc.text(`Date: ${bookingToDownload.bookingDate}`, 10, 25);
-    doc.text(`Schedule Time: ${bookingToDownload.startTime} - ${bookingToDownload.endTime}`, 10, 30);
+    doc.text(`Test Name: ${b0.name || "N/A"}`, 10, 20);
+    doc.text(
+      `Date: ${b0.bookingDate ? formatCustomDate(b0.bookingDate) : "N/A"}`,
+      10,
+      25
+    );
+    doc.text(
+      `Schedule Time: ${
+        b0.startTime && b0.endTime ? formatCustomTime(b0.startTime, b0.endTime) : "N/A"
+      }`,
+      10,
+      30
+    );
 
     autoTable(doc, {
       head: [
@@ -257,13 +357,8 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
         ],
       ],
       body: users.map((user: any, index: number) => {
-        let uid = user._id;
-        if (Array.isArray(uid)) uid = uid[0];
-
-        const relatedBooking = bookings.find((b) =>
-          Array.isArray(b.userId) ? b.userId.includes(uid) : b.userId === uid
-        );
-
+        const uid = toId(user._id);
+        const related = bookings.find((bk) => hasUserInBooking(bk, uid));
         return [
           index + 1,
           user?.name || "N/A",
@@ -271,15 +366,15 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
           user?.contactNo || "N/A",
           user?.transactionId || "N/A",
           user?.passportNumber || "N/A",
-          relatedBooking?.testType || "N/A",
-          relatedBooking?.testSystem || "N/A",
-          user?.totalMock || "N/A",
-          userAttendance[uid] !== null ? userAttendance[uid] : "N/A",
+          related?.testType || "N/A",
+          related?.testSystem || "N/A",
+          user?.totalMock ?? "N/A",
+          userAttendance[uid] ?? "N/A",
         ];
       }),
       theme: "grid",
-      styles: { fontSize: 10, overflow: "linebreak" },
-      headStyles: { fillColor: [250, 206, 57] }, // safer RGB
+      styles: { fontSize: 9, cellPadding: 1.5, overflow: "linebreak", valign: "middle" },
+      headStyles: { fillColor: [250, 206, 57] },
       columnStyles: {
         0: { cellWidth: 10 },
         1: { cellWidth: 35 },
@@ -305,31 +400,33 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
   }
 
   const filterUsers = (
-    users: any[],
-    bookings: Booking[],
-    filter: string,
-    testTypeFilter: string,
-    testSystemFilter: string,
+    usersArr: any[],
+    bookingsArr: Booking[],
+    filterText: string,
+    typeFilter: string,
+    systemFilter: string,
     _attendanceFilter: string
   ) => {
-    return users.filter((user) => {
-      const userBooking = bookings.find((b) =>
-        Array.isArray(b.userId) ? b.userId.includes(user._id) : b.userId === user._id
-      );
+    const f = (filterText || "").toLowerCase();
+    return usersArr.filter((user) => {
+      const uid = toId(user._id);
+      const userBooking = bookingsArr.find((bk) => hasUserInBooking(bk, uid));
 
       const matchesFilter =
-        user?.name?.toLowerCase().includes(filter.toLowerCase()) ||
-        user?.email?.toLowerCase().includes(filter.toLowerCase());
+        (user?.name || "").toLowerCase().includes(f) ||
+        (user?.email || "").toLowerCase().includes(f);
 
-      const matchesTestType =
-        !testTypeFilter ||
-        userBooking?.testType?.toLowerCase().trim() === testTypeFilter.toLowerCase().trim();
+      const matchesType =
+        !typeFilter ||
+        (userBooking?.testType || "").toLowerCase().trim() ===
+          typeFilter.toLowerCase().trim();
 
-      const matchesTestSystem =
-        !testSystemFilter ||
-        userBooking?.testSystem?.toLowerCase().trim() === testSystemFilter.toLowerCase().trim();
+      const matchesSystem =
+        !systemFilter ||
+        (userBooking?.testSystem || "").toLowerCase().trim() ===
+          systemFilter.toLowerCase().trim();
 
-      return matchesFilter && matchesTestType && matchesTestSystem;
+      return matchesFilter && matchesType && matchesSystem;
     });
   };
 
@@ -377,7 +474,12 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
     }
   };
 
-  const segmentMap = { L: "listening", W: "writing", R: "reading", S: "speaking" } as const;
+  const segmentMap = {
+    L: "listening",
+    W: "writing",
+    R: "reading",
+    S: "speaking",
+  } as const;
 
   const TeacherSelect = ({
     value,
@@ -438,7 +540,8 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
     Najia: "bg-cyan-600 text-white",
   };
 
-  const getTeacherBgClass = (value: string) => teacherColorMap[value] || "bg-white text-black";
+  const getTeacherBgClass = (value: string) =>
+    teacherColorMap[value] || "bg-white text-black";
 
   // Helper: are all 4 segments saved for THIS schedule?
   const isFeedbackComplete = (u: any) =>
@@ -449,34 +552,29 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
       u?.feedbackStatus?.speaking
     );
 
-  // --- TRF visibility + (optional) per-course route mapping ---
+  // TRF eligibility + route
   const canonicalizeCourse = (raw?: string) => {
     const n = String(raw || "").trim().toLowerCase();
     if (n.includes("ielts")) return "ielts";
-    if (n.includes("pte")) return "pearson pte"; // covers "pte", "pte academic", "pearson pte"
+    if (n.includes("pte")) return "pearson pte";
     if (n.includes("gre")) return "gre";
-    if (n.includes("toefl")) return "toefl"; // covers "toefl ibt"
+    if (n.includes("toefl")) return "toefl";
     return n;
   };
-
   const TRF_ELIGIBLE = new Set(["ielts", "pearson pte", "gre", "toefl"]);
-
-  const canShowTrfFor = (courseName?: string) => TRF_ELIGIBLE.has(canonicalizeCourse(courseName));
-
-  // If you later split TRF pages per course, just change these routes:
+  const canShowTrfFor = (courseName?: string) =>
+    TRF_ELIGIBLE.has(canonicalizeCourse(courseName));
   const TRF_ROUTE_BY_COURSE: Record<string, string> = {
     ielts: "/admin/form",
     "pearson pte": "/admin/form",
     gre: "/admin/form",
     toefl: "/admin/form",
   };
-
   const getTrfRoute = (courseName?: string) =>
     TRF_ROUTE_BY_COURSE[canonicalizeCourse(courseName)] ?? "/admin/form";
 
   return (
     <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
-      {/* Keep a single <Toaster /> globally in app/layout.tsx to avoid duplicate toasts */}
       {loading ? (
         <p>Loading...</p>
       ) : (
@@ -539,7 +637,9 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
               </p>
               <p>
                 <strong>Date:</strong>{" "}
-                {bookings[0]?.bookingDate ? formatCustomDate(bookings[0].bookingDate) : "N/A"}
+                {bookings[0]?.bookingDate
+                  ? formatCustomDate(bookings[0].bookingDate)
+                  : "N/A"}
               </p>
               <p>
                 <strong>Schedule Time:</strong>{" "}
@@ -578,11 +678,13 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
               </thead>
               <tbody>
                 {filteredUsers.map((user, index) => {
-                  const isAbsent = attendance[user._id] === "absent";
+                  const uid = toId(user._id);
+                  const isAbsent = attendance[uid] === "absent";
                   const allSaved = isFeedbackComplete(user);
+                  const emailDone = !!trfEmailSentByUser[uid];
 
                   return (
-                    <tr key={user._id} className="border-b">
+                    <tr key={uid} className="border-b">
                       <td className="px-4 py-2 text-sm">{index + 1}</td>
                       <td className="px-4 py-2 text-sm">{user?.name || "N/A"}</td>
                       <td className="px-4 py-2 text-sm">{user?.email || "N/A"}</td>
@@ -591,7 +693,7 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
                       <td>
                         <TeacherSelect
                           value={user.teacherL || ""}
-                          userId={user._id}
+                          userId={uid}
                           skill="L"
                           onChange={onChangeTeacher}
                           feedbackSaved={user.feedbackStatus?.listening}
@@ -602,7 +704,7 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
                       <td>
                         <TeacherSelect
                           value={user.teacherW || ""}
-                          userId={user._id}
+                          userId={uid}
                           skill="W"
                           onChange={onChangeTeacher}
                           feedbackSaved={user.feedbackStatus?.writing}
@@ -613,7 +715,7 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
                       <td>
                         <TeacherSelect
                           value={user.teacherR || ""}
-                          userId={user._id}
+                          userId={uid}
                           skill="R"
                           onChange={onChangeTeacher}
                           feedbackSaved={user.feedbackStatus?.reading}
@@ -624,7 +726,7 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
                       <td>
                         <TeacherSelect
                           value={user.teacherS || ""}
-                          userId={user._id}
+                          userId={uid}
                           skill="S"
                           onChange={onChangeTeacher}
                           feedbackSaved={user.feedbackStatus?.speaking}
@@ -633,34 +735,53 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
                         />
                       </td>
 
-                      <td className="px-4 py-2 text-sm">{attendance[user._id] || "N/A"}</td>
+                      <td className="px-4 py-2 text-sm">{attendance[uid] || "N/A"}</td>
 
                       <td className="px-4 py-2">
                         {canShowTrfFor(bookings[0]?.name) ? (
                           <button
-                            onClick={() =>
-                              router.push(
-                                `${getTrfRoute(bookings[0]?.name)}?userId=${encodeURIComponent(
-                                  user._id
-                                )}&scheduleId=${encodeURIComponent(
-                                  scheduleId
-                                )}&course=${encodeURIComponent(
-                                  canonicalizeCourse(bookings[0]?.name)
-                                )}`
-                              )
-                            }
+                            onClick={() => {
+                              const qs = new URLSearchParams({
+                                userId: uid,
+                                scheduleId,
+                                teacherL: user.teacherL || "",
+                                teacherW: user.teacherW || "",
+                                teacherR: user.teacherR || "",
+                                teacherS: user.teacherS || "",
+                                l: String(!!user?.feedbackStatus?.listening),
+                                r: String(!!user?.feedbackStatus?.reading),
+                                w: String(!!user?.feedbackStatus?.writing),
+                                s: String(!!user?.feedbackStatus?.speaking),
+                                course: canonicalizeCourse(bookings[0]?.name),
+                              });
+                              router.push(`${getTrfRoute(bookings[0]?.name)}?${qs.toString()}`);
+                            }}
                             disabled={isAbsent}
-                            className={`px-5 py-2 rounded-xl font-medium shadow-md transition-all duration-300 ease-in-out
-        ${
-          isAbsent
-            ? "bg-red-500 text-white cursor-not-allowed"
-            : allSaved
-            ? "bg-green-600 text-white hover:bg-green-700"
-            : "bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f] hover:font-semibold hover:shadow-xl hover:scale-105"
-        }
-      `}
+                            className={`inline-flex items-center gap-2 px-4 py-1 rounded-md font-medium shadow-sm text-sm transition
+                              ${
+                                isAbsent
+                                  ? "bg-red-500 text-white cursor-not-allowed"
+                                  : allSaved
+                                  ? "bg-green-600 text-white hover:bg-green-700"
+                                  : "bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f]"
+                              }`}
+                            title={
+                              isAbsent
+                                ? "User absent"
+                                : allSaved
+                                ? "All segments saved — view TRF"
+                                : "View TRF (some segments may be pending)"
+                            }
                           >
-                            View TRF
+                            {allSaved ? "View TRF ✓" : "View TRF"}
+                            {emailDone && (
+                              <span
+                                title="TRF email sent"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#00000f] bg-[#face39] text-[#00000f] text-[10px] font-bold shadow-sm"
+                              >
+                                ✔ Done
+                              </span>
+                            )}
                           </button>
                         ) : (
                           <span className="text-gray-400 italic">N/A</span>

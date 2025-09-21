@@ -23,6 +23,7 @@ import {
 
 import { RiHomeOfficeFill } from "react-icons/ri";
 import axios from "axios";
+import { MdOutlineCastForEducation } from "react-icons/md";
 
 const handleLinkClick = () => {};
 
@@ -139,6 +140,7 @@ const SidebarAdmin = () => {
             { href: "/admin/available-schedules", label: "Available Schedules", icon: <IoCloudDownloadOutline className="h-5 w-5" /> },
             { href: "/admin/homebased", label: "Home Based Booking", icon: <RiHomeOfficeFill className="h-5 w-5" /> },
             { href: "/admin/TRF", label: "TRF", icon: <IoMailOutline className="h-5 w-5" /> },
+            { href: "/admin/homebasedtrf", label: "TRF Home Based", icon: <MdOutlineCastForEducation className="h-5 w-5" /> },
             { href: "/admin/all-users", label: "Booking Details", icon: <IoWalletOutline className="h-5 w-5" /> },
             { href: "/admin/analysis", label: "Analysis", icon: <GrAnalytics className="h-5 w-5" /> },
             // Use the notification bell for Profile Edit Requests

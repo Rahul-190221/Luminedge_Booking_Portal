@@ -4,13 +4,97 @@ import React, { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 
-// ---------- Types ----------
+/* ===========================
+   API base + bulk fetchers
+   =========================== */
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://luminedge-server.vercel.app";
+
+/** Fetch *all* users by paging through /api/v1/admin/users */
+export async function fetchAllUsers(params?: {
+  search?: string;
+  status?: string;
+  role?: string;
+  pageSize?: number; // default 2000 (API max)
+}) {
+  const pageSize = Math.min(2000, Math.max(1, params?.pageSize ?? 2000));
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set("search", params.search);
+  if (params?.status) qs.set("status", params.status);
+  if (params?.role) qs.set("role", params.role);
+  qs.set("page", "1");
+  qs.set("limit", String(pageSize));
+
+  const first = await fetch(`${API_BASE}/api/v1/admin/users?${qs.toString()}`);
+  if (!first.ok) {
+    if (first.status === 404) return [];
+    throw new Error(`users page 1 failed: ${first.status}`);
+  }
+  const firstJson = await first.json();
+  const all: any[] = [...(firstJson.users || [])];
+
+  const total: number = Number(firstJson.total ?? all.length);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  for (let page = 2; page <= totalPages; page++) {
+    const qsp = new URLSearchParams(qs);
+    qsp.set("page", String(page));
+    const res = await fetch(`${API_BASE}/api/v1/admin/users?${qsp.toString()}`);
+    if (!res.ok) break;
+    const json = await res.json();
+    if (Array.isArray(json.users)) all.push(...json.users);
+    if (all.length >= total) break;
+  }
+  return all;
+}
+
+/** Fetch *all* bookingMock rows by paging through /api/v1/admin/bookings */
+export async function fetchAllBookings(params?: {
+  status?: string;
+  location?: "Home" | "Test Center";
+  pageSize?: number; // default 2000 (API max)
+}) {
+  const pageSize = Math.min(2000, Math.max(1, params?.pageSize ?? 2000));
+  const baseQS = new URLSearchParams();
+  if (params?.status) baseQS.set("status", params.status);
+  if (params?.location) baseQS.set("location", params.location);
+  baseQS.set("limit", String(pageSize));
+
+  baseQS.set("page", "1");
+  const first = await fetch(`${API_BASE}/api/v1/admin/bookings?${baseQS.toString()}`);
+  if (!first.ok) {
+    if (first.status === 404) return [];
+    throw new Error(`bookings page 1 failed: ${first.status}`);
+  }
+  const firstJson = await first.json();
+  const all: any[] = [...(firstJson.bookings || [])];
+
+  // keep pulling pages until a page returns fewer than pageSize
+  let page = 2;
+  while (true) {
+    const qsp = new URLSearchParams(baseQS);
+    qsp.set("page", String(page++));
+    const res = await fetch(`${API_BASE}/api/v1/admin/bookings?${qsp.toString()}`);
+    if (!res.ok) break;
+    const json = await res.json();
+    const chunk: any[] = json.bookings || [];
+    if (!chunk.length) break;
+    all.push(...chunk);
+    if (chunk.length < pageSize) break;
+  }
+  return all;
+}
+
+/* ===========================
+   Types
+   =========================== */
 type TimeSlot = {
   slotId: string;
   startTime: string;
   endTime: string;
   totalSlot?: number; // Optional
-  slot?: string;      // Available seats?
+  slot?: string; // Available seats?
 };
 
 type Schedule = {
@@ -24,7 +108,9 @@ type Schedule = {
   [x: string]: any;
 };
 
-// ---------- Dhaka date helpers ----------
+/* ===========================
+   Dhaka date helpers
+   =========================== */
 const ymdDhaka = (d: Date) =>
   new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Dhaka",
@@ -37,7 +123,6 @@ const ymdDhaka = (d: Date) =>
 const toYMD = (v: unknown): string | null => {
   if (!v) return null;
 
-  // Strings: prefer leading YYYY-MM-DD if present
   if (typeof v === "string") {
     const m = v.match(/^(\d{4}-\d{2}-\d{2})/);
     if (m) return m[1];
@@ -45,16 +130,13 @@ const toYMD = (v: unknown): string | null => {
     return isNaN(+d) ? null : ymdDhaka(d);
   }
 
-  // Numbers: epoch ms
   if (typeof v === "number") {
     const d = new Date(v);
     return isNaN(+d) ? null : ymdDhaka(d);
   }
 
-  // Date object
   if (v instanceof Date) return isNaN(+v) ? null : ymdDhaka(v);
 
-  // Mongo-style {$date: "..."}
   if (typeof v === "object" && v && "$date" in (v as any)) {
     const d = new Date((v as any).$date);
     return isNaN(+d) ? null : ymdDhaka(d);
@@ -78,7 +160,6 @@ const displayDate = (src: unknown): string => {
   const ymd = toYMD(src);
   if (!ymd) return "—";
   const [y, m, d] = ymd.split("-").map(Number);
-  // Render stable text (not used for comparisons)
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "long",
@@ -96,7 +177,9 @@ const isScheduleLike = (x: any): boolean => {
 const safeRowKey = (s: Schedule, idx: number) =>
   s._id ?? s.id ?? `${s.name ?? "unknown"}-${getStartDateYMD(s) ?? "na"}-${idx}`;
 
-// ---------- Component ----------
+/* ===========================
+   Component
+   =========================== */
 function TrfAvailableSchedulesBDMPage() {
   const router = useRouter();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -112,7 +195,7 @@ function TrfAvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const response = await fetch("https://luminedge-server.vercel.app/api/v1/admin/get-schedules");
+      const response = await fetch(`${API_BASE}/api/v1/admin/get-schedules`);
       const raw = await response.json();
       const cleaned = Array.isArray(raw) ? raw.filter(isScheduleLike) : [];
       setSchedules(cleaned);
