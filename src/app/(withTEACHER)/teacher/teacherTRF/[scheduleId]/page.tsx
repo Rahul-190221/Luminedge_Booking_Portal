@@ -61,6 +61,43 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
   const [testSystemFilter, setTestSystemFilter] = useState<string>("");
   const [attendanceFilter, setAttendanceFilter] = useState<string>("");
 
+
+  const toId = (v: any) => String(v ?? "").trim();
+
+type AttendanceMap = Record<string, string>;
+
+/** Page /admin/users until all of `userIds` are found */
+async function fetchUsersByIds(userIds: string[], pageSize = 500) {
+  const need = new Set(userIds.map(toId));
+  const found = new Map<string, any>();
+
+  // page 1 first (get total)
+  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    params: { page: 1, limit: pageSize },
+  });
+  const total: number = Number(first.data?.total ?? (first.data?.users?.length || 0));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const ingest = (arr: any[] = []) => {
+    for (const u of arr) {
+      const id = toId(u._id);
+      if (need.has(id) && !found.has(id)) found.set(id, u);
+    }
+  };
+  ingest(first.data?.users);
+
+  if (found.size < need.size) {
+    for (let page = 2; page <= totalPages; page++) {
+      const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+        params: { page, limit: pageSize },
+      });
+      ingest(data?.users);
+      if (found.size === need.size) break;
+    }
+  }
+  return Array.from(found.values());
+}
+
   // --- Schedule-scoped feedback flags per user
   const hydrateFeedbackStatus = useCallback(
     async (userIds: string[]) => {
@@ -105,123 +142,152 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
 
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
-
-    // helpers to page through APIs (front-end only)
-    const PAGE_SIZE = 1000;
-
-    const fetchAllBookings = async () => {
-      const all: Booking[] = [];
-      let page = 1;
-      while (true) {
-        const { data } = await axios.get(`${API_BASE}/api/v1/admin/bookings`, {
-          params: { page, limit: PAGE_SIZE },
-        });
-        const batch: Booking[] = data?.bookings ?? [];
-        all.push(...batch);
-        if (batch.length < PAGE_SIZE) break;
-        page += 1;
-      }
-      return all;
-    };
-
-    const fetchAllUsers = async () => {
-      const all: any[] = [];
-      let page = 1;
-
-      const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-        params: { page, limit: PAGE_SIZE },
-      });
-      const firstUsers: any[] = first.data?.users ?? [];
-      const total: number = Number(first.data?.total ?? firstUsers.length);
-      all.push(...firstUsers);
-
-      const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-      while (page < totalPages) {
-        page += 1;
-        const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-          params: { page, limit: PAGE_SIZE },
-        });
-        all.push(...(data?.users ?? []));
-      }
-      return all;
-    };
-
+  
+    // cancel in-flight if scheduleId changes
+    const controller = new AbortController();
+    const { signal } = controller;
+    (fetchBookingsAndUsers as any)._abort?.();
+    (fetchBookingsAndUsers as any)._abort = () => controller.abort();
+  
     try {
       setLoading(true);
-
-      // 1) All bookings -> only this schedule
-      const allBookings = await fetchAllBookings();
-      const filteredBookings: Booking[] = allBookings.filter(
-        (b) => String(b.scheduleId) === String(scheduleId)
+  
+      // 🔹 0) Fast path for HOME: server returns bookings joined with users
+      if (String(scheduleId).toLowerCase() === "home") {
+        const { data } = await axios.get(`${API_BASE}/api/v1/admin/bookings/home-with-users`, { signal });
+        const rows: any[] = data?.bookings || [];
+        if (!rows.length) {
+          setBookings([]); setUsers([]); setAttendance({}); setAttendanceCounts({ present: 0, absent: 0 }); setUserAttendance({});
+          return;
+        }
+  
+        // Normalize to your Booking shape (map testTime -> startTime)
+        const normalizedBookings: Booking[] = rows.map((r) => ({
+          id: String(r._id),
+          name: r.name || "N/A",
+          testType: r.testType || "N/A",
+          testSystem: r.testSystem || "N/A",
+          bookingDate: r.bookingDate || "",
+          scheduleId: "home",
+          slotId: "", // not used for HOME
+          startTime: r.testTime || "",
+          endTime: "",
+          userId: r.userId,
+          userCount: 1,
+          attendance: r.attendance || "N/A",
+        }));
+  
+        const userList = rows.map((r) => ({
+          ...r.user,
+          feedbackStatus: r.user?.feedbackStatus || {},
+        }));
+  
+        // Attendance map + counts
+        const initialAttendance: AttendanceMap = {};
+        for (const b of normalizedBookings) {
+          const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
+          const att = (b.attendance || "N/A").toString().trim().toLowerCase();
+          ids.forEach((uid) => (initialAttendance[toId(uid)] = att));
+        }
+        const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
+        const absentCount  = Object.values(initialAttendance).filter((s) => s === "absent").length;
+  
+        setBookings(normalizedBookings);
+        setUsers(userList);
+        setAttendance(initialAttendance);
+        setAttendanceCounts({ present: presentCount, absent: absentCount });
+  
+        // Bulk attendance totals (HOME uses same endpoint)
+        const homeUserIds = userList.map((u: any) => toId(u._id));
+        if (homeUserIds.length) {
+          try {
+            const { data: att } = await axios.post(
+              `${API_BASE}/api/v1/user/attendance/bulk`,
+              { userIds: homeUserIds },
+              { headers: { "Content-Type": "application/json" }, signal }
+            );
+            const map: Record<string, number | null> = {};
+            for (const id of homeUserIds) map[id] = att.attendance?.[id] ?? null;
+            setUserAttendance(map);
+          } catch (err) {
+            if (!axios.isCancel(err)) toast.error("Attendance lookup failed.");
+          }
+        }
+  
+        // Feedback flags per user for this “home” scheduleId (bookingId isn’t needed)
+        await hydrateFeedbackStatus(homeUserIds);
+        return;
+      }
+  
+      // 🔹 1) Non-HOME: pull only bookings for this schedule from the server
+      const { data } = await axios.get(
+        `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
+        { params: { page: 1, limit: 500 }, signal }
       );
-
-      // 2) Unique user IDs for this schedule
-      const userIds: string[] = Array.from(
+      const filteredBookings: Booking[] = data?.bookings || [];
+  
+      if (!filteredBookings.length) {
+        setBookings([]); setUsers([]); setAttendance({}); setAttendanceCounts({ present: 0, absent: 0 }); setUserAttendance({});
+        return;
+      }
+  
+      // 🔹 2) Unique userIds for this schedule
+      const userIds = Array.from(
         new Set(
-          filteredBookings.flatMap((b) => (Array.isArray(b.userId) ? b.userId : [b.userId]))
+          filteredBookings.flatMap((b) =>
+            Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)]
+          )
         )
-      ).filter(Boolean) as string[];
-
-      // 3) All users -> matched users only
-      const allUsers = await fetchAllUsers();
-      const usersById = new Map(allUsers.map((u: any) => [String(u._id), u]));
-      const matchedUsers = userIds
-        .map((id) => usersById.get(String(id)))
-        .filter(Boolean)
-        .map((u: any) => ({ ...u, feedbackStatus: u.feedbackStatus || {} }));
-
-      // 4) Attendance mapping + counts (case-insensitive)
-      const initialAttendance: Record<string, string> = {};
+      );
+  
+      // 🔹 3) Fetch only the users we need (paged internally)
+      const matchedUsers = userIds.length ? await fetchUsersByIds(userIds) : [];
+      const usersPlus = matchedUsers.map((u: any) => ({
+        ...u,
+        feedbackStatus: u.feedbackStatus || {},
+      }));
+  
+      // 🔹 4) Attendance map + counts
+      const initialAttendance: AttendanceMap = {};
       for (const b of filteredBookings) {
         const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
         const att = (b.attendance || "N/A").toString().trim().toLowerCase();
-        ids.forEach((uid) => {
-          initialAttendance[String(uid)] = att;
-        });
+        ids.forEach((uid) => (initialAttendance[toId(uid)] = att));
       }
       const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
-      const absentCount = Object.values(initialAttendance).filter((s) => s === "absent").length;
-
+      const absentCount  = Object.values(initialAttendance).filter((s) => s === "absent").length;
+  
       setBookings(filteredBookings);
-      setUsers(matchedUsers);
+      setUsers(usersPlus);
       setAttendance(initialAttendance);
       setAttendanceCounts({ present: presentCount, absent: absentCount });
-
-      // 5) Bulk attendance totals per user (unchanged backend)
-      if (userIds.length > 0) {
-        try {
-          const { data: attendanceResponse } = await axios.post(
-            `${API_BASE}/api/v1/user/attendance/bulk`,
-            { userIds },
-            { headers: { "Content-Type": "application/json" } }
-          );
-          const attendanceData: Record<string, number | null> = {};
-          userIds.forEach((uid) => {
-            attendanceData[uid] = attendanceResponse.attendance?.[uid] ?? null;
-          });
-          setUserAttendance(attendanceData);
-        } catch (error) {
-          console.error("Error fetching bulk attendance:", error);
-          if (axios.isAxiosError(error) && error.response) {
-            toast.error(
-              `Attendance API error: ${error.response.data.message || "Check the API"}`
-            );
-          } else {
-            toast.error("An unexpected error occurred.");
-          }
-        }
+  
+      // 🔹 5) Bulk attendance totals per user
+      try {
+        const { data: attRes } = await axios.post(
+          `${API_BASE}/api/v1/user/attendance/bulk`,
+          { userIds },
+          { headers: { "Content-Type": "application/json" }, signal }
+        );
+        const attMap: Record<string, number | null> = {};
+        for (const id of userIds) attMap[id] = attRes.attendance?.[id] ?? null;
+        setUserAttendance(attMap);
+      } catch (err) {
+        if (!axios.isCancel(err)) toast.error("Attendance lookup failed.");
       }
-
-      // 6) Hydrate schedule-scoped feedback flags
+  
+      // 🔹 6) Hydrate schedule-scoped feedback flags
       await hydrateFeedbackStatus(userIds);
-    } catch (error) {
-      toast.error("Error fetching data. Please try again.");
-      console.error(error);
+    } catch (err: any) {
+      if (!axios.isCancel(err)) {
+        console.error(err);
+        toast.error("Error fetching data. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   }, [scheduleId, hydrateFeedbackStatus]);
-
+  
   useEffect(() => {
     fetchBookingsAndUsers();
   }, [fetchBookingsAndUsers]);

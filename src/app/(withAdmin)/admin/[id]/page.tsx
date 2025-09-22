@@ -84,69 +84,85 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
+  
+    // cancel any previous call if schedule changes / unmounts
+    const controller = new AbortController();
+    const { signal } = controller;
+    (fetchBookingsAndUsers as any)._abort?.();
+    (fetchBookingsAndUsers as any)._abort = () => controller.abort();
+  
     try {
       setLoading(true);
-
-      // 1) Get bookings (use server paging; large limit is OK here)
-      const { data: bookingsData } = await axios.get(`${API}/api/v1/admin/bookings`, {
-        params: { page: 1, limit: 2000 },
-      });
-
-      // 2) Only keep bookings for the scheduleId
-      const filteredBookings: Booking[] = (bookingsData?.bookings || []).filter(
-        (b: Booking) => toId(b.scheduleId) === toId(scheduleId)
+  
+      // 🔹 Pull only the bookings for this schedule (server filters & projection)
+      const { data } = await axios.get(
+        `${API}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
+        { params: { page: 1, limit: 500 }, signal }
       );
-
-      // 3) Unique user ids from those bookings
-      const userIds: string[] = Array.from(
+      const filteredBookings: Booking[] = data?.bookings || [];
+      setBookings(filteredBookings);
+  
+      // nothing to do
+      if (!filteredBookings.length) {
+        setUsers([]);
+        setAttendance({});
+        setAttendanceCounts({ present: 0, absent: 0 });
+        setUserAttendance({});
+        return;
+      }
+  
+      // 🔹 unique userIds
+      const userIds = Array.from(
         new Set(
-          filteredBookings.flatMap((b: Booking) =>
+          filteredBookings.flatMap((b) =>
             Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)]
           )
         )
       );
-
-      // 4) Fetch ONLY the users we need (page through /admin/users until done)
-      const matchedUsers = userIds.length ? await fetchUsersByIds(userIds) : [];
-
-      // 5) Seed attendance map & counts
+  
+      // 🔹 seed attendance + counts from already-fetched bookings
       const initialAttendance: AttendanceMap = {};
       for (const bk of filteredBookings) {
         const ids = Array.isArray(bk.userId) ? bk.userId.map(toId) : [toId(bk.userId)];
         for (const uid of ids) initialAttendance[uid] = bk.attendance || "N/A";
       }
       const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
-      const absentCount = Object.values(initialAttendance).filter((s) => s === "absent").length;
-
-      setBookings(filteredBookings);
-      setUsers(matchedUsers);
+      const absentCount  = Object.values(initialAttendance).filter((s) => s === "absent").length;
+  
       setAttendance(initialAttendance);
       setAttendanceCounts({ present: presentCount, absent: absentCount });
-
-      // 6) Bulk attendance summary (counts) if needed
-      if (userIds.length) {
+  
+      // 🔹 fetch only the users we need (paged under the hood)
+      const matchedUsers = userIds.length ? await fetchUsersByIds(userIds) : [];
+      setUsers(matchedUsers);
+  
+      // 🔹 bulk attendance summary (parallel, non-blocking for UI)
+      (async () => {
         try {
           const { data: attRes } = await axios.post(
             `${API}/api/v1/user/attendance/bulk`,
             { userIds },
-            { headers: { "Content-Type": "application/json" } }
+            { headers: { "Content-Type": "application/json" }, signal }
           );
           const attMap: Record<string, number | null> = {};
           for (const id of userIds) attMap[id] = attRes.attendance?.[id] ?? null;
           setUserAttendance(attMap);
         } catch (err) {
-          console.error("Error fetching bulk attendance:", err);
-          toast.error("Attendance lookup failed.");
+          if (!axios.isCancel(err)) {
+            console.error("Error fetching bulk attendance:", err);
+            toast.error("Attendance lookup failed.");
+          }
         }
-      }
-    } catch (err) {
+      })();
+    } catch (err: any) {
+      if (axios.isCancel(err)) return;
       console.error(err);
       toast.error("Error fetching data. Please try again.");
     } finally {
       setLoading(false);
     }
   }, [scheduleId]);
-
+  
   useEffect(() => {
     fetchBookingsAndUsers();
   }, [fetchBookingsAndUsers]);

@@ -45,6 +45,10 @@ type ApiFeedbackStatusResponse = {
   };
 };
 
+type BudgetResponse = {
+  budget: number;
+};
+
 // ---------- helpers for id handling & user fetching (fixes 6/10 issue) ----------
 const toId = (v: any) => String(v ?? "").trim();
 const hasUserInBooking = (b: Booking, userId: string) =>
@@ -114,6 +118,8 @@ const TrfBookingRequestsPage = ({
   const [trfEmailSentByUser, setTrfEmailSentByUser] = useState<
     Record<string, boolean>
   >({});
+  // Budget map for each user
+  const [userBudgets, setUserBudgets] = useState<Record<string, number>>({});
 
   // Map teacher code -> email
   const teacherEmailMap: Record<string, string> = {
@@ -204,24 +210,51 @@ const TrfBookingRequestsPage = ({
     [scheduleId]
   );
 
+  // Hydrate budget for each user
+  const hydrateUserBudgets = useCallback(async (userIds: string[]) => {
+    if (!userIds?.length || !scheduleId) return;
+    try {
+      const results = await Promise.all(
+        userIds.map(async (uid) => {
+          try {
+            const { data } = await axios.get<BudgetResponse>(
+              `${API_BASE}/api/v1/admin/user-budget/${uid}/${scheduleId}`
+            );
+            return { uid, budget: data.budget || 0 };
+          } catch (e) {
+            console.error("budget fetch failed:", uid, e);
+            return { uid, budget: 0 };
+          }
+        })
+      );
+      setUserBudgets((prev) => {
+        const next = { ...prev };
+        results.forEach(({ uid, budget }) => {
+          next[uid] = budget;
+        });
+        return next;
+      });
+    } catch (e) {
+      console.error("hydrateUserBudgets error:", e);
+    }
+  }, [scheduleId]);
+
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
-
+  
     try {
       setLoading(true);
-
-      // 1) Fetch bookings (use a big page size)
+  
+      // 1) Fetch ONLY bookings for this schedule (paged & fast)
       const { data: bookingsData } = await axios.get(
-        `${API_BASE}/api/v1/admin/bookings`,
-        { params: { page: 1, limit: 2000 } }
+        `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
+        { params: { page: 1, limit: 500 } } // keep modest
       );
-
-      // 2) Only keep bookings for this scheduleId
-      const filteredBookings: Booking[] = (bookingsData?.bookings || []).filter(
-        (b: Booking) => toId(b.scheduleId) === toId(scheduleId)
-      );
-
-      // 3) Collect unique user ids
+  
+      // already filtered server-side
+      const filteredBookings: Booking[] = bookingsData?.bookings || [];
+  
+      // 2) Collect unique user ids
       const userIds: string[] = Array.from(
         new Set(
           filteredBookings.flatMap((b: Booking) =>
@@ -229,11 +262,11 @@ const TrfBookingRequestsPage = ({
           )
         )
       );
-
-      // 4) Fetch ONLY the users we need (page through users API until done)
+  
+      // 3) Fetch ONLY the users we need (page through users API until done)
       const baseUsers = userIds.length ? await fetchUsersByIds(userIds) : [];
-
-      // 4b) Enrich with schedule-scoped teacher fields (fallback to legacy)
+  
+      // 3b) Enrich with schedule-scoped teacher fields (fallback to legacy)
       const matchedUsers = baseUsers.map((u: any) => {
         const sched = u.teachersBySchedule?.[scheduleId] || {};
         return {
@@ -249,22 +282,22 @@ const TrfBookingRequestsPage = ({
           feedbackStatus: u.feedbackStatus || {},
         };
       });
-
-      // 5) Seed attendance map & counts
+  
+      // 4) Seed attendance map & counts
       const initialAttendance: Record<string, string> = {};
       for (const bk of filteredBookings) {
         const ids = Array.isArray(bk.userId) ? bk.userId.map(toId) : [toId(bk.userId)];
         for (const uid of ids) initialAttendance[uid] = bk.attendance || "N/A";
       }
       const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
-      const absentCount = Object.values(initialAttendance).filter((s) => s === "absent").length;
-
+      const absentCount  = Object.values(initialAttendance).filter((s) => s === "absent").length;
+  
       setBookings(filteredBookings);
       setUsers(matchedUsers);
       setAttendance(initialAttendance);
       setAttendanceCounts({ present: presentCount, absent: absentCount });
-
-      // 6) Bulk attendance summary
+  
+      // 5) Bulk attendance summary
       if (userIds.length) {
         try {
           const { data: attRes } = await axios.post(
@@ -280,20 +313,23 @@ const TrfBookingRequestsPage = ({
           toast.error("Attendance lookup failed.");
         }
       }
-
-      // 7) Hydrate schedule-scoped feedback flags
+  
+      // 6) Hydrate schedule-scoped feedback flags
       await hydrateFeedbackStatus(userIds);
-
-      // 8) Hydrate TRF sent status for Done badge
+  
+      // 7) Hydrate TRF sent status for Done badge
       await hydrateTrfSentStatus(userIds);
+  
+      // 8) Hydrate budgets for users
+      await hydrateUserBudgets(userIds);
     } catch (err) {
       console.error(err);
       toast.error("Error fetching data. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [scheduleId, hydrateFeedbackStatus, hydrateTrfSentStatus]);
-
+  }, [scheduleId, hydrateFeedbackStatus, hydrateTrfSentStatus, hydrateUserBudgets]);
+  
   useEffect(() => {
     fetchBookingsAndUsers();
   }, [fetchBookingsAndUsers]);
@@ -354,6 +390,7 @@ const TrfBookingRequestsPage = ({
           "Test System",
           "Purchased",
           "Attend",
+          "Budget",
         ],
       ],
       body: users.map((user: any, index: number) => {
@@ -370,6 +407,7 @@ const TrfBookingRequestsPage = ({
           related?.testSystem || "N/A",
           user?.totalMock ?? "N/A",
           userAttendance[uid] ?? "N/A",
+          userBudgets[uid] !== undefined ? `$${userBudgets[uid]}` : "N/A",
         ];
       }),
       theme: "grid",
@@ -386,6 +424,7 @@ const TrfBookingRequestsPage = ({
         7: { cellWidth: 25 },
         8: { cellWidth: 22 },
         9: { cellWidth: 15 },
+        10: { cellWidth: 20 }, // New column for budget
       },
       margin: { top: 35 },
       tableWidth: "auto",
@@ -433,8 +472,7 @@ const TrfBookingRequestsPage = ({
   const filteredUsers = filterUsers(
     users,
     bookings,
-    filter,
-    testTypeFilter,
+    filter, testTypeFilter,
     testSystemFilter,
     attendanceFilter
   );
@@ -682,6 +720,7 @@ const TrfBookingRequestsPage = ({
                   const isAbsent = attendance[uid] === "absent";
                   const allSaved = isFeedbackComplete(user);
                   const emailDone = !!trfEmailSentByUser[uid];
+                  const budget = userBudgets[uid] || 0;
 
                   return (
                     <tr key={uid} className="border-b">
@@ -739,50 +778,57 @@ const TrfBookingRequestsPage = ({
 
                       <td className="px-4 py-2">
                         {canShowTrfFor(bookings[0]?.name) ? (
-                          <button
-                            onClick={() => {
-                              const qs = new URLSearchParams({
-                                userId: uid,
-                                scheduleId,
-                                teacherL: user.teacherL || "",
-                                teacherW: user.teacherW || "",
-                                teacherR: user.teacherR || "",
-                                teacherS: user.teacherS || "",
-                                l: String(!!user?.feedbackStatus?.listening),
-                                r: String(!!user?.feedbackStatus?.reading),
-                                w: String(!!user?.feedbackStatus?.writing),
-                                s: String(!!user?.feedbackStatus?.speaking),
-                                course: canonicalizeCourse(bookings[0]?.name),
-                              });
-                              router.push(`${getTrfRoute(bookings[0]?.name)}?${qs.toString()}`);
-                            }}
-                            disabled={isAbsent}
-                            className={`inline-flex items-center gap-2 px-4 py-1 rounded-md font-medium shadow-sm text-sm transition
-                              ${
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                const qs = new URLSearchParams({
+                                  userId: uid,
+                                  scheduleId,
+                                  teacherL: user.teacherL || "",
+                                  teacherW: user.teacherW || "",
+                                  teacherR: user.teacherR || "",
+                                  teacherS: user.teacherS || "",
+                                  l: String(!!user?.feedbackStatus?.listening),
+                                  r: String(!!user?.feedbackStatus?.reading),
+                                  w: String(!!user?.feedbackStatus?.writing),
+                                  s: String(!!user?.feedbackStatus?.speaking),
+                                  course: canonicalizeCourse(bookings[0]?.name),
+                                });
+                                router.push(`${getTrfRoute(bookings[0]?.name)}?${qs.toString()}`);
+                              }}
+                              disabled={isAbsent}
+                              className={`inline-flex items-center gap-2 px-4 py-1 rounded-md font-medium shadow-sm text-sm transition
+                                ${
+                                  isAbsent
+                                    ? "bg-red-500 text-white cursor-not-allowed"
+                                    : allSaved
+                                    ? "bg-green-600 text-white hover:bg-green-700"
+                                    : "bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f]"
+                                }`}
+                              title={
                                 isAbsent
-                                  ? "bg-red-500 text-white cursor-not-allowed"
+                                  ? "User absent"
                                   : allSaved
-                                  ? "bg-green-600 text-white hover:bg-green-700"
-                                  : "bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f]"
-                              }`}
-                            title={
-                              isAbsent
-                                ? "User absent"
-                                : allSaved
-                                ? "All segments saved — view TRF"
-                                : "View TRF (some segments may be pending)"
-                            }
-                          >
-                            {allSaved ? "View TRF ✓" : "View TRF"}
-                            {emailDone && (
-                              <span
-                                title="TRF email sent"
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#00000f] bg-[#face39] text-[#00000f] text-[10px] font-bold shadow-sm"
-                              >
-                                ✔ Done
+                                  ? "All segments saved — view TRF"
+                                  : "View TRF (some segments may be pending)"
+                              }
+                            >
+                              {allSaved ? "View TRF ✓" : "View TRF"}
+                              {emailDone && (
+                                <span
+                                  title="TRF email sent"
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[#00000f] bg-[#face39] text-[#00000f] text-[10px] font-bold shadow-sm"
+                                >
+                                  ✔ Done
+                                </span>
+                              )}
+                            </button>
+                            {budget > 0 && (
+                              <span className="text-sm font-semibold text-gray-700">
+                                Budget: ${budget}
                               </span>
                             )}
-                          </button>
+                          </div>
                         ) : (
                           <span className="text-gray-400 italic">N/A</span>
                         )}

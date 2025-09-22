@@ -17,6 +17,7 @@ const DashboardPage = () => {
 
   const [totalUsers, setTotalUsers] = useState(0);
 
+
   useEffect(() => {
     (async () => {
       const { data } = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users");

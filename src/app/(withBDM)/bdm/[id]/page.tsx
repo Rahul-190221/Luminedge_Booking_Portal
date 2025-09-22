@@ -66,8 +66,10 @@ async function fetchUsersByIds(userIds: string[], pageSize = 500) {
   return Array.from(found.values());
 }
 
+
+
 const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
-  const scheduleId = toId(params?.id);
+  const scheduleId = params.id;
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -80,96 +82,172 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
   const [userAttendance, setUserAttendance] = useState<Record<string, number | null>>({});
   const [attendanceCounts, setAttendanceCounts] = useState({ present: 0, absent: 0 });
 
-  const fetchBookingsAndUsers = useCallback(async () => {
-    if (!scheduleId) return;
 
-    try {
-      setLoading(true);
-
-      // 1) Fetch bookings (you had no pagination here — that’s fine)
-      const { data: bookingsData } = await axios.get(`${API_BASE}/api/v1/admin/bookings`, {
-        params: { page: 1, limit: 2000 },
-      });
-
-      // 2) Filter by this schedule
-      const filtered: Booking[] = (bookingsData?.bookings || []).filter(
-        (b: Booking) => toId(b.scheduleId) === scheduleId
-      );
-
-      // 3) Unique user ids
-      const userIds: string[] = Array.from(
-        new Set(
-          filtered.flatMap((b) => (Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)]))
-        )
-      );
-
-      // 4) Fetch only users we need (page through until all are found)
-      const matchedUsers = userIds.length ? await fetchUsersByIds(userIds) : [];
-
-      // 5) Seed attendance map & counts
-      const initialAttendance: Record<string, string> = {};
-      for (const bk of filtered) {
-        const ids = Array.isArray(bk.userId) ? bk.userId.map(toId) : [toId(bk.userId)];
-        for (const uid of ids) initialAttendance[uid] = bk.attendance || "N/A";
-      }
-      const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
-      const absentCount = Object.values(initialAttendance).filter((s) => s === "absent").length;
-
-      setBookings(filtered);
-      setUsers(matchedUsers);
-      setAttendance(initialAttendance);
-      setAttendanceCounts({ present: presentCount, absent: absentCount });
-
-      // 6) Bulk attendance summary (your existing endpoint)
-      if (userIds.length) {
-        try {
-          const { data: attRes } = await axios.post(
-            `${API_BASE}/api/v1/user/attendance/bulk`,
-            { userIds },
-            { headers: { "Content-Type": "application/json" } }
-          );
-          const attMap: Record<string, number | null> = {};
-          for (const id of userIds) attMap[id] = attRes.attendance?.[id] ?? null;
-          setUserAttendance(attMap);
-        } catch (err: any) {
-          console.error("Error fetching bulk attendance:", err);
-          toast.error(
-            axios.isAxiosError(err) && err.response?.data?.message
-              ? `Attendance API error: ${err.response.data.message}`
-              : "Attendance lookup failed."
-          );
-        }
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Error fetching data. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [scheduleId]);
-
-  useEffect(() => {
-    fetchBookingsAndUsers();
-  }, [fetchBookingsAndUsers]);
+ 
+  // -------- helpers --------
+  const idsOf = (v: string | string[]) => (Array.isArray(v) ? v.map(String) : [String(v)]);
 
   const formatCustomDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = date.toLocaleString("en-US", { month: "long" });
-    const year = date.getFullYear();
+    const d = new Date(dateString);
+    if (isNaN(+d)) return "N/A";
+    const day = d.getDate().toString().padStart(2, "0");
+    const month = d.toLocaleString("en-US", { month: "long" });
+    const year = d.getFullYear();
     return `${day} ${month}, ${year}`;
   };
 
   const formatCustomTime = (start: string, end: string) => {
-    const fmt = (time: string) =>
-      new Date(`1970-01-01T${time}`).toLocaleTimeString("en-US", {
+    const fmt = (time: string) => {
+      if (!time || !/^\d{2}:\d{2}/.test(time)) return "N/A";
+      return new Date(`1970-01-01T${time}`).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
       });
+    };
     return `${fmt(start)} - ${fmt(end)}`;
   };
 
+  // Map userId -> their (first) booking row for quick joins
+  const bookingByUser = useMemo(() => {
+    const m = new Map<string, Booking>();
+    for (const b of bookings) idsOf(b.userId).forEach((uid) => m.set(String(uid), b));
+    return m;
+  }, [bookings]);
+
+  // -------- paginated fetchers --------
+  const fetchAllBookings = async (): Promise<Booking[]> => {
+    const all: Booking[] = [];
+    let page = 1;
+    while (true) {
+      const { data } = await axios.get(`${API_BASE}/api/v1/admin/bookings`, {
+        params: { page, limit: PAGE_SIZE },
+      });
+      const batch: Booking[] = data?.bookings ?? [];
+      all.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+      page += 1;
+    }
+    return all;
+  };
+
+  const toId = (v: any) => String(v ?? "").trim();
+
+/** Fetch only the users we need by paging /admin/users until all are found */
+async function fetchUsersByIds(userIds: string[], pageSize = 500) {
+  const need = new Set(userIds.map(toId));
+  const found = new Map<string, any>();
+
+  // page 1 first (get total)
+  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    params: { page: 1, limit: pageSize },
+  });
+  const total: number = Number(first.data?.total ?? (first.data?.users?.length || 0));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const ingest = (arr: any[] = []) => {
+    for (const u of arr) {
+      const id = toId(u._id);
+      if (need.has(id) && !found.has(id)) found.set(id, u);
+    }
+  };
+
+  ingest(first.data?.users);
+
+  if (found.size < need.size) {
+    for (let page = 2; page <= totalPages; page++) {
+      const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+        params: { page, limit: pageSize },
+      });
+      ingest(data?.users);
+      if (found.size === need.size) break;
+    }
+  }
+  return Array.from(found.values());
+}
+
+const fetchBookingsAndUsers = useCallback(async () => {
+  if (!scheduleId) return;
+
+  try {
+    setLoading(true);
+
+    // ✅ Ask backend for only this schedule’s bookings (no client-side full crawl)
+    const { data } = await axios.get(
+      `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
+      { params: { page: 1, limit: PAGE_SIZE } }
+    );
+    const scheduleBookings: Booking[] = data?.bookings || [];
+
+    if (!scheduleBookings.length) {
+      setBookings([]);
+      setUsers([]);
+      setAttendanceCounts({ present: 0, absent: 0 });
+      setUserAttendance({});
+      return;
+    }
+
+    // Unique user ids for this schedule
+    const userIds = Array.from(
+      new Set(
+        scheduleBookings.flatMap((b) =>
+          Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)]
+        )
+      )
+    );
+
+    // ✅ Fetch only the users we need (paged until all found)
+    const matchedUsers = userIds.length ? await fetchUsersByIds(userIds, 500) : [];
+
+    // Attendance map + totals (case-insensitive)
+    const attMap: Record<string, string> = {};
+    for (const b of scheduleBookings) {
+      const att = String(b.attendance || "N/A").trim().toLowerCase();
+      const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
+      ids.forEach((uid) => (attMap[toId(uid)] = att));
+    }
+    const present = Object.values(attMap).filter((s) => s === "present").length;
+    const absent  = Object.values(attMap).filter((s) => s === "absent").length;
+
+    setBookings(scheduleBookings);
+    setUsers(matchedUsers);
+    setAttendanceCounts({ present, absent });
+
+    // Optional bulk totals per user
+    if (userIds.length) {
+      try {
+        const { data: att } = await axios.post(
+          `${API_BASE}/api/v1/user/attendance/bulk`,
+          { userIds },
+          { headers: { "Content-Type": "application/json" } }
+        );
+        const totals: Record<string, number | null> = {};
+        for (const id of userIds) totals[id] = att?.attendance?.[id] ?? null;
+        setUserAttendance(totals);
+      } catch (err: any) {
+        console.error("bulk attendance error:", err);
+        toast.error(
+          axios.isAxiosError(err) && err.response
+            ? `Attendance API error: ${err.response.data?.message || "Check the API"}`
+            : "An unexpected error occurred."
+        );
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    toast.error("Error fetching data. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+}, [scheduleId]);
+
+
+  const PAGE_SIZE = 500;
+  useEffect(() => {
+    fetchBookingsAndUsers();
+  }, [fetchBookingsAndUsers]);
+
+ 
   // Precompute userId -> booking (avoids repeated .find in render)
   const bookingByUserId = useMemo(() => {
     const map = new Map<string, Booking>();
