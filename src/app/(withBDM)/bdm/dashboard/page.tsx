@@ -1,4 +1,3 @@
-
 "use client";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -7,6 +6,27 @@ import TableBDM from "@/components/tableBDM";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { motion } from "framer-motion";
+
+const TZ = "Asia/Dhaka"; // set your local timezone
+
+// YYYY-MM-DD in local TZ
+const localDayKey = (d: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+
+// YYYY-MM in local TZ
+const localMonthKey = (d: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+  })
+    .format(d)
+    .slice(0, 7);
 
 const DashboardPage = () => {
   const [users, setUsers] = useState([]); // All users from the API
@@ -24,31 +44,35 @@ const DashboardPage = () => {
       setUsers(filtered);
       setTotalUsers(data.total || 0);   // 👈 true DB total
       calculateDailyRequests(filtered, new Date());
-      calculateMonthlyRequests(filtered);
+      calculateMonthlyRequests(filtered, new Date());
       calculateOverallSchedule(filtered);
     })();
   }, []);
   
 
   const calculateDailyRequests = (users: any[], date: Date | null) => {
-    const formattedDate = date?.toISOString().split("T")[0];
+    const target = date ? localDayKey(date) : "";
     const count = users.filter((user: any) => {
-      return new Date(user.createdAt).toISOString().split("T")[0] === formattedDate;
+      const d = user?.createdAt ? new Date(user.createdAt) : null;
+      return d && localDayKey(d) === target;
     }).length;
     setDailyRequests(count);
   };
 
-  const calculateMonthlyRequests = (users: any[]) => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
+  const calculateMonthlyRequests = (users: any[], date: Date | null = new Date()) => {
+    const targetMonth = localMonthKey(date!);
     const count = users.filter((user: any) => {
-      return new Date(user.createdAt).toISOString().slice(0, 7) === currentMonth;
+      const d = user?.createdAt ? new Date(user.createdAt) : null;
+      return d && localMonthKey(d) === targetMonth;
     }).length;
     setMonthlyRequests(count);
   };
 
   const calculateOverallSchedule = (users: any[]) => {
     const schedule = users.reduce((acc: any, user: any) => {
-      const month = new Date(user.createdAt).toISOString().slice(0, 7);
+      const d = user?.createdAt ? new Date(user.createdAt) : null;
+      if (!d) return acc;
+      const month = localMonthKey(d);
       acc[month] = (acc[month] || 0) + 1;
       return acc;
     }, {});
@@ -62,14 +86,10 @@ const DashboardPage = () => {
 
   const handleMonthChange = (date: Date | null) => {
     setSelectedDate(date);
-    const formattedMonth = date?.toISOString().slice(0, 7);
-    const count = users.filter((user: any) => {
-      return new Date(user.createdAt).toISOString().slice(0, 7) === formattedMonth;
-    }).length;
-    setMonthlyRequests(count);
+    calculateMonthlyRequests(users, date);
   };
 
-  const currentMonthName = new Date().toLocaleString("default", { month: "long" });
+  const currentMonthName = (selectedDate || new Date()).toLocaleString("default", { month: "long" });
 
   return (
     <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">

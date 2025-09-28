@@ -27,12 +27,6 @@ async function fetchAllPaged<T = any>(
 ): Promise<T[]> {
   let page = 1;
   const all: T[] = [];
-
-  // backend returns 404 if there is nothing on page 1 — treat as empty
-  // otherwise, keep paging until a short page arrives
-  // (also protects you from the default limit=500)
-  // NOTE: params are merged; page/limit always override
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       const { data } = await axios.get(`${API_BASE}${endpoint}`, {
@@ -43,12 +37,31 @@ async function fetchAllPaged<T = any>(
       if (arr.length < pageSize) break;
       page += 1;
     } catch (err: any) {
-      if (page === 1) return []; // treat as empty
-      break; // stop paging on any later error
+      if (page === 1) return [];
+      break;
     }
   }
   return all;
 }
+
+// ---- BD-local date helpers (avoid UTC shifts) ----
+const BD_TZ = "Asia/Dhaka";
+const fmtBD = (d: Date | string | number) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: BD_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(d)); // -> "YYYY-MM-DD"
+
+const bdYMD = (d: Date | string | number | null | undefined) =>
+  d ? fmtBD(d) : "";
+
+const bdYM = (d: Date | string | number | null | undefined) =>
+  bdYMD(d).slice(0, 7);
+
+const bdYear = (d: Date | string | number | null | undefined) =>
+  parseInt(bdYMD(d).slice(0, 4) || "0", 10);
 
 const AnalysisPage = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -96,16 +109,10 @@ const AnalysisPage = () => {
     return [];
   };
 
-  const getBDDate = (iso: string) => {
-    const utc = new Date(iso);
-    return new Date(utc.toLocaleString("en-US", { timeZone: "Asia/Dhaka" }));
-  };
-
   // ---------- USERS ----------
   useEffect(() => {
     (async () => {
       try {
-        // get ALL users (not just first page)
         const allUsers = await fetchAllPaged<any>("/admin/users");
         const filtered = allUsers.filter((u) => u.role === "user");
 
@@ -133,37 +140,31 @@ const AnalysisPage = () => {
   };
 
   const calculateMockTypeStats = (arr: any[]) => {
-    const today =
-      todayStatDate
-        ? getBDDate(todayStatDate.toISOString()).toISOString().split("T")[0]
-        : getBDDate(new Date().toISOString()).toISOString().split("T")[0];
-
-    const currentMonth = getBDDate(new Date().toISOString()).toISOString().slice(0, 7);
-    const currentYear = getBDDate(new Date().toISOString()).getFullYear();
+    const today = bdYMD(todayStatDate || new Date());
+    const currentMonth = bdYM(new Date());
+    const currentYear = bdYear(new Date());
 
     const daily: Record<string, number> = {};
     const monthly: Record<string, number> = {};
     const yearly: Record<string, number> = {};
     const range: Record<string, number> = {};
 
+    const startStr = bdYMD(startDate || undefined);
+    const endStr = bdYMD(endDate || undefined);
+
     arr.forEach((user) => {
-      const createdAt = getBDDate(user.createdAt);
-      const dateStr = createdAt.toISOString().split("T")[0];
-      const monthStr = createdAt.toISOString().slice(0, 7);
-      const yearStr = createdAt.getFullYear();
+      const dateStr = bdYMD(user.createdAt);
+      const monthStr = dateStr.slice(0, 7);
+      const yearNum = parseInt(dateStr.slice(0, 4), 10);
       const mockTypes = extractMockTypes(user);
 
       mockTypes.forEach((type) => {
         if (dateStr === today) daily[type] = (daily[type] || 0) + 1;
         if (monthStr === currentMonth) monthly[type] = (monthly[type] || 0) + 1;
-        if (yearStr === currentYear) yearly[type] = (yearly[type] || 0) + 1;
+        if (yearNum === currentYear) yearly[type] = (yearly[type] || 0) + 1;
 
-        if (startDate && endDate) {
-          const start = getBDDate(startDate.toISOString());
-          const end = getBDDate(endDate.toISOString());
-          if (createdAt >= start && createdAt <= end) {
-            range[type] = (range[type] || 0) + 1;
-          }
+        if (startStr && endStr && dateStr >= startStr && dateStr <= endStr) {
+          range[type] = (range[type] || 0) + 1;
         }
       });
     });
@@ -180,24 +181,20 @@ const AnalysisPage = () => {
   };
 
   const calculateDailyRequests = (arr: any[], date: Date | null) => {
-    const d = date?.toISOString().split("T")[0];
-    const count = arr.filter(
-      (u: any) => new Date(u.createdAt).toISOString().split("T")[0] === d
-    ).length;
+    const d = bdYMD(date || undefined);
+    const count = arr.filter((u: any) => bdYMD(u.createdAt) === d).length;
     setDailyRequests(count);
   };
 
   const calculateMonthlyRequests = (arr: any[]) => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const count = arr.filter(
-      (u: any) => new Date(u.createdAt).toISOString().slice(0, 7) === currentMonth
-    ).length;
+    const currentMonth = bdYM(new Date());
+    const count = arr.filter((u: any) => bdYM(u.createdAt) === currentMonth).length;
     setMonthlyRequests(count);
   };
 
   const calculateOverallSchedule = (arr: any[]) => {
     const schedule = arr.reduce((acc: any, u: any) => {
-      const month = new Date(u.createdAt).toISOString().slice(0, 7);
+      const month = bdYM(u.createdAt);
       acc[month] = (acc[month] || 0) + 1;
       return acc;
     }, {});
@@ -213,23 +210,20 @@ const AnalysisPage = () => {
 
   const handleMonthChange = (date: Date | null) => {
     setSelectedDate(date);
-    const month = date?.toISOString().slice(0, 7);
-    const count = users.filter(
-      (u: any) => new Date(u.createdAt).toISOString().slice(0, 7) === month
-    ).length;
+    const month = bdYM(date || undefined);
+    const count = users.filter((u: any) => bdYM(u.createdAt) === month).length;
     setMonthlyRequests(count);
   };
 
   const handleRangeSearch = () => {
     if (startDate && endDate) {
+      const startStr = bdYMD(startDate);
+      const endStr = bdYMD(endDate);
       const range: Record<string, number> = {};
       users.forEach((user: any) => {
-        const createdAt = getBDDate(user.createdAt);
+        const dateStr = bdYMD(user.createdAt);
         const types = extractMockTypes(user);
-        if (
-          createdAt >= getBDDate(startDate.toISOString()) &&
-          createdAt <= getBDDate(endDate.toISOString())
-        ) {
+        if (dateStr >= startStr && dateStr <= endStr) {
           types.forEach((t) => (range[t] = (range[t] || 0) + 1));
         }
       });
@@ -243,10 +237,10 @@ const AnalysisPage = () => {
 
   const handleTodaySearch = () => {
     if (todayStatDate) {
-      const today = getBDDate(todayStatDate.toISOString()).toISOString().split("T")[0];
+      const today = bdYMD(todayStatDate);
       const daily: Record<string, number> = {};
       users.forEach((user: any) => {
-        const dateStr = getBDDate(user.createdAt).toISOString().split("T")[0];
+        const dateStr = bdYMD(user.createdAt);
         if (dateStr === today) {
           extractMockTypes(user).forEach(
             (t) => (daily[t] = (daily[t] || 0) + 1)
@@ -262,16 +256,19 @@ const AnalysisPage = () => {
   };
 
   const currentMonthName = useMemo(
-    () => new Date().toLocaleString("default", { month: "long" }),
+    () =>
+      new Intl.DateTimeFormat(undefined, { month: "long", timeZone: BD_TZ }).format(
+        new Date()
+      ),
     []
   );
 
   const handleSearchMonth = () => {
     if (searchMonthDate) {
-      const sel = searchMonthDate.toISOString().slice(0, 7);
+      const sel = bdYM(searchMonthDate);
       const monthly: Record<string, number> = {};
       users.forEach((u: any) => {
-        const userMonth = new Date(u.createdAt).toISOString().slice(0, 7);
+        const userMonth = bdYM(u.createdAt);
         if (userMonth === sel) {
           extractMockTypes(u).forEach(
             (t) => (monthly[t] = (monthly[t] || 0) + 1)
@@ -288,10 +285,10 @@ const AnalysisPage = () => {
 
   const handleSearchYear = () => {
     if (searchYearDate) {
-      const sel = searchYearDate.getFullYear();
+      const sel = bdYear(searchYearDate);
       const yearly: Record<string, number> = {};
       users.forEach((u: any) => {
-        const year = new Date(u.createdAt).getFullYear();
+        const year = bdYear(u.createdAt);
         if (year === sel) {
           extractMockTypes(u).forEach(
             (t) => (yearly[t] = (yearly[t] || 0) + 1)
@@ -328,8 +325,7 @@ const AnalysisPage = () => {
   const monthlyMockCounts = useMemo(() => {
     const monthlyMap: Record<string, Record<string, number>> = {};
     users.forEach((u: any) => {
-      const createdAt = getBDDate(u.createdAt);
-      const monthKey = createdAt.toISOString().slice(0, 7);
+      const monthKey = bdYM(u.createdAt);
       const types = extractMockTypes(u);
       monthlyMap[monthKey] ||= {};
       types.forEach((t) => (monthlyMap[monthKey][t] = (monthlyMap[monthKey][t] || 0) + 1));
@@ -374,15 +370,14 @@ const AnalysisPage = () => {
         { name: "Not Updated", value: notUpdated },
       ]);
 
-      // ---- Grouped monthly stacked bars
+      // ---- Grouped monthly stacked bars (BD-local month)
       const monthlyGrouped: Record<string, Record<string, number>> = {};
       bookings.forEach((b) => {
         const course = b.name || "Unknown";
         const status = (b.attendance || "Not Updated").toLowerCase();
-        const date = new Date(b.bookingDate);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        const monthKey = bdYM(b.bookingDate) || "Unknown";
 
-        const key = `${course} ${status.charAt(0).toUpperCase() + status.slice(1)}`; // "IELTS Present"
+        const key = `${course} ${status.charAt(0).toUpperCase() + status.slice(1)}`;
         monthlyGrouped[monthKey] ||= {};
         monthlyGrouped[monthKey][key] = (monthlyGrouped[monthKey][key] || 0) + 1;
       });
@@ -407,26 +402,25 @@ const AnalysisPage = () => {
   };
 
   useEffect(() => {
-    // single effect: fetch all bookings once, build both charts
     fetchAndBuildBookings();
   }, []);
 
   // ---------- defaults for monthly/yearly donuts ----------
   const runDefaultSearches = (usersData: any[]) => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
+    const currentMonth = bdYM(new Date());
     const monthly: Record<string, number> = {};
     usersData.forEach((u: any) => {
-      const m = new Date(u.createdAt).toISOString().slice(0, 7);
+      const m = bdYM(u.createdAt);
       if (m === currentMonth) {
         extractMockTypes(u).forEach((t) => (monthly[t] = (monthly[t] || 0) + 1));
       }
     });
     setSearchedMonthlyStats(allMockTypes.reduce((acc, t) => ({ ...acc, [t]: monthly[t] || 0 }), {}));
 
-    const currentYear = new Date().getFullYear();
+    const currentYear = bdYear(new Date());
     const yearly: Record<string, number> = {};
     usersData.forEach((u: any) => {
-      const y = new Date(u.createdAt).getFullYear();
+      const y = bdYear(u.createdAt);
       if (y === currentYear) {
         extractMockTypes(u).forEach((t) => (yearly[t] = (yearly[t] || 0) + 1));
       }
@@ -634,11 +628,8 @@ const AnalysisPage = () => {
       </div>
 
       {/* (cards kept commented as in your original) */}
-      {/*
-        ... your donut cards section ...
-      */}
+      {/* ... */}
     </div>
   );
 };
-
 export default AnalysisPage;

@@ -304,31 +304,40 @@ const FinalTRFPage = () => {
             task2_GRA: "",
           };
 
-     // Weighted Writing: (T1 + 2*T2) / 3, rounded to nearest 0.5
-const t1 = parseFloat(writingScores.task1_overall || "0");
-const t2 = parseFloat(writingScores.task2_overall || "0");
-const hasWriting = !!writingScores.task1_overall && !!writingScores.task2_overall;
+        // --- FIX: always snap writing marks to half-band ---
+        const normalizeHalf = (x: string) => {
+          const n = parseFloat(x);
+          return Number.isFinite(n) ? (Math.round(n * 2) / 2).toFixed(1) : "";
+        };
 
-const writingWeighted = hasWriting
-  ? Math.round(((t1 + 2 * t2) / 3) * 2) / 2
-  : NaN;
+        // Weighted Writing: (T1 + 2*T2) / 3, rounded to nearest 0.5
+        const t1 = parseFloat(writingScores.task1_overall || "0");
+        const t2 = parseFloat(writingScores.task2_overall || "0");
+        const hasWriting = !!writingScores.task1_overall && !!writingScores.task2_overall;
 
-// Overall: average of L, R, weighted Writing, S → rounded to nearest 0.5
-const L = parseFloat(status.listeningMarks || "0");
-const R = parseFloat(status.readingMarks || "0");
-const S = parseFloat(status.speakingMarks || "0");
+        const writingWeighted = hasWriting
+          ? Math.round(((t1 + 2 * t2) / 3) * 2) / 2
+          : NaN;
 
-const overallStr =
-  adminData.overallScore ??
-  (status.listeningMarks &&
-   status.readingMarks &&
-   hasWriting &&
-   status.speakingMarks
-    ? (Math.round(((L + R + writingWeighted + S) / 4) * 2) / 2).toFixed(1)
-    : "");
+        // Overall: average of L, R, weighted Writing, S → rounded to nearest 0.5
+        const L = parseFloat(status.listeningMarks || "0");
+        const R = parseFloat(status.readingMarks || "0");
+        const S = parseFloat(status.speakingMarks || "0");
 
-// keep writingMarks in formData in sync with the weighted result
-const writingAvg = hasWriting ? writingWeighted.toFixed(1) : (writingScores.task1_overall || writingScores.task2_overall || "");
+        const overallStr =
+          adminData.overallScore ??
+          (status.listeningMarks &&
+          status.readingMarks &&
+          hasWriting &&
+          status.speakingMarks
+            ? (Math.round(((L + R + writingWeighted + S) / 4) * 2) / 2).toFixed(1)
+            : "");
+
+        // keep writingMarks in formData in sync with the weighted result
+        const writingAvg = hasWriting
+          ? (Math.round(writingWeighted * 2) / 2).toFixed(1)
+          : normalizeHalf(writingScores.task1_overall) ||
+            normalizeHalf(writingScores.task2_overall);
 
         setFormData({
           firstName: status.firstName || "",
@@ -1158,7 +1167,7 @@ const writingAvg = hasWriting ? writingWeighted.toFixed(1) : (writingScores.task
                 ) : (
                   <textarea
                     rows={3}
-                    className="w-full bg-gray-50 text-red-600 text-sm p-1"
+                    className="W-full bg-gray-50 text-red-600 text-sm p-1"
                     name="readingFeedback"
                     value={formData.readingFeedback}
                     onChange={handleChange}
@@ -1514,5 +1523,4 @@ const writingAvg = hasWriting ? writingWeighted.toFixed(1) : (writingScores.task
     </div>
   );
 };
-
 export default FinalTRFPage;

@@ -92,7 +92,6 @@ export default function HomeBasedPage() {
     /\/$/,
     ""
   );
-
   // -------- fetch bookings with embedded users --------
   const fetchHomeBookingsAndUsers = useCallback(async () => {
     setLoading(true);
