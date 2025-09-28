@@ -304,32 +304,31 @@ const FinalTRFPage = () => {
             task2_GRA: "",
           };
 
-        const overallStr =
-          adminData.overallScore ??
-          ((status.listeningMarks &&
-            status.readingMarks &&
-            writingScores.task1_overall &&
-            writingScores.task2_overall &&
-            status.speakingMarks)
-            ? (
-                Math.round(
-                  ((parseFloat(status.listeningMarks || "0") +
-                    parseFloat(status.readingMarks || "0") +
-                    (parseFloat(writingScores.task1_overall || "0") +
-                      parseFloat(writingScores.task2_overall || "0")) / 2 +
-                    parseFloat(status.speakingMarks || "0")) /
-                    4) * 2
-                ) / 2
-              ).toFixed(1)
-            : "");
+     // Weighted Writing: (T1 + 2*T2) / 3, rounded to nearest 0.5
+const t1 = parseFloat(writingScores.task1_overall || "0");
+const t2 = parseFloat(writingScores.task2_overall || "0");
+const hasWriting = !!writingScores.task1_overall && !!writingScores.task2_overall;
 
-        const writingAvg =
-          writingScores.task1_overall && writingScores.task2_overall
-            ? (
-                (parseFloat(writingScores.task1_overall || "0") +
-                  parseFloat(writingScores.task2_overall || "0")) / 2
-              ).toFixed(1)
-            : writingScores.task1_overall || writingScores.task2_overall || "";
+const writingWeighted = hasWriting
+  ? Math.round(((t1 + 2 * t2) / 3) * 2) / 2
+  : NaN;
+
+// Overall: average of L, R, weighted Writing, S → rounded to nearest 0.5
+const L = parseFloat(status.listeningMarks || "0");
+const R = parseFloat(status.readingMarks || "0");
+const S = parseFloat(status.speakingMarks || "0");
+
+const overallStr =
+  adminData.overallScore ??
+  (status.listeningMarks &&
+   status.readingMarks &&
+   hasWriting &&
+   status.speakingMarks
+    ? (Math.round(((L + R + writingWeighted + S) / 4) * 2) / 2).toFixed(1)
+    : "");
+
+// keep writingMarks in formData in sync with the weighted result
+const writingAvg = hasWriting ? writingWeighted.toFixed(1) : (writingScores.task1_overall || writingScores.task2_overall || "");
 
         setFormData({
           firstName: status.firstName || "",
