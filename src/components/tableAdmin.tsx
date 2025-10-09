@@ -366,7 +366,7 @@ const TableAdmin = () => {
       <div className="bg-gray-100 p-4 h-22 mb-3 flex flex-col sm:flex-row gap-4 py-2">
         <div className="flex items-center w-full sm:w-auto">
           <label htmlFor="search" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
-            Search (Name):
+          Search <span className="font-normal">(Name/Email)</span>:
           </label>
           <input
             type="text"

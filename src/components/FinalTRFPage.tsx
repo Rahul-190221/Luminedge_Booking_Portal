@@ -171,6 +171,7 @@ const FinalTRFPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [bookingDateYMD, setBookingDateYMD] = useState<string>("");
 
   const [lockedSegments, setLockedSegments] = useState<Record<SegmentKey, boolean>>({
     reading: false,
@@ -257,156 +258,165 @@ const FinalTRFPage = () => {
     </div>
   );
 
-  // ---------- load data ----------
-  useEffect(() => {
-    if (!urlUserId || !urlScheduleId) {
-      toast.error("Missing userId or scheduleId in URL.");
-      return;
-    }
+// ---------- load data ----------
+useEffect(() => {
+  if (!urlUserId || !urlScheduleId) {
+    toast.error("Missing userId or scheduleId in URL.");
+    return;
+  }
 
-    const fetchUserAndStatus = async () => {
-      setLoading(true);
-      try {
-        const [feedbackRes, adminRes, bookingsRes, userRes] = await Promise.all([
-          axios.get(`${API_BASE}/api/v1/admin/feedback-status/${urlUserId}/${urlScheduleId}`),
-          axios.get(`${API_BASE}/api/v1/admin/get-admin-section/${urlUserId}/${urlScheduleId}`),
-          axios.get(`${API_BASE}/api/v1/user/bookings/${urlUserId}`),
-          axios.get(`${API_BASE}/api/v1/user/status/${urlUserId}`),
-        ]);
+  const fetchUserAndStatus = async () => {
+    setLoading(true);
+    try {
+      const [feedbackRes, adminRes, bookingsRes, userRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/v1/admin/feedback-status/${urlUserId}/${urlScheduleId}`),
+        axios.get(`${API_BASE}/api/v1/admin/get-admin-section/${urlUserId}/${urlScheduleId}`),
+        axios.get(`${API_BASE}/api/v1/user/bookings/${urlUserId}`),
+        axios.get(`${API_BASE}/api/v1/user/status/${urlUserId}`),
+      ]);
 
-        if (!feedbackRes.data || !feedbackRes.data.status) {
-          throw new Error(feedbackRes.data?.message || "Failed to fetch feedback/status.");
-        }
+      if (!feedbackRes.data || !feedbackRes.data.status) {
+        throw new Error(feedbackRes.data?.message || "Failed to fetch feedback/status.");
+      }
 
-        const status = feedbackRes.data.status || {};
-        const adminData = adminRes.data || {};
+      const status = feedbackRes.data.status || {};
+      const adminData = adminRes.data || {};
+      const userDoc = userRes.data?.user || {};
 
-        const bookings: any[] = bookingsRes.data?.bookings || [];
-        const matchedBooking = bookings.find(
-          (b) => String(b.scheduleId) === String(urlScheduleId)
-        );
-        const testDateFromBooking = matchedBooking?.bookingDate;
+      // Find booking by scheduleId (Test Center) or by _id (Home fallback)
+      const bookings: any[] = bookingsRes.data?.bookings || [];
+      const scheduleKey = String(urlScheduleId || "");
+      const matchedBooking =
+        bookings.find(b => String(b.scheduleId || "") === scheduleKey) ||
+        bookings.find(b => String(b._id || "") === scheduleKey);
 
-        const userDoc = userRes.data?.user || {};
-        const dobRaw = userDoc.dateOfBirth ?? userDoc.dateofbirth ?? status.dateOfBirth;
+      // Prefer bookingDate → status.testDate → admin.testDate
+      const testDateYMD =
+        toYMDLoose(matchedBooking?.bookingDate) ||
+        toYMDLoose(status.testDate) ||
+        toYMDLoose(adminData.testDate) ||
+        "";
 
-        const writingScores: WritingScores =
-          status.writingScores || {
-            task1_overall: "",
-            task1_TA: "",
-            task1_CC: "",
-            task1_LR: "",
-            task1_GRA: "",
-            task2_overall: "",
-            task2_TR: "",
-            task2_CC: "",
-            task2_LR: "",
-            task2_GRA: "",
-          };
+      // keep if you display it elsewhere
+      setBookingDateYMD(testDateYMD);
 
-        // --- FIX: always snap writing marks to half-band ---
-        const normalizeHalf = (x: string) => {
-          const n = parseFloat(x);
-          return Number.isFinite(n) ? (Math.round(n * 2) / 2).toFixed(1) : "";
+      // DOB
+      const dobRaw = userDoc.dateOfBirth ?? userDoc.dateofbirth ?? status.dateOfBirth;
+
+      // Writing scores + derived marks
+      const writingScores: WritingScores =
+        status.writingScores || {
+          task1_overall: "",
+          task1_TA: "",
+          task1_CC: "",
+          task1_LR: "",
+          task1_GRA: "",
+          task2_overall: "",
+          task2_TR: "",
+          task2_CC: "",
+          task2_LR: "",
+          task2_GRA: "",
         };
 
-        // Weighted Writing: (T1 + 2*T2) / 3, rounded to nearest 0.5
-        const t1 = parseFloat(writingScores.task1_overall || "0");
-        const t2 = parseFloat(writingScores.task2_overall || "0");
-        const hasWriting = !!writingScores.task1_overall && !!writingScores.task2_overall;
+      const normalizeHalf = (x: string) => {
+        const n = parseFloat(x);
+        return Number.isFinite(n) ? (Math.round(n * 2) / 2).toFixed(1) : "";
+      };
 
-        const writingWeighted = hasWriting
-          ? Math.round(((t1 + 2 * t2) / 3) * 2) / 2
-          : NaN;
+      const t1 = parseFloat(writingScores.task1_overall || "0");
+      const t2 = parseFloat(writingScores.task2_overall || "0");
+      const hasWriting = !!writingScores.task1_overall && !!writingScores.task2_overall;
 
-        // Overall: average of L, R, weighted Writing, S → rounded to nearest 0.5
-        const L = parseFloat(status.listeningMarks || "0");
-        const R = parseFloat(status.readingMarks || "0");
-        const S = parseFloat(status.speakingMarks || "0");
+      const writingWeighted = hasWriting
+        ? Math.round(((t1 + 2 * t2) / 3) * 2) / 2
+        : NaN;
 
-        const overallStr =
-          adminData.overallScore ??
-          (status.listeningMarks &&
+      const L = parseFloat(status.listeningMarks || "0");
+      const R = parseFloat(status.readingMarks || "0");
+      const S = parseFloat(status.speakingMarks || "0");
+
+      const overallStr =
+        adminData.overallScore ??
+        (status.listeningMarks &&
           status.readingMarks &&
           hasWriting &&
           status.speakingMarks
-            ? (Math.round(((L + R + writingWeighted + S) / 4) * 2) / 2).toFixed(1)
-            : "");
+          ? (Math.round(((L + R + writingWeighted + S) / 4) * 2) / 2).toFixed(1)
+          : "");
 
-        // keep writingMarks in formData in sync with the weighted result
-        const writingAvg = hasWriting
-          ? (Math.round(writingWeighted * 2) / 2).toFixed(1)
-          : normalizeHalf(writingScores.task1_overall) ||
-            normalizeHalf(writingScores.task2_overall);
+      const writingAvg = hasWriting
+        ? (Math.round(writingWeighted * 2) / 2).toFixed(1)
+        : normalizeHalf(writingScores.task1_overall) ||
+          normalizeHalf(writingScores.task2_overall);
 
-        setFormData({
-          firstName: status.firstName || "",
-          lastName: status.lastName || "",
-          dateOfBirth: toYMD(dobRaw),
-          sex: status.sex || "",
-          centreName: status.centreName || adminData.centreName || "",
-          testDate: toYMD(testDateFromBooking || status.testDate || adminData.testDate),
-          schemeCode: status.schemeCode || adminData.schemeCode || "",
-          resultDate: toYMD(adminData.resultDate),
-          overall: overallStr || "",
-          proficiency: adminData.proficiencyLevel || "",
-          comments: adminData.adminComments || "",
-          adminSignature: adminData.adminSignature || "",
-          readingFeedback: status.readingFeedback || "",
-          listeningFeedback: status.listeningFeedback || "",
-          readingMarks: status.readingMarks || "",
-          writingMarks: writingAvg,
-          listeningMarks: status.listeningMarks || "",
-          speakingMarks: status.speakingMarks || "",
-          speakingFC: status.speakingFC || "",
-          speakingLR: status.speakingLR || "",
-          speakingGRA: status.speakingGRA || "",
-          speakingPRO: status.speakingPRO || "",
-          writingTask1TA: writingScores.task1_TA || "",
-          writingTask1CC: writingScores.task1_CC || "",
-          writingTask1LR: writingScores.task1_LR || "",
-          writingTask1GRA: writingScores.task1_GRA || "",
-          writingTask1Feedback: status.writingTask1?.join("\n") || "",
-          writingTask2TR: writingScores.task2_TR || "",
-          writingTask2CC: writingScores.task2_CC || "",
-          writingTask2LR: writingScores.task2_LR || "",
-          writingTask2GRA: writingScores.task2_GRA || "",
-          writingTask2Feedback: status.writingTask2?.join("\n") || "",
-          writingSign: status.writingSign || "",
-          speakingSign: status.speakingSign || "",
-          feedback: {
-            writingScores,
-            writingTask1: status.writingTask1 || [],
-            writingTask2: status.writingTask2 || [],
-            task1Notes: status.task1Notes || ["", "", "", "", ""],
-            task2Notes: status.task2Notes || ["", "", "", "", ""],
-            speakingScores: {
-              FC: status.speakingFC || "",
-              LR: status.speakingLR || "",
-              GRA: status.speakingGRA || "",
-              PRO: status.speakingPRO || "",
-              Total: status.speakingMarks || "",
-            },
-            speakingNotes: status.speakingFeedback || "",
+      setFormData({
+        firstName: status.firstName || "",
+        lastName: status.lastName || "",
+        dateOfBirth: toYMD(dobRaw),
+        sex: status.sex || "",
+        centreName: status.centreName || adminData.centreName || "",
+        testDate: testDateYMD, // <<< booking date now shows here
+        schemeCode: status.schemeCode || adminData.schemeCode || "",
+        resultDate: toYMD(adminData.resultDate),
+        overall: overallStr || "",
+        proficiency: adminData.proficiencyLevel || "",
+        comments: adminData.adminComments || "",
+        adminSignature: adminData.adminSignature || "",
+        readingFeedback: status.readingFeedback || "",
+        listeningFeedback: status.listeningFeedback || "",
+        readingMarks: status.readingMarks || "",
+        writingMarks: writingAvg,
+        listeningMarks: status.listeningMarks || "",
+        speakingMarks: status.speakingMarks || "",
+        speakingFC: status.speakingFC || "",
+        speakingLR: status.speakingLR || "",
+        speakingGRA: status.speakingGRA || "",
+        speakingPRO: status.speakingPRO || "",
+        writingTask1TA: writingScores.task1_TA || "",
+        writingTask1CC: writingScores.task1_CC || "",
+        writingTask1LR: writingScores.task1_LR || "",
+        writingTask1GRA: writingScores.task1_GRA || "",
+        writingTask1Feedback: status.writingTask1?.join("\n") || "",
+        writingTask2TR: writingScores.task2_TR || "",
+        writingTask2CC: writingScores.task2_CC || "",
+        writingTask2LR: writingScores.task2_LR || "",
+        writingTask2GRA: writingScores.task2_GRA || "",
+        writingTask2Feedback: status.writingTask2?.join("\n") || "",
+        writingSign: status.writingSign || "",
+        speakingSign: status.speakingSign || "",
+        feedback: {
+          writingScores,
+          writingTask1: status.writingTask1 || [],
+          writingTask2: status.writingTask2 || [],
+          task1Notes: status.task1Notes || ["", "", "", "", ""],
+          task2Notes: status.task2Notes || ["", "", "", "", ""],
+          speakingScores: {
+            FC: status.speakingFC || "",
+            LR: status.speakingLR || "",
+            GRA: status.speakingGRA || "",
+            PRO: status.speakingPRO || "",
+            Total: status.speakingMarks || "",
           },
-        });
+          speakingNotes: status.speakingFeedback || "",
+        },
+      });
 
-        setLockedSegments({
-          listening: !!status.listening,
-          reading: !!status.reading,
-          writing: !!status.writing,
-          speaking: !!status.speaking,
-        });
-      } catch (err: any) {
-        console.error(err);
-        toast.error(err?.message || "Failed to load TRF data.");
-      } finally {
-        setLoading(false);
-      }
-    };
+      setLockedSegments({
+        listening: !!status.listening,
+        reading: !!status.reading,
+        writing: !!status.writing,
+        speaking: !!status.speaking,
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Failed to load TRF data.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchUserAndStatus();
-  }, [urlUserId, urlScheduleId]);
+  fetchUserAndStatus();
+}, [urlUserId, urlScheduleId]);
 
   useEffect(() => {
     if (!isPrint) return;
@@ -934,10 +944,11 @@ const FinalTRFPage = () => {
           </label>
 
           <div className="col-start-4 ml-4">
-            <div className="border border-black px-4 py-[2px] text-red-600 text-base h-[28px] w-[75%] flex items-center tabular-nums whitespace-nowrap pdf-field">
-              {renderISO(formData.testDate)}
-            </div>
-          </div>
+  <div className="border border-black px-4 py-[2px] text-red-600 text-base h-[28px] w-[75%] flex items-center tabular-nums whitespace-nowrap pdf-field">
+    {renderISO(bookingDateYMD || formData.testDate)}
+  </div>
+</div>
+
         </div>
 
         <hr className="border-t border-[#00000f] my-4" />

@@ -584,7 +584,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
                 toast((t) => (
                   <div className="text-left text-[#00000f]">
-                    <p className="mb-1 text-sm font-medium font-bold">
+                    <p className="mb-1 text-sm font-medium ">
                       Are you sure you want to send reminder emails to all users?
                     </p>
                     <p className="mb-2 text-sm leading-snug text-[#00000f] font-bold">

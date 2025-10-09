@@ -445,7 +445,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   };
 
   return (
-    <div className="p-1 sm:p-2 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl rounded-2xl border border-[#00000f]/10">
+    <div className="p-1 sm:p-2 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl  rounded-2xl border border-[#00000f]/10">
       <div className="w-full max-w-5xl mx-auto px-0">
         {/* Title Section */}
         <div className="w-full flex justify-center mt-[8px] lg:mt-6 text-[#00000f]">

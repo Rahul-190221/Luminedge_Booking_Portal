@@ -7,6 +7,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { motion } from "framer-motion";
 
+const API = "https://luminedge-server.vercel.app";
+
 // Booking Type Definition
 type Booking = {
   _id: string;
@@ -29,22 +31,21 @@ type Booking = {
   totalMock?: number;
   scheduleId?: string;
 };
+
 type Schedule = {
   _id: string;
   name: string;
   testType: string;
   testSystem: string;
   startDate: string;
-  endDate?: string; // Optional property
+  endDate?: string;
   location?: string;
 };
 
 export default function HomeBasedPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<Record<string, any>>({});
-  const [userAttendance, setUserAttendance] = useState<{
-    [key: string]: { present: number; absent: number };
-  }>({});
+  const [attendCount, setAttendCount] = useState<Record<string, number | null>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attendance, setAttendance] = useState<Record<string, string>>({});
@@ -63,35 +64,50 @@ export default function HomeBasedPage() {
 
     try {
       const response = await axios.get(
-        "https://luminedge-server.vercel.app/api/v1/admin/bookings/home-with-users"
+        `${API}/api/v1/admin/bookings/home-with-users`
       );
-      const homeBookings = response.data.bookings;
+      const homeBookings: Booking[] = response.data.bookings;
 
       if (!homeBookings || homeBookings.length === 0) {
         setBookings([]);
         setUsers({});
-        setUserAttendance({});
+        setAttendCount({});
         return;
       }
 
+      // build user map from payload
       const usersMap: Record<string, any> = {};
-      const attendanceSummary: Record<string, { present: number; absent: number }> = {};
-
       homeBookings.forEach((booking: any) => {
-        const userId = booking.userId;
+        const userId = String(booking.userId);
         const user = booking.user;
         usersMap[userId] = user;
-
-        if (!attendanceSummary[userId]) {
-          attendanceSummary[userId] = { present: 0, absent: 0 };
-        }
-        if (booking.attendance === "present") attendanceSummary[userId].present += 1;
-        else if (booking.attendance === "absent") attendanceSummary[userId].absent += 1;
       });
 
       setBookings(homeBookings);
       setUsers(usersMap);
-      setUserAttendance(attendanceSummary);
+
+      // --- NEW: bulk attend value (same style as your other page) ---
+      const uniqueUserIds = Array.from(new Set(homeBookings.map(b => String(b.userId))));
+      if (uniqueUserIds.length) {
+        try {
+          const { data: attRes } = await axios.post(
+            `${API}/api/v1/user/attendance/bulk`,
+            { userIds: uniqueUserIds },
+            { headers: { "Content-Type": "application/json" } }
+          );
+          const map: Record<string, number | null> = {};
+          for (const uid of uniqueUserIds) {
+            map[uid] = attRes?.attendance?.[uid] ?? null; // whatever your backend defines
+          }
+          setAttendCount(map);
+        } catch (e) {
+          console.error("Attendance bulk fetch failed:", e);
+          toast.error("Failed to load Attend values");
+          setAttendCount({});
+        }
+      } else {
+        setAttendCount({});
+      }
     } catch (error: any) {
       console.error("❌ Fetch failed:", error);
       toast.error(error.message || "Failed to fetch bookings");
@@ -119,7 +135,7 @@ export default function HomeBasedPage() {
       const status = attendanceValue === "present" ? "Present" : "Absent";
 
       const response = await axios.put(
-        `https://luminedge-server.vercel.app/api/v1/user/bookings/home`,
+        `${API}/api/v1/user/bookings/home`,
         {
           userId,
           attendance: attendanceValue,
@@ -136,6 +152,19 @@ export default function HomeBasedPage() {
         ...prev,
         [userId]: attendanceValue,
       }));
+
+      // Optionally refresh Attend count for this user (keep UI in-sync)
+      try {
+        const { data: attRes } = await axios.post(
+          `${API}/api/v1/user/attendance/bulk`,
+          { userIds: [userId] },
+          { headers: { "Content-Type": "application/json" } }
+        );
+        setAttendCount((prev) => ({
+          ...prev,
+          [userId]: attRes?.attendance?.[userId] ?? prev[userId] ?? null,
+        }));
+      } catch {}
 
       toast.success("Home attendance updated successfully!");
     } catch (error: any) {
@@ -154,25 +183,21 @@ export default function HomeBasedPage() {
       const bookingDate = new Date(booking.bookingDate);
       bookingDate.setHours(0, 0, 0, 0);
 
-      // Course type filter (you used "name" to hold course name)
-      if (testTypeFilter && booking.name !== testTypeFilter) return false;
+      // FIX: filter by testType (not name)
+      if (testTypeFilter && booking.testType !== testTypeFilter) return false;
 
-      // Date category
       if (dateFilter === "past" && bookingDate >= today) return false;
       if (dateFilter === "upcoming" && bookingDate < today) return false;
 
-      // Exact date filter
       if (startDateFilter) {
         const fd = new Date(startDateFilter);
         fd.setHours(0, 0, 0, 0);
         if (bookingDate.getTime() !== fd.getTime()) return false;
       }
 
-      // Name
       if (nameFilter && !user.name?.toLowerCase().includes(nameFilter.toLowerCase()))
         return false;
 
-      // Course name free text
       if (
         courseNameFilter &&
         !booking.name?.toLowerCase().includes(courseNameFilter.toLowerCase())
@@ -182,13 +207,12 @@ export default function HomeBasedPage() {
       return true;
     });
 
-    // Sort: past -> DESC (recent first), upcoming -> ASC (soonest first), all -> DESC (to match your need for past-like)
     return list.sort((a, b) => {
       const da = new Date(a.bookingDate).getTime();
       const db = new Date(b.bookingDate).getTime();
       if (dateFilter === "past") return db - da; // DESC
       if (dateFilter === "upcoming") return da - db; // ASC
-      return db - da; // "all" => DESC so the newest is first
+      return db - da; // "all" => DESC
     });
   }, [
     bookings,
@@ -200,12 +224,11 @@ export default function HomeBasedPage() {
     courseNameFilter,
   ]);
 
-  // Reset to page 1 when filters/page-size change
   useEffect(() => {
     setCurrentPage(1);
   }, [testTypeFilter, dateFilter, startDateFilter, nameFilter, courseNameFilter, schedulesPerPage]);
 
-  // ---------- PAGINATION (20 per page by default) ----------
+  // ---------- PAGINATION ----------
   const totalItems = filteredList.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / schedulesPerPage));
   const indexOfLastSchedule = currentPage * schedulesPerPage;
@@ -214,7 +237,7 @@ export default function HomeBasedPage() {
 
   // ---------- PDF uses same filtered order ----------
   const confirmDownload = () => {
-    const flattenedBookings = filteredList; // already flat & sorted
+    const flattenedBookings = filteredList;
 
     if (!flattenedBookings.length) {
       toast.error("No booking data to download.");
@@ -270,10 +293,8 @@ export default function HomeBasedPage() {
           user?.contactNo || "N/A",
           user?.transactionId || "N/A",
           user?.passportNumber || "N/A",
-          user?.totalMock || "N/A",
-          userAttendance[userId]
-            ? userAttendance[userId].present + userAttendance[userId].absent
-            : "N/A",
+          user?.totalMock ?? "N/A",
+          attendCount[userId] ?? "N/A", // <-- backend Attend value
         ];
       }),
       startY: 25,
@@ -420,7 +441,7 @@ export default function HomeBasedPage() {
                 return (
                   <tr key={booking._id} className="text-center border-b text-sm">
                     <td className="p-4">
-                      {indexOfFirstSchedule + index + 1 /* continuous row numbers */}
+                      {indexOfFirstSchedule + index + 1}
                     </td>
                     <td className="p-4">{user.name || "N/A"}</td>
                     <td className="p-4">{booking.name}</td>
@@ -443,9 +464,9 @@ export default function HomeBasedPage() {
                     <td className="p-4">{user.contactNo || "N/A"}</td>
                     <td className="p-4">{user.transactionId || "N/A"}</td>
                     <td className="p-4">{user.passportNumber || "N/A"}</td>
-                    <td className="p-4">{user.totalMock || 0}</td>
+                    <td className="p-4">{user.totalMock ?? 0}</td>
                     <td className="p-4">
-                      {userAttendance[booking.userId]?.present ?? 0}
+                      {attendCount[booking.userId] ?? "N/A"}
                     </td>
                     <td className="p-4">
                       <select
