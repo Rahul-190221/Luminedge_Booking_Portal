@@ -41,6 +41,62 @@ const Table = ({ userId }: { userId: string }) => {
     fetchBookings();
   }, [userId]);
 
+  // ---------- DATE-ONLY SORT HELPERS (minimal change) ----------
+  const monthIndex: Record<string, number> = {
+    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+    may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8,
+    september: 8, oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+  };
+
+  const parseDayMs = (s: string): number => {
+    if (!s) return Number.POSITIVE_INFINITY;
+
+    // 1) YYYY-MM-DD or YYYY/MM/DD
+    const m1 = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (m1) {
+      const y = +m1[1], m = +m1[2], d = +m1[3];
+      const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
+      return isNaN(dt.getTime()) ? Number.POSITIVE_INFINITY : dt.getTime();
+    }
+
+    // 2) "DD Month, YYYY" or "DD Month YYYY"
+    const m2 = s.match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})$/);
+    if (m2) {
+      const d = +m2[1];
+      const mon = monthIndex[m2[2].toLowerCase()];
+      const y = +m2[3];
+      if (Number.isInteger(mon)) {
+        const dt = new Date(y, mon as number, d, 0, 0, 0, 0);
+        return isNaN(dt.getTime()) ? Number.POSITIVE_INFINITY : dt.getTime();
+      }
+    }
+
+    // 3) Fallback
+    const dt = new Date(s);
+    if (!isNaN(dt.getTime())) {
+      dt.setHours(0, 0, 0, 0);
+      return dt.getTime();
+    }
+    return Number.POSITIVE_INFINITY;
+  };
+
+  const minutesWithinDay = (b: Booking) => {
+    const t = b.location === "Home" ? b.testTime : b.startTime;
+    const m = t?.match(/^(\d{1,2}):(\d{2})$/);
+    return m ? (+m[1]) * 60 + (+m[2]) : 0;
+  };
+
+  const sortedBookings = React.useMemo(() => {
+    return [...bookings].sort((a, b) => {
+      const d = parseDayMs(a.bookingDate) - parseDayMs(b.bookingDate); // Exam Date ASC
+      if (d !== 0) return d;
+      const t = minutesWithinDay(a) - minutesWithinDay(b);             // tie by time
+      if (t !== 0) return t;
+      return a._id.localeCompare(b._id);                                // stable
+    });
+  }, [bookings]);
+  // -------------------------------------------------------------
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const day = date.getDate();
@@ -87,15 +143,8 @@ const Table = ({ userId }: { userId: string }) => {
   return (
     <>
       <Head>
-        <link
-          rel="preload"
-          href="/_next/static/css/app/layout.css"
-          as="style"
-        />
-        <link
-          rel="stylesheet"
-          href="/_next/static/css/app/layout.css"
-        />
+        <link rel="preload" href="/_next/static/css/app/layout.css" as="style" />
+        <link rel="stylesheet" href="/_next/static/css/app/layout.css" />
       </Head>
 
       <table className="table">
@@ -109,12 +158,11 @@ const Table = ({ userId }: { userId: string }) => {
             <th>Start Time</th>
             <th>Location</th>
             <th>Status</th>
-            
             <th>Action</th>
           </tr>
         </thead>
         <tbody className="text-[#00000f] bg-white">
-          {bookings.map((booking, index) => (
+          {sortedBookings.map((booking, index) => (
             <tr key={booking._id}>
               <td>{index + 1}</td>
               <td>{booking.name}</td>
@@ -142,13 +190,19 @@ const Table = ({ userId }: { userId: string }) => {
                     !(
                       booking.status === "pending" &&
                       (booking.location === "Home" ? booking.testTime : booking.startTime) &&
-                      isPast24Hours(booking.bookingDate, booking.location === "Home" ? booking.testTime : booking.startTime)
+                      isPast24Hours(
+                        booking.bookingDate,
+                        booking.location === "Home" ? booking.testTime : booking.startTime
+                      )
                     )
                   }
                   className={`px-4 py-2 font-bold rounded ${
                     booking.status === "pending" &&
                     (booking.location === "Home" ? booking.testTime : booking.startTime) &&
-                    isPast24Hours(booking.bookingDate, booking.location === "Home" ? booking.testTime : booking.startTime)
+                    isPast24Hours(
+                      booking.bookingDate,
+                      booking.location === "Home" ? booking.testTime : booking.startTime
+                    )
                       ? "text-black hover:bg-white-700"
                       : "text-gray-500 cursor-not-allowed"
                   }`}
