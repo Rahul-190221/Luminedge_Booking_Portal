@@ -125,7 +125,7 @@ const LoginPage = () => {
           <h1 className=" font-bold text-5xl py-2 lg:py-6 text-[#00000f]">
             Welcome to <br /> Luminedge.
           </h1>
-          <div className="text-lg mt-4 lg:mt-3 text-xl lg:text-2xl text-[#00000f]">
+          <div className="mt-4 lg:mt-3 text-xl lg:text-2xl text-[#00000f]">
           The most premium exam venue awarded by <br /> 
           <span className="block h-2"></span> {/* Add this line to create space */}
           <Image

@@ -1,87 +1,154 @@
+/* === Theme tokens === */
+:root {
+  --brand: #00000f;
+  --accent: #FACE39;
+  --muted: #f3f4f6;  /* slate-100 */
+  --muted-2: #e5e7eb; /* slate-200 */
+  --text: #00000f;
+  --white: #ffffff;
+}
+
+/* Base */
 .react-calendar {
   width: 100% !important;
-  height: 100% !important;
   max-width: 100%;
   border: none;
   font-family: inherit;
+  background: var(--white);
+  box-sizing: border-box;
 }
 
-/* Remove red styling on weekends */
-.react-calendar__month-view__weekdays__weekday abbr,
-.react-calendar__tile {
-  color: #00000f !important;
+/* Header / navigation */
+.react-calendar__navigation {
+  margin-bottom: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .5rem;
+}
+.react-calendar__navigation__label {
+  grid-column: span 3 / span 3;
+  text-align: center;
+  font-weight: 700;
+  color: var(--brand);
+}
+.react-calendar__navigation button {
+  background: var(--muted);
+  border: 1px solid var(--muted-2);
+  border-radius: .5rem;
+  padding: .4rem .5rem;
+  font-weight: 600;
+  color: var(--brand);
+  transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.react-calendar__navigation button:hover:not(:disabled) {
+  background: var(--brand);
+  color: var(--white);
+  border-color: var(--brand);
+}
+.react-calendar__navigation button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
 }
 
-/* Already-defined grid layout for consistent spacing */
+/* Weekday row (remove underline from <abbr>) */
+.react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+  color: var(--brand) !important;
+  font-weight: 700;
+}
+
+/* Month grid: clean gaps and perfect squares */
 .react-calendar__month-view__days {
   display: grid !important;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
 }
 
+/* Tiles – base */
 .react-calendar__tile {
   aspect-ratio: 1 / 1;
   text-align: center;
   border-radius: 8px;
   padding: 2px;
-  font-weight: bold;
-  color: #00000f !important; /* override any red/gray */
-  transition: all 0.3s ease;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--white);
+  border: 1px solid transparent;
+  transition: all .25s ease;
 }
 
-/* Available date */
-.available-date {
-  border: 1px solid #FACE39 !important;
-  color: #00000f !important;
- 
+/* Focus ring for keyboard users */
+.react-calendar__tile:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
-/* Hover */
-.available-date:hover {
-  background-color: #00000f !important;
-  color: #ffffff !important;
-}
-
-/* Hover effect on selected date */
-.selected-date:hover {
-  background-color: #00000f !important;
-  color: #FACE39 !important;
-  cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
+/* Neighbor month days (always muted) */
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: #9ca3af !important;
 }
 
 /* Today */
 .react-calendar__tile--now {
-  background-color: #00000f !important;
-  color: #ffffff !important;
+  background: var(--brand) !important;
+  color: var(--white) !important;
 }
 
-/* Today + selected */
-.react-calendar__tile--now.selected-date {
-  background-color: #FACE39 !important;
-  color: #00000f !important;
+/* Selected day (your custom class from tileClassName) */
+.selected-date {
+  background: var(--accent) !important;
+  color: var(--brand) !important;
+  border-color: var(--accent) !important;
 }
 
-/* Dates from other months (grayed out) */
-.react-calendar__month-view__days__day--neighboringMonth {
-  color: #9ca3af !important; /* Tailwind slate-400 */
+/* Available day (your custom class from tileClassName) */
+.available-date {
+  border: 1px solid var(--accent) !important;
+  color: var(--brand) !important;
 }
 
-/* Override the active/selected date style */
+/* Hover states */
+.available-date:hover {
+  background: var(--brand) !important;
+  color: var(--white) !important;
+}
+.selected-date:hover {
+  background: var(--brand) !important;
+  color: var(--accent) !important;
+  cursor: pointer;
+}
+
+/* Active (clicked) – keep same as selected */
 .react-calendar__tile--active {
-  background-color: #FACE39 !important;
-  color: #00000f !important;
-  border: 1px solid #FACE39 !important;
+  background: var(--accent) !important;
+  color: var(--brand) !important;
+  border-color: var(--accent) !important;
 }
-
-/* Ensure hover effect still applies */
 .react-calendar__tile--active:hover {
-  background-color: #00000f !important;
-  color: #ffffff !important;
+  background: var(--brand) !important;
+  color: var(--white) !important;
 }
 
-/* Combine with selected-date if needed */
-.selected-date.react-calendar__tile--active {
-  background-color: #FACE39 !important;
-  color: #00000f !important;
+/* Specificity fixes so “selected” wins over “today” */
+.react-calendar__tile--now.selected-date,
+.react-calendar__tile--now.react-calendar__tile--active {
+  background: var(--accent) !important;
+  color: var(--brand) !important;
+}
+
+/* Disabled days (tileDisabled or past days) */
+.react-calendar__tile:disabled,
+.react-calendar__tile--disabled {
+  background: var(--muted);
+  color: #9ca3af !important;
+  border: 1px dashed var(--muted-2);
+  cursor: not-allowed;
+  opacity: .85;
+}
+
+/* Optional: make disabled available-date look disabled too */
+.available-date:disabled {
+  background: var(--muted) !important;
+  color: #9ca3af !important;
+  border-color: var(--muted-2) !important;
 }
