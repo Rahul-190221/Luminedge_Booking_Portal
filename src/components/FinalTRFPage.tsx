@@ -258,165 +258,160 @@ const FinalTRFPage = () => {
     </div>
   );
 
-// ---------- load data ----------
-useEffect(() => {
-  if (!urlUserId || !urlScheduleId) {
-    toast.error("Missing userId or scheduleId in URL.");
-    return;
-  }
+  // ---------- load data ----------
+  useEffect(() => {
+    if (!urlUserId || !urlScheduleId) {
+      toast.error("Missing userId or scheduleId in URL.");
+      return;
+    }
 
-  const fetchUserAndStatus = async () => {
-    setLoading(true);
-    try {
-      const [feedbackRes, adminRes, bookingsRes, userRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/v1/admin/feedback-status/${urlUserId}/${urlScheduleId}`),
-        axios.get(`${API_BASE}/api/v1/admin/get-admin-section/${urlUserId}/${urlScheduleId}`),
-        axios.get(`${API_BASE}/api/v1/user/bookings/${urlUserId}`),
-        axios.get(`${API_BASE}/api/v1/user/status/${urlUserId}`),
-      ]);
+    const fetchUserAndStatus = async () => {
+      setLoading(true);
+      try {
+        const [feedbackRes, adminRes, bookingsRes, userRes] = await Promise.all([
+          axios.get(`${API_BASE}/api/v1/admin/feedback-status/${urlUserId}/${urlScheduleId}`),
+          axios.get(`${API_BASE}/api/v1/admin/get-admin-section/${urlUserId}/${urlScheduleId}`),
+          axios.get(`${API_BASE}/api/v1/user/bookings/${urlUserId}`),
+          axios.get(`${API_BASE}/api/v1/user/status/${urlUserId}`),
+        ]);
 
-      if (!feedbackRes.data || !feedbackRes.data.status) {
-        throw new Error(feedbackRes.data?.message || "Failed to fetch feedback/status.");
-      }
+        if (!feedbackRes.data || !feedbackRes.data.status) {
+          throw new Error(feedbackRes.data?.message || "Failed to fetch feedback/status.");
+        }
 
-      const status = feedbackRes.data.status || {};
-      const adminData = adminRes.data || {};
-      const userDoc = userRes.data?.user || {};
+        const status = feedbackRes.data.status || {};
+        const adminData = adminRes.data || {};
+        const userDoc = userRes.data?.user || {};
 
-      // Find booking by scheduleId (Test Center) or by _id (Home fallback)
-      const bookings: any[] = bookingsRes.data?.bookings || [];
-      const scheduleKey = String(urlScheduleId || "");
-      const matchedBooking =
-        bookings.find(b => String(b.scheduleId || "") === scheduleKey) ||
-        bookings.find(b => String(b._id || "") === scheduleKey);
+        // Find booking by scheduleId (Test Center) or by _id (Home fallback)
+        const bookings: any[] = bookingsRes.data?.bookings || [];
+        const scheduleKey = String(urlScheduleId || "");
+        const matchedBooking =
+          bookings.find((b) => String(b.scheduleId || "") === scheduleKey) ||
+          bookings.find((b) => String(b._id || "") === scheduleKey);
 
-      // Prefer bookingDate → status.testDate → admin.testDate
-      const testDateYMD =
-        toYMDLoose(matchedBooking?.bookingDate) ||
-        toYMDLoose(status.testDate) ||
-        toYMDLoose(adminData.testDate) ||
-        "";
+        // Prefer bookingDate → status.testDate → admin.testDate
+        const testDateYMD =
+          toYMDLoose(matchedBooking?.bookingDate) ||
+          toYMDLoose(status.testDate) ||
+          toYMDLoose(adminData.testDate) ||
+          "";
 
-      // keep if you display it elsewhere
-      setBookingDateYMD(testDateYMD);
+        // keep if you display it elsewhere
+        setBookingDateYMD(testDateYMD);
 
-      // DOB
-      const dobRaw = userDoc.dateOfBirth ?? userDoc.dateofbirth ?? status.dateOfBirth;
+        // DOB
+        const dobRaw = userDoc.dateOfBirth ?? userDoc.dateofbirth ?? status.dateOfBirth;
 
-      // Writing scores + derived marks
-      const writingScores: WritingScores =
-        status.writingScores || {
-          task1_overall: "",
-          task1_TA: "",
-          task1_CC: "",
-          task1_LR: "",
-          task1_GRA: "",
-          task2_overall: "",
-          task2_TR: "",
-          task2_CC: "",
-          task2_LR: "",
-          task2_GRA: "",
+        // Writing scores + derived marks
+        const writingScores: WritingScores =
+          status.writingScores || {
+            task1_overall: "",
+            task1_TA: "",
+            task1_CC: "",
+            task1_LR: "",
+            task1_GRA: "",
+            task2_overall: "",
+            task2_TR: "",
+            task2_CC: "",
+            task2_LR: "",
+            task2_GRA: "",
+          };
+
+        const normalizeHalf = (x: string) => {
+          const n = parseFloat(x);
+          return Number.isFinite(n) ? (Math.round(n * 2) / 2).toFixed(1) : "";
         };
 
-      const normalizeHalf = (x: string) => {
-        const n = parseFloat(x);
-        return Number.isFinite(n) ? (Math.round(n * 2) / 2).toFixed(1) : "";
-      };
+        const t1 = parseFloat(writingScores.task1_overall || "0");
+        const t2 = parseFloat(writingScores.task2_overall || "0");
+        const hasWriting = !!writingScores.task1_overall && !!writingScores.task2_overall;
 
-      const t1 = parseFloat(writingScores.task1_overall || "0");
-      const t2 = parseFloat(writingScores.task2_overall || "0");
-      const hasWriting = !!writingScores.task1_overall && !!writingScores.task2_overall;
+        const writingWeighted = hasWriting ? Math.round(((t1 + 2 * t2) / 3) * 2) / 2 : NaN;
 
-      const writingWeighted = hasWriting
-        ? Math.round(((t1 + 2 * t2) / 3) * 2) / 2
-        : NaN;
+        const L = parseFloat(status.listeningMarks || "0");
+        const R = parseFloat(status.readingMarks || "0");
+        const S = parseFloat(status.speakingMarks || "0");
 
-      const L = parseFloat(status.listeningMarks || "0");
-      const R = parseFloat(status.readingMarks || "0");
-      const S = parseFloat(status.speakingMarks || "0");
+        const overallStr =
+          adminData.overallScore ??
+          (status.listeningMarks && status.readingMarks && hasWriting && status.speakingMarks
+            ? (Math.round(((L + R + writingWeighted + S) / 4) * 2) / 2).toFixed(1)
+            : "");
 
-      const overallStr =
-        adminData.overallScore ??
-        (status.listeningMarks &&
-          status.readingMarks &&
-          hasWriting &&
-          status.speakingMarks
-          ? (Math.round(((L + R + writingWeighted + S) / 4) * 2) / 2).toFixed(1)
-          : "");
+        const writingAvg = hasWriting
+          ? (Math.round(writingWeighted * 2) / 2).toFixed(1)
+          : normalizeHalf(writingScores.task1_overall) ||
+            normalizeHalf(writingScores.task2_overall);
 
-      const writingAvg = hasWriting
-        ? (Math.round(writingWeighted * 2) / 2).toFixed(1)
-        : normalizeHalf(writingScores.task1_overall) ||
-          normalizeHalf(writingScores.task2_overall);
-
-      setFormData({
-        firstName: status.firstName || "",
-        lastName: status.lastName || "",
-        dateOfBirth: toYMD(dobRaw),
-        sex: status.sex || "",
-        centreName: status.centreName || adminData.centreName || "",
-        testDate: testDateYMD, // <<< booking date now shows here
-        schemeCode: status.schemeCode || adminData.schemeCode || "",
-        resultDate: toYMD(adminData.resultDate),
-        overall: overallStr || "",
-        proficiency: adminData.proficiencyLevel || "",
-        comments: adminData.adminComments || "",
-        adminSignature: adminData.adminSignature || "",
-        readingFeedback: status.readingFeedback || "",
-        listeningFeedback: status.listeningFeedback || "",
-        readingMarks: status.readingMarks || "",
-        writingMarks: writingAvg,
-        listeningMarks: status.listeningMarks || "",
-        speakingMarks: status.speakingMarks || "",
-        speakingFC: status.speakingFC || "",
-        speakingLR: status.speakingLR || "",
-        speakingGRA: status.speakingGRA || "",
-        speakingPRO: status.speakingPRO || "",
-        writingTask1TA: writingScores.task1_TA || "",
-        writingTask1CC: writingScores.task1_CC || "",
-        writingTask1LR: writingScores.task1_LR || "",
-        writingTask1GRA: writingScores.task1_GRA || "",
-        writingTask1Feedback: status.writingTask1?.join("\n") || "",
-        writingTask2TR: writingScores.task2_TR || "",
-        writingTask2CC: writingScores.task2_CC || "",
-        writingTask2LR: writingScores.task2_LR || "",
-        writingTask2GRA: writingScores.task2_GRA || "",
-        writingTask2Feedback: status.writingTask2?.join("\n") || "",
-        writingSign: status.writingSign || "",
-        speakingSign: status.speakingSign || "",
-        feedback: {
-          writingScores,
-          writingTask1: status.writingTask1 || [],
-          writingTask2: status.writingTask2 || [],
-          task1Notes: status.task1Notes || ["", "", "", "", ""],
-          task2Notes: status.task2Notes || ["", "", "", "", ""],
-          speakingScores: {
-            FC: status.speakingFC || "",
-            LR: status.speakingLR || "",
-            GRA: status.speakingGRA || "",
-            PRO: status.speakingPRO || "",
-            Total: status.speakingMarks || "",
+        setFormData({
+          firstName: status.firstName || "",
+          lastName: status.lastName || "",
+          dateOfBirth: toYMD(dobRaw),
+          sex: status.sex || "",
+          centreName: status.centreName || adminData.centreName || "",
+          testDate: testDateYMD, // <<< booking date now shows here
+          schemeCode: status.schemeCode || adminData.schemeCode || "",
+          resultDate: toYMD(adminData.resultDate),
+          overall: overallStr || "",
+          proficiency: adminData.proficiencyLevel || "",
+          comments: adminData.adminComments || "",
+          adminSignature: adminData.adminSignature || "",
+          readingFeedback: status.readingFeedback || "",
+          listeningFeedback: status.listeningFeedback || "",
+          readingMarks: status.readingMarks || "",
+          writingMarks: writingAvg,
+          listeningMarks: status.listeningMarks || "",
+          speakingMarks: status.speakingMarks || "",
+          speakingFC: status.speakingFC || "",
+          speakingLR: status.speakingLR || "",
+          speakingGRA: status.speakingGRA || "",
+          speakingPRO: status.speakingPRO || "",
+          writingTask1TA: writingScores.task1_TA || "",
+          writingTask1CC: writingScores.task1_CC || "",
+          writingTask1LR: writingScores.task1_LR || "",
+          writingTask1GRA: writingScores.task1_GRA || "",
+          writingTask1Feedback: status.writingTask1?.join("\n") || "",
+          writingTask2TR: writingScores.task2_TR || "",
+          writingTask2CC: writingScores.task2_CC || "",
+          writingTask2LR: writingScores.task2_LR || "",
+          writingTask2GRA: writingScores.task2_GRA || "",
+          writingTask2Feedback: status.writingTask2?.join("\n") || "",
+          writingSign: status.writingSign || "",
+          speakingSign: status.speakingSign || "",
+          feedback: {
+            writingScores,
+            writingTask1: status.writingTask1 || [],
+            writingTask2: status.writingTask2 || [],
+            task1Notes: status.task1Notes || ["", "", "", "", ""],
+            task2Notes: status.task2Notes || ["", "", "", "", ""],
+            speakingScores: {
+              FC: status.speakingFC || "",
+              LR: status.speakingLR || "",
+              GRA: status.speakingGRA || "",
+              PRO: status.speakingPRO || "",
+              Total: status.speakingMarks || "",
+            },
+            speakingNotes: status.speakingFeedback || "",
           },
-          speakingNotes: status.speakingFeedback || "",
-        },
-      });
+        });
 
-      setLockedSegments({
-        listening: !!status.listening,
-        reading: !!status.reading,
-        writing: !!status.writing,
-        speaking: !!status.speaking,
-      });
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message || "Failed to load TRF data.");
-    } finally {
-      setLoading(false);
-    }
-  };
+        setLockedSegments({
+          listening: !!status.listening,
+          reading: !!status.reading,
+          writing: !!status.writing,
+          speaking: !!status.speaking,
+        });
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err?.message || "Failed to load TRF data.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchUserAndStatus();
-}, [urlUserId, urlScheduleId]);
+    fetchUserAndStatus();
+  }, [urlUserId, urlScheduleId]);
 
   useEffect(() => {
     if (!isPrint) return;
@@ -677,25 +672,25 @@ useEffect(() => {
             const cs = (doc.defaultView || window).getComputedStyle(el);
 
             // Copy full box model + text metrics to preserve layout exactly
-            box.style.boxSizing     = cs.boxSizing;
-            box.style.display       = cs.display;
-            box.style.width         = cs.width;
-            box.style.height        = cs.height;
-            box.style.minHeight     = cs.height;
-            box.style.paddingTop    = cs.paddingTop;
-            box.style.paddingRight  = cs.paddingRight;
+            box.style.boxSizing = cs.boxSizing;
+            box.style.display = cs.display;
+            box.style.width = cs.width;
+            box.style.height = cs.height;
+            box.style.minHeight = cs.height;
+            box.style.paddingTop = cs.paddingTop;
+            box.style.paddingRight = cs.paddingRight;
             box.style.paddingBottom = cs.paddingBottom;
-            box.style.paddingLeft   = cs.paddingLeft;
-            box.style.marginTop     = cs.marginTop;
-            box.style.marginRight   = cs.marginRight;
-            box.style.marginBottom  = cs.marginBottom;
-            box.style.marginLeft    = cs.marginLeft;
-            box.style.borderTop     = cs.borderTop;
-            box.style.borderRight   = cs.borderRight;
-            box.style.borderBottom  = cs.borderBottom;
-            box.style.borderLeft    = cs.borderLeft;
-            box.style.textAlign     = cs.textAlign;
-            box.style.lineHeight    = cs.lineHeight;
+            box.style.paddingLeft = cs.paddingLeft;
+            box.style.marginTop = cs.marginTop;
+            box.style.marginRight = cs.marginRight;
+            box.style.marginBottom = cs.marginBottom;
+            box.style.marginLeft = cs.marginLeft;
+            box.style.borderTop = cs.borderTop;
+            box.style.borderRight = cs.borderRight;
+            box.style.borderBottom = cs.borderBottom;
+            box.style.borderLeft = cs.borderLeft;
+            box.style.textAlign = cs.textAlign;
+            box.style.lineHeight = cs.lineHeight;
 
             if (el.classList.contains("text-center")) {
               box.style.textAlign = "center";
@@ -846,9 +841,7 @@ useEffect(() => {
       const { success, message, to, userEmail, email, user } = (res?.data || {}) as any;
       if (success) {
         const who = to || userEmail || email || user?.email || extractEmail(message);
-        toast.success(
-          who ? `Email sent successfully to ${who}.` : "Email sent successfully."
-        );
+        toast.success(who ? `Email sent successfully to ${who}.` : "Email sent successfully.");
       } else {
         throw new Error(message || "Failed to send email.");
       }
@@ -861,26 +854,32 @@ useEffect(() => {
     }
   };
 
+  // ====== NEW: overall visibility control (only if L, R, W, S > 0) ======
+  const getNum = (s: string) => {
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const lNum = getNum(formData.listeningMarks);
+  const rNum = getNum(formData.readingMarks);
+  const wNum = getNum(formData.writingMarks);
+  const sNum = getNum(formData.speakingMarks);
+  const hasAllFourBands = lNum > 0 && rNum > 0 && wNum > 0 && sNum > 0;
+
+  const computedOverall = (() => {
+    if (formData.overall) return getNum(formData.overall);
+    const avg = (lNum + rNum + wNum + sNum) / 4;
+    return Math.round(avg * 2) / 2;
+  })();
+
+  const overallDisplay = hasAllFourBands ? (computedOverall || "—") : "—";
+
+  // Chart data uses 0 for Overall unless all four are present and > 0
   const chartData = {
     labels: ["Listening", "Reading", "Writing", "Speaking", "Overall"],
     datasets: [
       {
         label: "IELTS Scores",
-        data: [
-          parseFloat(formData.listeningMarks) || 0,
-          parseFloat(formData.readingMarks) || 0,
-          parseFloat(formData.writingMarks) || 0,
-          parseFloat(formData.speakingMarks) || 0,
-          (() => {
-            if (formData.overall) return parseFloat(formData.overall) || 0;
-            const l = parseFloat(formData.listeningMarks || "0");
-            const r = parseFloat(formData.readingMarks || "0");
-            const w = parseFloat(formData.writingMarks || "0");
-            const s = parseFloat(formData.speakingMarks || "0");
-            const avg = (l + r + w + s) / 4;
-            return Math.round(avg * 2) / 2;
-          })(),
-        ],
+        data: [lNum, rNum, wNum, sNum, hasAllFourBands ? computedOverall : 0],
         backgroundColor: ["#2563EB", "#16A34A", "#CA8A04", "#DC2626", "#6B7280"],
         borderColor: ["#1E3A8A", "#15803D", "#B45309", "#B91C1C", "#4B5563"],
         borderWidth: 1,
@@ -944,11 +943,10 @@ useEffect(() => {
           </label>
 
           <div className="col-start-4 ml-4">
-  <div className="border border-black px-4 py-[2px] text-red-600 text-base h-[28px] w-[75%] flex items-center tabular-nums whitespace-nowrap pdf-field">
-    {renderISO(bookingDateYMD || formData.testDate)}
-  </div>
-</div>
-
+            <div className="border border-black px-4 py-[2px] text-red-600 text-base h-[28px] w-[75%] flex items-center tabular-nums whitespace-nowrap pdf-field">
+              {renderISO(bookingDateYMD || formData.testDate)}
+            </div>
+          </div>
         </div>
 
         <hr className="border-t border-[#00000f] my-4" />
@@ -977,7 +975,7 @@ useEffect(() => {
             </div>
           </div>
 
-          <hr className="border-t border-[#00000f] my-4" />
+        <hr className="border-t border-[#00000f] my-4" />
 
           <div className="grid grid-cols-3 gap-4 mt-2">
             <div className="flex items-center gap-2">
@@ -1034,11 +1032,12 @@ useEffect(() => {
               </div>
             ))}
 
+            {/* Overall now respects "all four > 0" rule */}
             <div className="flex items-center gap-1">
               <span className="whitespace-nowrap ml-4 w-20 text-xs font-semibold leading-tight">
                 Overall <br /> Band <br /> Score
               </span>
-              <StaticBox className="w-[65%] px-3 tabular-nums">{formData.overall || "—"}</StaticBox>
+              <StaticBox className="w-[65%] px-3 tabular-nums">{overallDisplay}</StaticBox>
             </div>
           </div>
 
@@ -1137,7 +1136,7 @@ useEffect(() => {
             className="w-full h-6 keep-bg"
             style={{ backgroundImage: "repeating-linear-gradient(-135deg, #000 0 2px, #fff 2px 8px)" }}
           />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-fit h-6 bg-white px-4 z-10 flex items-center justify-center">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-fit h-6 bg-white px-4 z-10 flex items-center justify-center">
             <h2 className="text-xl font-bold text-[#00000f]">Examiner&apos;s Detailed Feedback</h2>
           </div>
         </div>
@@ -1331,7 +1330,7 @@ useEffect(() => {
 
                   <tr className="text-[#00000f] font-semibold bg-gray-100 h-8">
                     <th className="border border-black p-1">Task 2</th>
-                    <th className="border border-black p-1">TA</th>
+                    <th className="border border-black p-1">TR</th>
                     <th className="border border-black p-1">CC</th>
                     <th className="border border-black p-1">LR</th>
                     <th className="border border-black p-1">GRA</th>

@@ -1,14 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, Loader2, Lock } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+// ---------------- Module-scope helpers ----------------
+const todayDhakaYMD = () =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
+// Treat 0 as not-ready; return null for invalid bands
+const bandOrNull = (v: any): number | null => {
+  const n = parseFloat(v);
+  if (isNaN(n) || n < 0 || n > 9) return null;
+  return n > 0 ? n : null; // 0 blocks overall
+};
+
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://luminedge-server.vercel.app";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://luminedge-server.vercel.app";
 
 const segments = [
   { key: "listening", label: "Listening", color: "#2563EB" },
@@ -51,14 +68,14 @@ interface FormData {
   readingMarks: string;
   writingMarks: string; // computed from writingScores
   listeningMarks: string;
-  speakingMarks: string;
+  speakingMarks: string; // legacy compatibility
+  speakingTotal?: string; // preferred UI field for Speaking total
 
   // speaking subscores
   speakingFC: string;
   speakingLR: string;
   speakingGRA: string;
   speakingPRO: string;
-  speakingTotal?: string;
 
   // writing breakdown helpers (kept for compatibility if used elsewhere)
   writingTask1TA: string;
@@ -92,7 +109,7 @@ interface FormData {
   // allow dynamic fields
   [key: string]: any;
   examinerSignature?: string; // speaking signature
-  examinerNotes?: string;     // writing signature
+  examinerNotes?: string; // writing signature
 }
 
 const TestReportForm = () => {
@@ -112,11 +129,11 @@ const TestReportForm = () => {
     writingMarks: "",
     listeningMarks: "",
     speakingMarks: "",
+    speakingTotal: "",
     speakingFC: "",
     speakingLR: "",
     speakingGRA: "",
     speakingPRO: "",
-    speakingTotal: "",  
     writingTask1TA: "",
     writingTask1CC: "",
     writingTask1LR: "",
@@ -136,10 +153,11 @@ const TestReportForm = () => {
     schemeCode: "",
     resultDate: "",
 
-    // ⬇️ NEW: signatures used by the Speaking/Writing signature inputs
+    // signatures used by Speaking/Writing signature inputs
     examinerSignature: "",
     examinerNotes: "",
     adminSignature: "Md. Arifur Rahman", // default
+
     feedback: {
       writingScores: {
         task1_overall: "",
@@ -167,7 +185,7 @@ const TestReportForm = () => {
     speaking: false,
   });
 
-  // ⬇️ NEW: per-segment timestamps (ISO strings from backend)
+  // per-segment timestamps (ISO strings from backend)
   const [segmentTimestamps, setSegmentTimestamps] = useState<Record<SegmentKey, string>>({
     listening: "",
     reading: "",
@@ -182,7 +200,7 @@ const TestReportForm = () => {
   const progressPercent = (savedCount / segments.length) * 100;
 
   // helper: format ISO → Dhaka local human string
-  const formatDhakaDateTime = (iso?: string) => { // ⬅️ NEW
+  const formatDhakaDateTime = (iso?: string) => {
     if (!iso) return "";
     const d = new Date(iso);
     if (isNaN(+d)) return "";
@@ -197,6 +215,23 @@ const TestReportForm = () => {
     }).format(d);
   };
 
+  // derived: whether all four segment marks are valid (>0 and ≤9)
+  const isOverallReady = useMemo(() => {
+    const speaking = formData.speakingTotal ?? formData.speakingMarks;
+    return (
+      bandOrNull(formData.listeningMarks) !== null &&
+      bandOrNull(formData.readingMarks) !== null &&
+      bandOrNull(formData.writingMarks) !== null &&
+      bandOrNull(speaking) !== null
+    );
+  }, [
+    formData.listeningMarks,
+    formData.readingMarks,
+    formData.writingMarks,
+    formData.speakingMarks,
+    formData.speakingTotal,
+  ]);
+
   // fetch schedule-scoped feedback status
   useEffect(() => {
     let mounted = true;
@@ -209,75 +244,73 @@ const TestReportForm = () => {
         );
         const status = res.data?.status || {};
         if (!mounted) return;
-        
+
         // Coalesce speaking total from multiple possible server fields
         const fetchedSpeakingTotal =
           (typeof status.speakingTotal === "string" && status.speakingTotal) ||
           (typeof status.speakingMarks === "string" && status.speakingMarks) ||
           (status?.marks && typeof status.marks.Total === "string" && status.marks.Total) ||
           "";
-        
+
         setFormData((prev) => ({
           ...prev,
-        
+
           // feedback texts
           listeningFeedback: status.listeningFeedback ?? prev.listeningFeedback ?? "",
-          readingFeedback:   status.readingFeedback   ?? prev.readingFeedback   ?? "",
-          writingFeedback:   status.writingFeedback   ?? prev.writingFeedback   ?? "",   // ✅ fix
-          speakingFeedback:  status.speakingFeedback  ?? prev.speakingFeedback  ?? "",
-        
+          readingFeedback: status.readingFeedback ?? prev.readingFeedback ?? "",
+          writingFeedback: status.writingFeedback ?? prev.writingFeedback ?? "",
+          speakingFeedback: status.speakingFeedback ?? prev.speakingFeedback ?? "",
+
           // marks/bands
           listeningMarks: status.listeningMarks ?? prev.listeningMarks ?? "",
-          readingMarks:   status.readingMarks   ?? prev.readingMarks   ?? "",
-          // ✅ keep legacy speakingMarks in sync with the exact saved total
-          speakingMarks:  fetchedSpeakingTotal || prev.speakingMarks || "",
-        
+          readingMarks: status.readingMarks ?? prev.readingMarks ?? "",
+          // keep both in sync so UI + legacy code see the same number
+          speakingMarks: fetchedSpeakingTotal || prev.speakingMarks || "",
+          speakingTotal: fetchedSpeakingTotal || prev.speakingTotal || "",
+
           // speaking subscores
-          speakingFC:     status.speakingFC     ?? prev.speakingFC     ?? "",
-          speakingLR:     status.speakingLR     ?? prev.speakingLR     ?? "",
-          speakingGRA:    status.speakingGRA    ?? prev.speakingGRA    ?? "",
-          speakingPRO:    status.speakingPRO    ?? prev.speakingPRO    ?? "",
-          // ✅ exact total from server (no auto-calc)
-          speakingTotal:  fetchedSpeakingTotal || prev.speakingTotal || "",
-        
+          speakingFC: status.speakingFC ?? prev.speakingFC ?? "",
+          speakingLR: status.speakingLR ?? prev.speakingLR ?? "",
+          speakingGRA: status.speakingGRA ?? prev.speakingGRA ?? "",
+          speakingPRO: status.speakingPRO ?? prev.speakingPRO ?? "",
+
           // candidate/admin meta
-          centreName:  status.centreName  ?? prev.centreName  ?? "",
-          testDate:    status.testDate    ?? prev.testDate    ?? "",
-          lastName:    status.lastName    ?? prev.lastName    ?? "",
-          firstName:   status.firstName   ?? prev.firstName   ?? "",
+          centreName: status.centreName ?? prev.centreName ?? "",
+          testDate: status.testDate ?? prev.testDate ?? "",
+          lastName: status.lastName ?? prev.lastName ?? "",
+          firstName: status.firstName ?? prev.firstName ?? "",
           dateOfBirth: status.dateOfBirth ?? prev.dateOfBirth ?? "",
-          sex:         status.sex         ?? prev.sex         ?? "",
-          schemeCode:  status.schemeCode  ?? prev.schemeCode  ?? "",
-        
+          sex: status.sex ?? prev.sex ?? "",
+          schemeCode: status.schemeCode ?? prev.schemeCode ?? "",
+
           // signatures
           examinerSignature: status.speakingSign ?? prev.examinerSignature ?? "",
-          examinerNotes:     status.writingSign  ?? prev.examinerNotes     ?? "",
-        
+          examinerNotes: status.writingSign ?? prev.examinerNotes ?? "",
+
           // writing nested data
           feedback: {
             writingScores: status.writingScores ?? prev.feedback.writingScores,
-            writingTask1:  status.writingTask1  ?? prev.feedback.writingTask1,
-            writingTask2:  status.writingTask2  ?? prev.feedback.writingTask2,
-            task1Notes:    status.task1Notes    ?? prev.feedback.task1Notes,
-            task2Notes:    status.task2Notes    ?? prev.feedback.task2Notes,
+            writingTask1: status.writingTask1 ?? prev.feedback.writingTask1,
+            writingTask2: status.writingTask2 ?? prev.feedback.writingTask2,
+            task1Notes: status.task1Notes ?? prev.feedback.task1Notes,
+            task2Notes: status.task2Notes ?? prev.feedback.task2Notes,
           },
         }));
-        
 
         setLockedSegments({
           listening: !!status.listening,
-          reading:   !!status.reading,
-          writing:   !!status.writing,
-          speaking:  !!status.speaking,
+          reading: !!status.reading,
+          writing: !!status.writing,
+          speaking: !!status.speaking,
         });
 
-        // ⬇️ NEW: timestamps from backend
+        // timestamps from backend
         const ts = (status.timestamps || {}) as Partial<Record<SegmentKey, string>>;
         setSegmentTimestamps({
           listening: ts.listening || "",
-          reading:   ts.reading   || "",
-          writing:   ts.writing   || "",
-          speaking:  ts.speaking  || "",
+          reading: ts.reading || "",
+          writing: ts.writing || "",
+          speaking: ts.speaking || "",
         });
       } catch (err) {
         console.error("Error fetching feedback status:", err);
@@ -285,7 +318,9 @@ const TestReportForm = () => {
     };
 
     fetchStatus();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [userId, scheduleId]);
 
   const handleChange = (
@@ -295,8 +330,6 @@ const TestReportForm = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-
-  
   // set default result date once
   useEffect(() => {
     if (!formData.resultDate) {
@@ -305,110 +338,58 @@ const TestReportForm = () => {
     }
   }, [formData.resultDate]);
 
-  // // auto calc overall & proficiency from 4 bands
-  // useEffect(() => {
-  //   const parseScore = (val: any): number | null => {
-  //     const parsed = parseFloat(val);
-  //     return !isNaN(parsed) && parsed >= 0 && parsed <= 9 ? parsed : null;
-  //   };
+  // auto calc overall & proficiency from 4 bands (only when all valid and > 0)
+  useEffect(() => {
+    const listening = bandOrNull(formData.listeningMarks);
+    const reading = bandOrNull(formData.readingMarks);
+    const writing = bandOrNull(formData.writingMarks);
+    // prefer speakingTotal (UI field), fallback to legacy speakingMarks
+    const speaking = bandOrNull(formData.speakingTotal ?? formData.speakingMarks);
 
-  //   const listening = parseScore(formData.listeningMarks);
-  //   const reading = parseScore(formData.readingMarks);
-  //   const writing = parseScore(formData.writingMarks);
-  //   const speaking = parseScore(formData.speakingMarks);
+    const scores = [listening, reading, writing, speaking];
+    const isComplete = scores.every((s) => s !== null);
 
-  //   const scores = [listening, reading, writing, speaking];
-  //   const isComplete = scores.every((s) => s !== null);
+    if (isComplete) {
+      const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
 
-  //   if (isComplete) {
-  //     const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
-  //     const overall = Math.round(average * 2) / 2;
+      // IELTS-specific rounding (nearest 0.5 with 0.25/0.75 thresholds)
+      const roundIELTS = (avg: number): number => {
+        const floor = Math.floor(avg);
+        const decimal = avg - floor;
+        if (decimal < 0.25) return floor;
+        if (decimal < 0.75) return floor + 0.5;
+        return floor + 1;
+        };
+      const overall = roundIELTS(average);
 
-  //     const getCEFR = (score: number): string => {
-  //       if (score >= 8.5) return "C2";
-  //       if (score >= 7.0) return "C1";
-  //       if (score >= 5.5) return "B2";
-  //       if (score >= 4.0) return "B1";
-  //       return "A2";
-  //     };
+      const getCEFR = (score: number): string => {
+        if (score >= 8.5) return "C2";
+        if (score >= 6.5) return "C1"; // Luminedge policy mapping
+        if (score >= 5.5) return "B2";
+        if (score >= 4.0) return "B1";
+        return "A2";
+      };
 
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       overall: overall.toFixed(1),
-  //       proficiency: getCEFR(overall),
-  //     }));
-  //   } else {
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       overall: "",
-  //       proficiency: "",
-  //     }));
-  //   }
-  // }, [
-  //   formData.listeningMarks,
-  //   formData.readingMarks,
-  //   formData.writingMarks,
-  //   formData.speakingMarks,
-  // ]);
+      setFormData((prev) => ({
+        ...prev,
+        overall: overall.toFixed(1),
+        proficiency: getCEFR(overall),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        overall: "",
+        proficiency: "",
+      }));
+    }
+  }, [
+    formData.listeningMarks,
+    formData.readingMarks,
+    formData.writingMarks,
+    formData.speakingMarks,
+    formData.speakingTotal,
+  ]);
 
-  // auto calc overall & proficiency from 4 bands
-useEffect(() => {
-  const parseScore = (val: any): number | null => {
-    const parsed = parseFloat(val);
-    return !isNaN(parsed) && parsed >= 0 && parsed <= 9 ? parsed : null;
-  };
-
-  const listening = parseScore(formData.listeningMarks);
-  const reading = parseScore(formData.readingMarks);
-  const writing = parseScore(formData.writingMarks);
-  const speaking = parseScore(formData.speakingMarks);
-
-  const scores = [listening, reading, writing, speaking];
-  const isComplete = scores.every((s) => s !== null);
-
-  if (isComplete) {
-    const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
-
-    // IELTS-specific rounding
-    const roundIELTS = (avg: number): number => {
-      const floor = Math.floor(avg);
-      const decimal = avg - floor;
-
-      if (decimal < 0.25) return floor;
-      if (decimal < 0.75) return floor + 0.5;
-      return floor + 1;
-    };
-
-    const overall = roundIELTS(average);
-
-    const getCEFR = (score: number): string => {
-      if (score >= 8.5) return "C2";
-      if (score >= 6.5) return "C1"; // shifted closer to common IELTS–CEFR mapping
-      if (score >= 5.5) return "B2";
-      if (score >= 4.0) return "B1";
-      return "A2";
-    };
-
-    setFormData((prev) => ({
-      ...prev,
-      overall: overall.toFixed(1),
-      proficiency: getCEFR(overall),
-    }));
-  } else {
-    setFormData((prev) => ({
-      ...prev,
-      overall: "",
-      proficiency: "",
-    }));
-  }
-}, [
-  formData.listeningMarks,
-  formData.readingMarks,
-  formData.writingMarks,
-  formData.speakingMarks,
-]);
-
-  
   // auto calc writing band (task2 double weight)
   useEffect(() => {
     const { feedback } = formData;
@@ -434,7 +415,8 @@ useEffect(() => {
     if (allValid) {
       const total = [...task1Scores, ...task2Scores, ...task2Scores].reduce((a, b) => a + b, 0);
       const average = total / 12;
-      const rounded = Math.floor(average * 2) / 2; // round DOWN to .0/.5
+      // nearest 0.5 (change to Math.floor for round-down)
+      const rounded = Math.round(average * 2) / 2;
 
       setFormData((prev) => ({
         ...prev,
@@ -451,15 +433,6 @@ useEffect(() => {
     formData.feedback.writingScores.task2_LR,
     formData.feedback.writingScores.task2_GRA,
   ]);
-
-  // Put this once near the top of the file (module scope)
-  const todayDhakaYMD = () =>
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Dhaka",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date());
 
   const handleSaveFeedback = async () => {
     const admin = localStorage.getItem("adminName") || "Unknown";
@@ -498,10 +471,19 @@ useEffect(() => {
       };
 
       if (selectedSegment === "speaking") {
-        const { speakingFeedback, speakingFC, speakingLR, speakingGRA, speakingPRO, speakingMarks } =
-          formData;
+        const {
+          speakingFeedback,
+          speakingFC,
+          speakingLR,
+          speakingGRA,
+          speakingPRO,
+          speakingMarks,
+          speakingTotal,
+        } = formData;
 
-        if (!speakingFeedback.trim() || !speakingMarks.trim()) {
+        const totalToSend = (speakingTotal || speakingMarks || "").toString().trim();
+
+        if (!speakingFeedback.trim() || !totalToSend) {
           setSaveStatus("❌ Please enter both feedback and total marks.");
           setSaving(false);
           return;
@@ -513,7 +495,7 @@ useEffect(() => {
           LR: speakingLR,
           GRA: speakingGRA,
           PRO: speakingPRO,
-          Total: speakingMarks,
+          Total: totalToSend,
         };
       } else if (selectedSegment === "writing") {
         const {
@@ -539,8 +521,8 @@ useEffect(() => {
         payload.marks = writingScores;
       } else {
         // reading / listening
-        const feedbackValue = formData[`${selectedSegment}Feedback`] || "";
-        const marksValue = formData[`${selectedSegment}Marks`] || "";
+        const feedbackValue = (formData as any)[`${selectedSegment}Feedback`] || "";
+        const marksValue = (formData as any)[`${selectedSegment}Marks`] || "";
 
         if (!feedbackValue.trim() || !marksValue.trim()) {
           setSaveStatus("❌ Please enter both feedback and marks.");
@@ -558,7 +540,7 @@ useEffect(() => {
         setLockedSegments((prev) => ({ ...prev, [selectedSegment]: true }));
         setSaveStatus("✅ Feedback saved successfully.");
 
-        // ⬇️ NEW: show a timestamp immediately (optimistic; server is authoritative)
+        // optimistic timestamp (server is authoritative)
         setSegmentTimestamps((prev) => ({
           ...prev,
           [selectedSegment]: new Date().toISOString(),
@@ -588,19 +570,15 @@ useEffect(() => {
 
     const today = todayDhakaYMD();
 
-    const {
-      overall,
-      proficiency,
-      schemeCode,
-      comments,
-      adminSignature,
-    } = formData;
+    const { overall, proficiency, schemeCode, comments, adminSignature } = formData;
 
     const resultDate = formData.resultDate || today; // fallback to today
     const centreName = "LUMINEDGE BD";
     const testDate = today;
 
     // fallback signature if empty
+    theSignature: {
+    }
     const signatureToSave =
       (adminSignature && adminSignature.trim()) || "Md. Arifur Rahman";
 
@@ -612,21 +590,18 @@ useEffect(() => {
     try {
       setSaving(true);
 
-      const response = await axios.put(
-        `${API_BASE}/api/v1/admin/save-admin-section`,
-        {
-          userId,
-          scheduleId,
-          overall,
-          proficiency,
-          resultDate,
-          schemeCode,
-          comments,
-          adminSignature: signatureToSave, // ✅ use fallback
-          centreName,
-          testDate,
-        }
-      );
+      const response = await axios.put(`${API_BASE}/api/v1/admin/save-admin-section`, {
+        userId,
+        scheduleId,
+        overall,
+        proficiency,
+        resultDate,
+        schemeCode,
+        comments,
+        adminSignature: signatureToSave,
+        centreName,
+        testDate,
+      });
 
       if (response?.data?.success) {
         setFormData((prev) => ({
@@ -673,7 +648,8 @@ useEffect(() => {
           resultDate: data.resultDate || new Date().toISOString().split("T")[0],
           schemeCode: data.schemeCode || "",
           adminSignature:
-            (data.adminSignature ?? localStorage.getItem("adminName")) ?? "Md. Arifur Rahman",
+            (data.adminSignature ?? localStorage.getItem("adminName")) ??
+            "Md. Arifur Rahman",
         }));
       } catch (err) {
         console.error("Failed to fetch admin section:", err);
@@ -703,33 +679,40 @@ useEffect(() => {
         </h2>
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
-          {/* Overall Band Score */}
-          <div className="flex flex-col">
-            <label className="font-semibold text-[13px] mb-1 text-gray-800">
-              Overall Band Score
-            </label>
-            <input
-              name="overall"
-              value={formData.overall || ""}
-              readOnly
-              className="border border-gray-600 rounded-md px-3 py-2 bg-gray-100 shadow-inner text-red-600 focus:outline-none"
-              placeholder="e.g. 7.5"
-            />
-          </div>
+          {/* Overall & Proficiency — only visible when all four bands are valid (>0) */}
+          {isOverallReady ? (
+            <>
+              <div className="flex flex-col">
+                <label className="font-semibold text-[13px] mb-1 text-gray-800">
+                  Overall Band Score
+                </label>
+                <input
+                  name="overall"
+                  value={formData.overall || ""}
+                  readOnly
+                  className="border border-gray-600 rounded-md px-3 py-2 bg-gray-100 shadow-inner text-red-600 focus:outline-none"
+                  placeholder="e.g. 7.5"
+                />
+              </div>
 
-          {/* English Proficiency Level */}
-          <div className="flex flex-col">
-            <label className="font-semibold text-[13px] mb-1 text-gray-800">
-              English Proficiency Level
-            </label>
-            <input
-              name="proficiency"
-              value={formData.proficiency || ""}
-              readOnly
-              className="border border-gray-600 rounded-md px-3 py-2 bg-gray-100 shadow-inner text-red-600 focus:outline-none"
-              placeholder="e.g. B2, C1"
-            />
-          </div>
+              <div className="flex flex-col">
+                <label className="font-semibold text-[13px] mb-1 text-gray-800">
+                  English Proficiency Level
+                </label>
+                <input
+                  name="proficiency"
+                  value={formData.proficiency || ""}
+                  readOnly
+                  className="border border-gray-600 rounded-md px-3 py-2 bg-gray-100 shadow-inner text-red-600 focus:outline-none"
+                  placeholder="e.g. B2, C1"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="col-span-2 text-[13px] text-gray-600 italic">
+              Enter valid band scores for Listening, Reading, Writing, and Speaking to reveal Overall & CEFR.
+            </div>
+          )}
 
           {/* Result Date + Scheme Code */}
           <div className="grid grid-cols-2 gap-6 col-span-2">
@@ -782,7 +765,7 @@ useEffect(() => {
             />
 
             <p className="text-sm text-gray-600 mt-0 mb-3">
-              {formData.comments?.split(/\s+/).filter(Boolean).length || 0}/300 words
+              {(formData.comments?.split(/\s+/).filter(Boolean).length || 0)}/300 words
             </p>
           </div>
 
@@ -915,9 +898,7 @@ useEffect(() => {
         <div
           className="rounded-lg p-4 shadow-md border bg-gray-50"
           style={{
-            borderLeft: `4px solid ${
-              segments.find((s) => s.key === selectedSegment)?.color
-            }`,
+            borderLeft: `4px solid ${segments.find((s) => s.key === selectedSegment)?.color}`,
           }}
         >
           <h3 className="text-lg font-semibold text-gray-800 mb-2">
@@ -944,7 +925,7 @@ useEffect(() => {
                         <input
                           type="number"
                           name={`speaking${key}`}
-                          value={formData[`speaking${key}`] || ""}
+                          value={(formData as any)[`speaking${key}`] || ""}
                           onChange={handleChange}
                           step={0.5}
                           min={0}
@@ -1222,7 +1203,7 @@ useEffect(() => {
                   min={0}
                   max={9}
                   step={0.5}
-                  value={formData[`${selectedSegment}Marks`] || ""}
+                  value={(formData as any)[`${selectedSegment}Marks`] || ""}
                   onChange={handleChange}
                   disabled={lockedSegments[selectedSegment]}
                   className="w-24 border border-gray-300 rounded px-2 py-1 text-sm text-red-600"
@@ -1231,7 +1212,7 @@ useEffect(() => {
               <textarea
                 name={`${selectedSegment}Feedback`}
                 rows={6}
-                value={formData[`${selectedSegment}Feedback`] || ""}
+                value={(formData as any)[`${selectedSegment}Feedback`] || ""}
                 onChange={handleChange}
                 disabled={lockedSegments[selectedSegment]}
                 placeholder={`Enter feedback for ${selectedSegment}...`}
@@ -1264,7 +1245,7 @@ useEffect(() => {
               )}
             </button>
 
-            {/* ⬇️ NEW: show last-saved timestamp for current segment */}
+            {/* last-saved timestamp for current segment */}
             {segmentTimestamps[selectedSegment] && (
               <p className="mt-2 text-xs text-gray-600">
                 Saved on {formatDhakaDateTime(segmentTimestamps[selectedSegment])} (Dhaka)
