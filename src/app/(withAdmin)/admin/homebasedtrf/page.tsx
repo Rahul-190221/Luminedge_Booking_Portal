@@ -791,7 +791,10 @@ function TeacherSelect({
     Tanvir: "tanvirkhan.luminedge@gmail.com",
     Iffat: "iffat.luminedge@gmail.com",
     Najia: "najia.luminedge@gmail.com",
-    Rahul: "rahul1921@cseku.ac.bd",
+    Sazzadur: "sazzadur.luminedge@gmail.com",
+    Mubasshira: "mubasshira.luminedge@gmail.com",
+
+    // Rahul: "rahul1921@cseku.ac.bd",
   };
   const teacherColorMap: Record<string, string> = {
     Prima: "bg-green-500 text-white",
@@ -803,7 +806,9 @@ function TeacherSelect({
     Tanvir: "bg-purple-600 text-white",
     Iffat: "bg-pink-600 text-white",
     Najia: "bg-cyan-600 text-white",
-    Rahul: "bg-gray-600 text-white",
+    Sazzadur: "bg-lime-600 text-white",
+    Mubasshira: "bg-rose-600 text-white",
+    // Rahul: "bg-gray-600 text-white",
   };
   const getTeacherBgClass = (val: string) => teacherColorMap[val] || "bg-white text-black";
 
