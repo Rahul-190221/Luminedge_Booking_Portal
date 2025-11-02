@@ -169,7 +169,10 @@ export default function HomeBasedPage() {
     Tanvir: "tanvirkhan.luminedge@gmail.com",
     Iffat: "iffat.luminedge@gmail.com",
     Najia: "najia.luminedge@gmail.com",
-    Rahul: "rahul1921@cseku.ac.bd",
+    Sazzadur: "sazzadur.luminedge@gmail.com",
+    Mubasshira: "mubasshira.luminedge@gmail.com",
+
+    // Rahul: "rahul1921@cseku.ac.bd",
   };
 
   const emailToTeacher: Record<string, string> = useMemo(() => {
