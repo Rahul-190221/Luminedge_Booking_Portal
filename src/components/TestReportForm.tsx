@@ -339,56 +339,109 @@ const TestReportForm = () => {
   }, [formData.resultDate]);
 
   // auto calc overall & proficiency from 4 bands (only when all valid and > 0)
-  useEffect(() => {
-    const listening = bandOrNull(formData.listeningMarks);
-    const reading = bandOrNull(formData.readingMarks);
-    const writing = bandOrNull(formData.writingMarks);
-    // prefer speakingTotal (UI field), fallback to legacy speakingMarks
-    const speaking = bandOrNull(formData.speakingTotal ?? formData.speakingMarks);
+useEffect(() => {
+  const listening = bandOrNull(formData.listeningMarks);
+  const reading = bandOrNull(formData.readingMarks);
+  const writing = bandOrNull(formData.writingMarks);
+  // prefer speakingTotal (UI field), fallback to legacy speakingMarks
+  const speaking = bandOrNull(formData.speakingTotal ?? formData.speakingMarks);
 
-    const scores = [listening, reading, writing, speaking];
-    const isComplete = scores.every((s) => s !== null);
+  const scores = [listening, reading, writing, speaking];
+  // Updated: explicitly check > 0 to match comment
+  const isComplete = scores.every((s) => s !== null && s > 0);
 
-    if (isComplete) {
-      const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
+  if (isComplete) {
+    const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
 
-      // IELTS-specific rounding (nearest 0.5 with 0.25/0.75 thresholds)
-      const roundIELTS = (avg: number): number => {
-        const floor = Math.floor(avg);
-        const decimal = avg - floor;
-        if (decimal < 0.25) return floor;
-        if (decimal < 0.75) return floor + 0.5;
-        return floor + 1;
-        };
-      const overall = roundIELTS(average);
+    // IELTS-specific rounding (nearest 0.5 with .25/.75 rounding up)
+    const roundIELTS = (avg: number): number => {
+      const floor = Math.floor(avg);
+      const decimal = avg - floor;
+      if (decimal < 0.25) return floor;
+      if (decimal < 0.75) return floor + 0.5;
+      return floor + 1;
+    };
+    const overall = roundIELTS(average);
 
-      const getCEFR = (score: number): string => {
-        if (score >= 8.5) return "C2";
-        if (score >= 6.5) return "C1"; // Luminedge policy mapping
-        if (score >= 5.5) return "B2";
-        if (score >= 4.0) return "B1";
-        return "A2";
-      };
+    // Updated: Official British Council / IELTS CEFR mapping
+    const getCEFR = (score: number): string => {
+      if (score >= 8.5) return "C2";
+      if (score >= 7.0) return "C1"; // Solid C1 threshold (6.5 is B2/C1 borderline)
+      if (score >= 5.5) return "B2";
+      if (score >= 4.0) return "B1";
+      return "A2"; // Covers low scores (A1 for <2.0 optional in simplified mappings)
+    };
 
-      setFormData((prev) => ({
-        ...prev,
-        overall: overall.toFixed(1),
-        proficiency: getCEFR(overall),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        overall: "",
-        proficiency: "",
-      }));
-    }
-  }, [
-    formData.listeningMarks,
-    formData.readingMarks,
-    formData.writingMarks,
-    formData.speakingMarks,
-    formData.speakingTotal,
-  ]);
+    setFormData((prev) => ({
+      ...prev,
+      overall: overall.toFixed(1),
+      proficiency: getCEFR(overall),
+    }));
+  } else {
+    setFormData((prev) => ({
+      ...prev,
+      overall: "",
+      proficiency: "",
+    }));
+  }
+}, [
+  formData.listeningMarks,
+  formData.readingMarks,
+  formData.writingMarks,
+  formData.speakingMarks,
+  formData.speakingTotal,
+]);
+  // auto calc overall & proficiency from 4 bands (only when all valid and > 0)
+  // useEffect(() => {
+  //   const listening = bandOrNull(formData.listeningMarks);
+  //   const reading = bandOrNull(formData.readingMarks);
+  //   const writing = bandOrNull(formData.writingMarks);
+  //   // prefer speakingTotal (UI field), fallback to legacy speakingMarks
+  //   const speaking = bandOrNull(formData.speakingTotal ?? formData.speakingMarks);
+
+  //   const scores = [listening, reading, writing, speaking];
+  //   const isComplete = scores.every((s) => s !== null);
+
+  //   if (isComplete) {
+  //     const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
+
+  //     // IELTS-specific rounding (nearest 0.5 with 0.25/0.75 thresholds)
+  //     const roundIELTS = (avg: number): number => {
+  //       const floor = Math.floor(avg);
+  //       const decimal = avg - floor;
+  //       if (decimal < 0.25) return floor;
+  //       if (decimal < 0.75) return floor + 0.5;
+  //       return floor + 1;
+  //       };
+  //     const overall = roundIELTS(average);
+
+  //     const getCEFR = (score: number): string => {
+  //       if (score >= 8.5) return "C2";
+  //       if (score >= 6.5) return "C1"; // Luminedge policy mapping
+  //       if (score >= 5.5) return "B2";
+  //       if (score >= 4.0) return "B1";
+  //       return "A2";
+  //     };
+
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       overall: overall.toFixed(1),
+  //       proficiency: getCEFR(overall),
+  //     }));
+  //   } else {
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       overall: "",
+  //       proficiency: "",
+  //     }));
+  //   }
+  // }, [
+  //   formData.listeningMarks,
+  //   formData.readingMarks,
+  //   formData.writingMarks,
+  //   formData.speakingMarks,
+  //   formData.speakingTotal,
+  // ]);
 
   // auto calc writing band (task2 double weight)
   useEffect(() => {
