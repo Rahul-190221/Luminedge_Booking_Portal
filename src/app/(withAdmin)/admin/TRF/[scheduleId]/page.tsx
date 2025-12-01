@@ -49,6 +49,47 @@ type BudgetResponse = {
   budget: number;
 };
 
+// // ---------- helpers for id handling & user fetching (fixes 6/10 issue) ----------
+// const toId = (v: any) => String(v ?? "").trim();
+// const hasUserInBooking = (b: Booking, userId: string) =>
+//   Array.isArray(b.userId)
+//     ? b.userId.map(toId).includes(userId)
+//     : toId(b.userId) === userId;
+
+// /** Page through /admin/users until we've collected all of the ids needed */
+// async function fetchUsersByIds(userIds: string[], pageSize = 500) {
+//   const need = new Set(userIds.map(toId));
+//   const found = new Map<string, any>();
+
+//   // page 1 to get total
+//   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+//     params: { page: 1, limit: pageSize },
+//   });
+//   const total: number = first.data?.total ?? (first.data?.users?.length || 0);
+//   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+//   const ingest = (usersPage: any[]) => {
+//     for (const u of usersPage || []) {
+//       const id = toId(u._id);
+//       if (need.has(id) && !found.has(id)) found.set(id, u);
+//     }
+//   };
+
+//   ingest(first.data?.users || []);
+//   if (found.size === need.size) return Array.from(found.values());
+
+//   for (let page = 2; page <= totalPages; page++) {
+//     const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+//       params: { page, limit: pageSize },
+//     });
+//     ingest(pageRes.data?.users || []);
+//     if (found.size === need.size) break;
+//   }
+
+//   return Array.from(found.values());
+// }
+// // -------------------------------------------------------------------------------
+
 // ---------- helpers for id handling & user fetching (fixes 6/10 issue) ----------
 const toId = (v: any) => String(v ?? "").trim();
 const hasUserInBooking = (b: Booking, userId: string) =>
@@ -57,30 +98,45 @@ const hasUserInBooking = (b: Booking, userId: string) =>
     : toId(b.userId) === userId;
 
 /** Page through /admin/users until we've collected all of the ids needed */
-async function fetchUsersByIds(userIds: string[], pageSize = 500) {
+async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   const need = new Set(userIds.map(toId));
   const found = new Map<string, any>();
 
-  // page 1 to get total
+  // page 1 to get total + actual page size (backend may cap `limit`)
   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-    params: { page: 1, limit: pageSize },
+    params: { page: 1, limit: requestedPageSize },
   });
-  const total: number = first.data?.total ?? (first.data?.users?.length || 0);
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const firstPageUsers: any[] = first.data?.users || [];
+  const total: number =
+    first.data?.total ?? (firstPageUsers.length || 0);
+
+  // effective page size is what the backend really returned
+  const effectivePageSize = firstPageUsers.length || requestedPageSize;
+  const totalPages = Math.max(
+    1,
+    effectivePageSize > 0 ? Math.ceil(total / effectivePageSize) : 1
+  );
 
   const ingest = (usersPage: any[]) => {
     for (const u of usersPage || []) {
       const id = toId(u._id);
-      if (need.has(id) && !found.has(id)) found.set(id, u);
+      if (need.has(id) && !found.has(id)) {
+        found.set(id, u);
+      }
     }
   };
 
-  ingest(first.data?.users || []);
-  if (found.size === need.size) return Array.from(found.values());
+  // ingest page 1
+  ingest(firstPageUsers);
+  if (found.size === need.size || totalPages === 1) {
+    return Array.from(found.values());
+  }
 
+  // fetch remaining pages until we've found everyone or hit last page
   for (let page = 2; page <= totalPages; page++) {
     const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-      params: { page, limit: pageSize },
+      params: { page, limit: requestedPageSize },
     });
     ingest(pageRes.data?.users || []);
     if (found.size === need.size) break;
@@ -88,7 +144,6 @@ async function fetchUsersByIds(userIds: string[], pageSize = 500) {
 
   return Array.from(found.values());
 }
-// -------------------------------------------------------------------------------
 
 const TrfBookingRequestsPage = ({
   params,

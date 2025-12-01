@@ -34,38 +34,84 @@ const hasUserInBooking = (booking: Booking, userId: string) =>
     ? booking.userId.map(toId).includes(userId)
     : toId(booking.userId) === userId;
 
-/** Page through /admin/users until we've collected all of the ids needed */
-async function fetchUsersByIds(userIds: string[], pageSize = 500) {
+// /** Page through /admin/users until we've collected all of the ids needed */
+// async function fetchUsersByIds(userIds: string[], pageSize = 500) {
+//   const need = new Set(userIds.map(toId));
+//   const found = new Map<string, any>();
+
+//   // page 1 to get total
+//   const first = await axios.get(`${API}/api/v1/admin/users`, {
+//     params: { page: 1, limit: pageSize },
+//   });
+//   const total: number = first.data?.total ?? (first.data?.users?.length || 0);
+//   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+//   const ingest = (usersPage: any[]) => {
+//     for (const u of usersPage || []) {
+//       const id = toId(u._id);
+//       if (need.has(id) && !found.has(id)) found.set(id, u);
+//     }
+//   };
+
+//   ingest(first.data?.users || []);
+//   if (found.size === need.size) return Array.from(found.values());
+
+//   for (let page = 2; page <= totalPages; page++) {
+//     const pageRes = await axios.get(`${API}/api/v1/admin/users`, {
+//       params: { page, limit: pageSize },
+//     });
+//     ingest(pageRes.data?.users || []);
+//     if (found.size === need.size) break;
+//   }
+
+//   return Array.from(found.values());
+// }
+
+async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   const need = new Set(userIds.map(toId));
   const found = new Map<string, any>();
-
-  // page 1 to get total
-  const first = await axios.get(`${API}/api/v1/admin/users`, {
-    params: { page: 1, limit: pageSize },
-  });
-  const total: number = first.data?.total ?? (first.data?.users?.length || 0);
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const ingest = (usersPage: any[]) => {
     for (const u of usersPage || []) {
       const id = toId(u._id);
-      if (need.has(id) && !found.has(id)) found.set(id, u);
+      if (need.has(id) && !found.has(id)) {
+        found.set(id, u);
+      }
     }
   };
 
-  ingest(first.data?.users || []);
-  if (found.size === need.size) return Array.from(found.values());
+  // First page
+  const first = await axios.get(`${API}/api/v1/admin/users`, {
+    params: { page: 1, limit: requestedPageSize },
+  });
 
-  for (let page = 2; page <= totalPages; page++) {
+  const firstPageUsers: any[] = first.data?.users || [];
+  const total: number =
+    typeof first.data?.total === "number"
+      ? first.data.total
+      : firstPageUsers.length;
+
+  // This is the real page size the server used (e.g. 120 in prod)
+  const serverLimit = firstPageUsers.length || requestedPageSize;
+
+  ingest(firstPageUsers);
+
+  if (!total || serverLimit === 0 || found.size === need.size) {
+    return Array.from(found.values());
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / serverLimit));
+
+  for (let page = 2; page <= totalPages && found.size < need.size; page++) {
     const pageRes = await axios.get(`${API}/api/v1/admin/users`, {
-      params: { page, limit: pageSize },
+      params: { page, limit: serverLimit }, // use serverLimit, not 500
     });
     ingest(pageRes.data?.users || []);
-    if (found.size === need.size) break;
   }
 
   return Array.from(found.values());
 }
+
 
 const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
   const { id: scheduleId } = params || {};
