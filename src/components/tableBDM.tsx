@@ -21,6 +21,7 @@ export interface User {
   isDeleted: boolean;
   testType?: string;
   testSystem?: string;
+  // role?: string; // add if your backend returns role
 }
 
 // ✅ Define Table Item Interface
@@ -35,8 +36,8 @@ interface ItemType {
 }
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://luminedge-server.vercel.app";
-const PAGE_SIZE = 2000; // backend already caps to <= 2000
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://luminedge-server.vercel.app";
 
 const TableBDM = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -57,37 +58,66 @@ const TableBDM = () => {
   const [submittedItems, setSubmittedItems] = useState<ItemType[]>([]);
   const [lastMock, setLastMock] = useState<ItemType | null>(null);
 
-  // ---------- fetch all users (server-paginated) ----------
+  // ---------- fetch all users (robust, server-paginated) ----------
   useEffect(() => {
     const fetchAllUsers = async () => {
       setIsLoading(true);
       try {
-        // get first page to know total
-        const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-          params: { page: 1, limit: PAGE_SIZE, role: "user" },
-        });
+        const acc: User[] = [];
+        const seen = new Set<string>();
 
-        const firstUsers: User[] = first.data?.users ?? [];
-        const total: number = Number(first.data?.total ?? firstUsers.length);
-        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        const requestedLimit = 500;
+        let page = 1;
+        let effectiveLimit: number | null = null;
+        let totalFromServer: number | null = null;
 
-        const all = [...firstUsers];
-
-        // if more pages, load them
-        for (let page = 2; page <= totalPages; page += 1) {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
           const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-            params: { page, limit: PAGE_SIZE, role: "user" },
+            params: { page, limit: requestedLimit, role: "user" },
           });
-          all.push(...(data?.users ?? []));
+
+          const batch: User[] = (data?.users ?? []) as User[];
+
+          // First page: detect real page size & total if provided
+          if (page === 1) {
+            effectiveLimit = batch.length || requestedLimit;
+            if (typeof data?.total === "number") {
+              totalFromServer = data.total;
+            }
+          }
+
+          if (!batch.length) break;
+
+          let newCount = 0;
+          for (const u of batch) {
+            const id = String(u._id);
+            if (!seen.has(id)) {
+              seen.add(id);
+              acc.push(u);
+              newCount++;
+            }
+          }
+
+          // If nothing new was added, stop (backend may be ignoring page)
+          if (newCount === 0) break;
+
+          // If total is known and we already have all, stop
+          if (totalFromServer && acc.length >= totalFromServer) break;
+
+          // If this page is shorter than the effective page size, it is the last page
+          if (effectiveLimit && batch.length < effectiveLimit) break;
+
+          page += 1;
         }
 
         // sort by createdAt desc
-        all.sort(
+        acc.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
 
-        setUsers(all);
+        setUsers(acc);
       } catch (err) {
         console.error("Error fetching users:", err);
         toast.error("Failed to load users.");
@@ -103,11 +133,13 @@ const TableBDM = () => {
   // ---------- filtering (memoized) ----------
   const filteredUsers = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-
     let list = users;
 
     if (statusFilter !== "all") {
-      list = list.filter((u) => String(u.status).toLowerCase() === statusFilter.toLowerCase());
+      list = list.filter(
+        (u) =>
+          String(u.status).toLowerCase() === statusFilter.toLowerCase()
+      );
     }
 
     if (actionFilter === "blocked") {
@@ -140,7 +172,9 @@ const TableBDM = () => {
   // ---------- user mock details ----------
   const fetchUserMockData = async (userId: string) => {
     try {
-      const { data, status } = await axios.get(`${API_BASE}/api/v1/user/${userId}`);
+      const { data, status } = await axios.get(
+        `${API_BASE}/api/v1/user/${userId}`
+      );
       if (status === 200 && data?.success) {
         setSubmittedItems(data.mocks || []);
         setLastMock(data.lastMock || null);
@@ -175,8 +209,11 @@ const TableBDM = () => {
       {/* Filters */}
       <div className="bg-gray-100 p-4 h-22 mb-3 flex flex-col sm:flex-row gap-4 py-2">
         <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="search" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
-          Search <span className="font-normal">(Name/Email)</span>:
+          <label
+            htmlFor="search"
+            className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+          >
+            Search <span className="font-normal">(Name/Email)</span>:
           </label>
           <input
             id="search"
@@ -189,7 +226,10 @@ const TableBDM = () => {
         </div>
 
         <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="statusFilter" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
+          <label
+            htmlFor="statusFilter"
+            className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+          >
             Filter by Status:
           </label>
           <select
@@ -206,7 +246,10 @@ const TableBDM = () => {
         </div>
 
         <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="actionFilter" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
+          <label
+            htmlFor="actionFilter"
+            className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+          >
             Action:
           </label>
           <select
@@ -230,7 +273,6 @@ const TableBDM = () => {
           <thead>
             <tr className="bg-[#face39] text-[#00000f] text-left">
               <th className="px-4 py-2">Name</th>
-              
               <th className="px-4 py-2">Enrollment Date</th>
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2">Action</th>
@@ -240,14 +282,15 @@ const TableBDM = () => {
             {currentUsers.map((user: User) => (
               <tr key={user._id} className="border-b">
                 <td className="px-4 py-2 break-words">{user.name || "N/A"}</td>
-                
+
                 <td className="px-4 py-2 break-words">
                   {new Date(user.createdAt).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric",
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
                   })}
                 </td>
+
                 <td className="px-4 py-2 break-words">
                   <span
                     className={`inline-block px-4 py-1 rounded-full text-base font-semibold 
@@ -279,7 +322,11 @@ const TableBDM = () => {
 
             {!isLoading && currentUsers.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-sm text-gray-600">
+                {/* 4 columns in thead, so colSpan = 4 */}
+                <td
+                  colSpan={4}
+                  className="px-4 py-6 text-center text-sm text-gray-600"
+                >
                   No users match your filters.
                 </td>
               </tr>
@@ -319,7 +366,8 @@ const TableBDM = () => {
             Previous
           </button>
           <span className="mx-2">
-            Page {currentPage} / {Math.max(1, Math.ceil(filteredUsers.length / usersPerPage))}
+            Page {currentPage} /{" "}
+            {Math.max(1, Math.ceil(filteredUsers.length / usersPerPage))}
           </span>
           <button
             onClick={() => setCurrentPage((prev) => prev + 1)}
@@ -337,31 +385,65 @@ const TableBDM = () => {
           <div className="bg-white p-5 rounded-lg shadow-lg w-full sm:w-3/4 flex flex-col sm:flex-row gap-5">
             {/* User Details */}
             <div className="w-full sm:w-1/3 bg-white rounded-xl shadow-md p-2 border border-gray-300">
-              <h2 className="text-2xl font-semibold text-[##00000f] mb-1">👤User Details</h2>
-              <div className="space-y-2 text-sm text-[##00000f]">
-                <p><strong>Name:</strong> {selectedUser?.name || "N/A"}</p>
-                <p><strong>Email:</strong> {selectedUser?.email || "N/A"}</p>
-                <p><strong>Phone:</strong> {selectedUser?.contactNo || "N/A"}</p>
-                <p><strong>Passport No:</strong> {selectedUser?.passportNumber || "N/A"}</p>
-                <p><strong>Transaction ID:</strong> {selectedUser?.transactionId || "N/A"}</p>
+              <h2 className="text-2xl font-semibold text-[#00000f] mb-1">
+                👤User Details
+              </h2>
+              <div className="space-y-2 text-sm text-[#00000f]">
+                <p>
+                  <strong>Name:</strong> {selectedUser?.name || "N/A"}
+                </p>
+                <p>
+                  <strong>Email:</strong> {selectedUser?.email || "N/A"}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {selectedUser?.contactNo || "N/A"}
+                </p>
+                <p>
+                  <strong>Passport No:</strong>{" "}
+                  {selectedUser?.passportNumber || "N/A"}
+                </p>
+                <p>
+                  <strong>Transaction ID:</strong>{" "}
+                  {selectedUser?.transactionId || "N/A"}
+                </p>
 
                 {!submittedItems.length && (
                   <>
-                    <p><strong>Test Name:</strong> {selectedUser?.mockType || "N/A"}</p>
-                    <p><strong>Test Type:</strong> {selectedUser?.testType || "N/A"}</p>
+                    <p>
+                      <strong>Test Name:</strong>{" "}
+                      {selectedUser?.mockType || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Test Type:</strong>{" "}
+                      {selectedUser?.testType || "N/A"}
+                    </p>
                   </>
                 )}
 
-                <p><strong>Purchased:</strong> {selectedUser?.totalMock ?? "N/A"}</p>
-                <p><strong>Booked:</strong> {
-                  selectedUser?.totalMock != null && selectedUser?.mock != null
-                    ? Number(selectedUser?.totalMock) - Number(selectedUser?.mock)
-                    : "N/A"
-                }</p>
-                <p><strong>Remaining:</strong> {selectedUser?.mock ?? "N/A"}</p>
+                <p>
+                  <strong>Purchased:</strong>{" "}
+                  {selectedUser?.totalMock ?? "N/A"}
+                </p>
+                <p>
+                  <strong>Booked:</strong>{" "}
+                  {selectedUser?.totalMock != null &&
+                  selectedUser?.mock != null
+                    ? Number(selectedUser?.totalMock) -
+                      Number(selectedUser?.mock)
+                    : "N/A"}
+                </p>
+                <p>
+                  <strong>Remaining:</strong> {selectedUser?.mock ?? "N/A"}
+                </p>
                 <p>
                   <strong>Status:</strong>{" "}
-                  <span className={`font-semibold ${selectedUser?.status === "blocked" ? "text-red-500" : "text-green-600"}`}>
+                  <span
+                    className={`font-semibold ${
+                      selectedUser?.status === "blocked"
+                        ? "text-red-500"
+                        : "text-green-600"
+                    }`}
+                  >
                     {selectedUser?.status || "N/A"}
                   </span>
                 </p>
@@ -370,11 +452,22 @@ const TableBDM = () => {
               {lastMock && (
                 <div className="mt-1 border-t pt-0 text-sm">
                   <h3 className="text-lg font-bold mb-1">📄Latest Mock</h3>
-                  <p><strong>Mock Type:</strong> {lastMock.mockType || "N/A"}</p>
-                  <p><strong>Test Type:</strong> {lastMock.testType || "N/A"}</p>
-                  <p><strong>System:</strong> {lastMock.testSystem || "N/A"}</p>
-                  <p><strong>Mock #:</strong> {lastMock.mock || "N/A"}</p>
-                  <p><strong>Txn ID:</strong> {lastMock.transactionId || "N/A"}</p>
+                  <p>
+                    <strong>Mock Type:</strong> {lastMock.mockType || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Test Type:</strong> {lastMock.testType || "N/A"}
+                  </p>
+                  <p>
+                    <strong>System:</strong> {lastMock.testSystem || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Mock #:</strong> {lastMock.mock || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Txn ID:</strong>{" "}
+                    {lastMock.transactionId || "N/A"}
+                  </p>
                 </div>
               )}
             </div>
@@ -384,33 +477,55 @@ const TableBDM = () => {
 
             {/* History Table */}
             <div className="w-full sm:w-2/3 bg-white rounded-2xl shadow-lg border border-gray-200 p-2 flex flex-col max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-semibold text-[##00000f] mb-1">🛠Update User</h2>
+              <h2 className="text-2xl font-semibold text-[#00000f] mb-1">
+                🛠Update User
+              </h2>
 
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm border border-gray-400 border-collapse rounded-lg overflow-hidden shadow-sm">
                   <thead>
-                    <tr className="bg-yellow-300 text-[##00000f] font-semibold text-center">
+                    <tr className="bg-yellow-300 text-[#00000f] font-semibold text-center">
                       <th className="p-3 border border-gray-400">Mock Type</th>
                       <th className="p-3 border border-gray-400">Test Type</th>
-                      <th className="p-3 border border-gray-400">Test System</th>
+                      <th className="p-3 border border-gray-400">
+                        Test System
+                      </th>
                       <th className="p-3 border border-gray-400">Mock #</th>
                       <th className="p-3 border border-gray-400">MR</th>
-                      <th className="p-3 border border-gray-400">MR Validation</th>
-                      <th className="w-[20%] p-1 border border-gray-300">Expired Date</th>
+                      <th className="p-3 border border-gray-400">
+                        MR Validation
+                      </th>
+                      <th className="w-[20%] p-1 border border-gray-300">
+                        Expired Date
+                      </th>
                     </tr>
                   </thead>
-                  <tbody className="text-center bg-white text-[##00000f]">
+                  <tbody className="text-center bg-white text-[#00000f]">
                     {submittedItems.map((item, index) => (
                       <tr key={`submitted-${index}`} className="hover:bg-gray-50">
-                        <td className="p-3 border border-gray-300">{item.mockType}</td>
-                        <td className="p-3 border border-gray-300">{item.testType}</td>
-                        <td className="p-3 border border-gray-300">{item.testSystem}</td>
-                        <td className="p-3 border border-gray-300">{item.mock}</td>
-                        <td className="p-3 border border-gray-300">{item.transactionId}</td>
-                        <td className="p-3 border border-gray-300">{item.mrValidation}</td>
+                        <td className="p-3 border border-gray-300">
+                          {item.mockType}
+                        </td>
+                        <td className="p-3 border border-gray-300">
+                          {item.testType}
+                        </td>
+                        <td className="p-3 border border-gray-300">
+                          {item.testSystem}
+                        </td>
+                        <td className="p-3 border border-gray-300">
+                          {item.mock}
+                        </td>
+                        <td className="p-3 border border-gray-300">
+                          {item.transactionId}
+                        </td>
+                        <td className="p-3 border border-gray-300">
+                          {item.mrValidation}
+                        </td>
                         <td className="p-1 border border-gray-300">
                           {item.mrValidationExpiry
-                            ? new Date(item.mrValidationExpiry).toLocaleDateString("en-US", {
+                            ? new Date(
+                                item.mrValidationExpiry
+                              ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",
                                 day: "2-digit",

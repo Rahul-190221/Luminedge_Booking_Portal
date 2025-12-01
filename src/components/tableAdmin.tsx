@@ -36,6 +36,10 @@ interface ItemType {
   mrValidationExpiry?: string; // Added this property
   isEditing?: boolean;
 }
+// ✅ Add this constant here:
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://luminedge-server.vercel.app";
 
 const TableAdmin = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -61,46 +65,119 @@ const TableAdmin = () => {
   const [submittedItems, setSubmittedItems] = useState<ItemType[]>([]);
 
   // 🧲 Fetch ALL users (iterate pages) so filtering is complete client-side
+  // useEffect(() => {
+  //   const fetchAllUsers = async () => {
+  //     setIsLoading(true);
+  //     try {
+  //       const acc: User[] = [];
+  //       let page = 1;
+  //       const limit = 500; // big page size to minimize roundtrips
+  //       // loop until the received page is shorter than limit
+  //       // supports both paginated & non-paginated backends
+  //       // (if backend ignores page/limit we still just set once)
+  //       // eslint-disable-next-line no-constant-condition
+  //       while (true) {
+  //         const { data } = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users", {
+  //           params: { page, limit },
+  //         });
+  //         const batch: User[] = (data?.users ?? []) as User[];
+  //         acc.push(...batch);
+  //         if (!Array.isArray(batch) || batch.length < limit) break;
+  //         page += 1;
+  //       }
+
+  //       const sorted = acc.sort(
+  //         (a, b) =>
+  //           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  //       );
+
+  //       setUsers(sorted);
+  //       setFilteredUsers(sorted);
+  //     } catch (error) {
+  //       console.error("Error fetching users:", error);
+  //       setUsers([]);
+  //       setFilteredUsers([]);
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
+
+  //   fetchAllUsers();
+  // }, []);
+
   useEffect(() => {
     const fetchAllUsers = async () => {
       setIsLoading(true);
       try {
         const acc: User[] = [];
+        const seen = new Set<string>();
+  
+        const requestedLimit = 500;
         let page = 1;
-        const limit = 500; // big page size to minimize roundtrips
-        // loop until the received page is shorter than limit
-        // supports both paginated & non-paginated backends
-        // (if backend ignores page/limit we still just set once)
+        let effectiveLimit: number | null = null;
+        let totalFromServer: number | null = null;
+  
         // eslint-disable-next-line no-constant-condition
         while (true) {
-          const { data } = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users", {
-            params: { page, limit },
-          });
+          const { data } = await axios.get(
+            `${API_BASE}/api/v1/admin/users`,
+            { params: { page, limit: requestedLimit } }
+          );
+  
           const batch: User[] = (data?.users ?? []) as User[];
-          acc.push(...batch);
-          if (!Array.isArray(batch) || batch.length < limit) break;
+  
+          // First page: detect real page size & total if provided
+          if (page === 1) {
+            effectiveLimit = batch.length || requestedLimit;
+            if (typeof data?.total === "number") {
+              totalFromServer = data.total;
+            }
+          }
+  
+          if (!batch.length) break;
+  
+          let newCount = 0;
+          for (const u of batch) {
+            const id = String(u._id);
+            if (!seen.has(id)) {
+              seen.add(id);
+              acc.push(u);
+              newCount++;
+            }
+          }
+  
+          // If nothing new was added, stop (backend may be ignoring page)
+          if (newCount === 0) break;
+  
+          // If total is known and we already have all, stop
+          if (totalFromServer && acc.length >= totalFromServer) break;
+  
+          // If this page is shorter than the effective page size, it is the last page
+          if (effectiveLimit && batch.length < effectiveLimit) break;
+  
           page += 1;
         }
-
+  
         const sorted = acc.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-
+  
         setUsers(sorted);
         setFilteredUsers(sorted);
       } catch (error) {
         console.error("Error fetching users:", error);
         setUsers([]);
         setFilteredUsers([]);
+        toast.error("Failed to load users.");
       } finally {
         setIsLoading(false);
       }
     };
-
+  
     fetchAllUsers();
   }, []);
-
+  
   // 🔎 Compute filtered list (status, blocked/unblocked, search)
   useEffect(() => {
     let filtered = users;
