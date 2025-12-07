@@ -6,6 +6,37 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
+// -------- Shared constants (no hook warnings) --------
+const TEACHER_EMAIL_MAP: Record<string, string> = {
+  Prima: "prima.luminedge@gmail.com",
+  Neelima: "neelima.luminedge2023@gmail.com",
+  Tamim: "tamim.luminedge@gmail.com",
+  Raisa: "raisa.luminedge@gmail.com",
+  Rafi: "rafi.luminedge@gmail.com",
+  Saiham: "saiham.luminedge@gmail.com",
+  Tanvir: "tanvirkhan.luminedge@gmail.com",
+  Iffat: "iffat.luminedge@gmail.com",
+  Najia: "najia.luminedge@gmail.com",
+  Sazzadur: "sazzadur.luminedge@gmail.com",
+  Mubasshira: "mubasshira.luminedge@gmail.com",
+  // Rahul: "rahul1921@cseku.ac.bd",
+};
+
+const TEACHER_COLOR_MAP: Record<string, string> = {
+  Prima: "bg-green-500 text-white",
+  Neelima: "bg-blue-600 text-white",
+  Tamim: "bg-yellow-500 text-black",
+  Raisa: "bg-red-600 text-white",
+  Rafi: "bg-indigo-600 text-white",
+  Saiham: "bg-emerald-600 text-white",
+  Tanvir: "bg-purple-600 text-white",
+  Iffat: "bg-pink-600 text-white",
+  Najia: "bg-cyan-600 text-white",
+  Sazzadur: "bg-lime-600 text-white",
+  Mubasshira: "bg-rose-600 text-white",
+  // Rahul: "bg-gray-600 text-white",
+};
+
 // ---------- Types ----------
 type SegmentKey = "listening" | "writing" | "reading" | "speaking";
 
@@ -88,10 +119,10 @@ export default function HomeBasedPage() {
   const fetchedTeachersRef = React.useRef<Set<string>>(new Set()); // `${uid}:${sid}` set
   const fetchedEmailRef = React.useRef<Set<string>>(new Set()); // scheduleId set for TRF email status
 
-  const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || "https://luminedge-server.vercel.app").replace(
-    /\/$/,
-    ""
-  );
+  const API_BASE = (
+    process.env.NEXT_PUBLIC_API_BASE_URL || "https://luminedge-server.vercel.app"
+  ).replace(/\/$/, "");
+
   // -------- fetch bookings with embedded users --------
   const fetchHomeBookingsAndUsers = useCallback(async () => {
     setLoading(true);
@@ -158,26 +189,10 @@ export default function HomeBasedPage() {
     fetchHomeBookingsAndUsers();
   }, [fetchHomeBookingsAndUsers]);
 
-  // -------- teacher maps --------
-  const teacherEmailMap: Record<string, string> = {
-    Prima: "prima.luminedge@gmail.com",
-    Neelima: "neelima.luminedge2023@gmail.com",
-    Tamim: "tamim.luminedge@gmail.com",
-    Raisa: "raisa.luminedge@gmail.com",
-    Rafi: "rafi.luminedge@gmail.com",
-    Saiham: "saiham.luminedge@gmail.com",
-    Tanvir: "tanvirkhan.luminedge@gmail.com",
-    Iffat: "iffat.luminedge@gmail.com",
-    Najia: "najia.luminedge@gmail.com",
-    Sazzadur: "sazzadur.luminedge@gmail.com",
-    Mubasshira: "mubasshira.luminedge@gmail.com",
-
-    // Rahul: "rahul1921@cseku.ac.bd",
-  };
-
+  // -------- teacher reverse map (email -> name) --------
   const emailToTeacher: Record<string, string> = useMemo(() => {
     const m: Record<string, string> = {};
-    Object.entries(teacherEmailMap).forEach(([name, email]) => {
+    Object.entries(TEACHER_EMAIL_MAP).forEach(([name, email]) => {
       if (email) m[email.trim().toLowerCase()] = name;
     });
     return m;
@@ -188,7 +203,7 @@ export default function HomeBasedPage() {
     skill: "L" | "W" | "R" | "S",
     newTeacher: string
   ) => {
-    const email = teacherEmailMap[newTeacher];
+    const email = TEACHER_EMAIL_MAP[newTeacher];
     if (!email) {
       toast.error(`No email mapped for teacher ${newTeacher}`);
       return;
@@ -246,51 +261,58 @@ export default function HomeBasedPage() {
     return !!(flags.listening && flags.reading && flags.writing && flags.speaking);
   };
 
-// ---------- TRF redirect (go to /admin/form) ----------
-const handleViewTRF = useCallback((booking: Booking) => {
-  // fall back to booking.userId if joined user is missing
-  const uid = booking.user?._id ?? booking.userId;
-  const sid = booking._id;
+  // ---------- TRF redirect (go to /admin/form) ----------
+  const handleViewTRF = useCallback(
+    (booking: Booking) => {
+      // fall back to booking.userId if joined user is missing
+      const uid = booking.user?._id ?? booking.userId;
+      const sid = booking._id;
 
-  if (!uid || !sid) {
-    toast.error("Missing userId or scheduleId.");
-    return;
-  }
+      if (!uid || !sid) {
+        toast.error("Missing userId or scheduleId.");
+        return;
+      }
 
-  // include teacher hints + saved-segment flags if you want (optional)
-  const teacherL =
-    booking.teacherL ||
-    (booking.teacherLEmail && emailToTeacher[(booking.teacherLEmail || "").toLowerCase()]) ||
-    "";
-  const teacherW =
-    booking.teacherW ||
-    (booking.teacherWEmail && emailToTeacher[(booking.teacherWEmail || "").toLowerCase()]) ||
-    "";
-  const teacherR =
-    booking.teacherR ||
-    (booking.teacherREmail && emailToTeacher[(booking.teacherREmail || "").toLowerCase()]) ||
-    "";
-  const teacherS =
-    booking.teacherS ||
-    (booking.teacherSEmail && emailToTeacher[(booking.teacherSEmail || "").toLowerCase()]) ||
-    "";
+      // include teacher hints + saved-segment flags if you want (optional)
+      const teacherL =
+        booking.teacherL ||
+        (booking.teacherLEmail &&
+          emailToTeacher[(booking.teacherLEmail || "").toLowerCase()]) ||
+        "";
+      const teacherW =
+        booking.teacherW ||
+        (booking.teacherWEmail &&
+          emailToTeacher[(booking.teacherWEmail || "").toLowerCase()]) ||
+        "";
+      const teacherR =
+        booking.teacherR ||
+        (booking.teacherREmail &&
+          emailToTeacher[(booking.teacherREmail || "").toLowerCase()]) ||
+        "";
+      const teacherS =
+        booking.teacherS ||
+        (booking.teacherSEmail &&
+          emailToTeacher[(booking.teacherSEmail || "").toLowerCase()]) ||
+        "";
 
-  const flags = feedbackFlagsBySchedule[sid] || {};
-  const qs = new URLSearchParams({
-    userId: String(uid),
-    scheduleId: String(sid),
-    teacherL,
-    teacherW,
-    teacherR,
-    teacherS,
-    l: String(!!flags.listening),
-    r: String(!!flags.reading),
-    w: String(!!flags.writing),
-    s: String(!!flags.speaking),
-  });
+      const flags = feedbackFlagsBySchedule[sid] || {};
+      const qs = new URLSearchParams({
+        userId: String(uid),
+        scheduleId: String(sid),
+        teacherL,
+        teacherW,
+        teacherR,
+        teacherS,
+        l: String(!!flags.listening),
+        r: String(!!flags.reading),
+        w: String(!!flags.writing),
+        s: String(!!flags.speaking),
+      });
 
-  router.push(`/admin/form?${qs.toString()}`);
-}, [emailToTeacher, feedbackFlagsBySchedule, router]);
+      router.push(`/admin/form?${qs.toString()}`);
+    },
+    [emailToTeacher, feedbackFlagsBySchedule, router]
+  );
 
   // ---------- filtering / paging ----------
   const filteredBookings = useMemo(() => {
@@ -311,7 +333,8 @@ const handleViewTRF = useCallback((booking: Booking) => {
           if (bookingDate.getTime() !== filterDate.getTime()) return false;
         }
 
-        if (nameFilter && !user.name?.toLowerCase().includes(nameFilter.toLowerCase())) return false;
+        if (nameFilter && !user.name?.toLowerCase().includes(nameFilter.toLowerCase()))
+          return false;
 
         if (
           courseNameFilter &&
@@ -492,7 +515,7 @@ const handleViewTRF = useCallback((booking: Booking) => {
               value={nameFilter}
               onChange={(e) => setNameFilter(e.target.value)}
               placeholder="Enter name..."
-              className="px-2 py-1 border rounded w/full sm:w-auto"
+              className="px-2 py-1 border rounded w-full sm:w-auto"
             />
           </label>
 
@@ -501,7 +524,7 @@ const handleViewTRF = useCallback((booking: Booking) => {
             <select
               value={testTypeFilter}
               onChange={(e) => setTestTypeFilter(e.target.value)}
-              className="px-2 py-1 border rounded w/full sm:w-auto text-[#00000f]"
+              className="px-2 py-1 border rounded w-full sm:w-auto text-[#00000f]"
             >
               <option value="IELTS">IELTS (enforced)</option>
             </select>
@@ -512,7 +535,7 @@ const handleViewTRF = useCallback((booking: Booking) => {
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="px-2 py-1 border rounded w/full sm:w-auto text-[#00000f]"
+              className="px-2 py-1 border rounded w-full sm:w-auto text-[#00000f]"
             >
               <option value="all">All Schedules</option>
               <option value="past">Past</option>
@@ -526,7 +549,7 @@ const handleViewTRF = useCallback((booking: Booking) => {
               type="date"
               value={startDateFilter}
               onChange={(e) => setStartDateFilter(e.target.value)}
-              className="px-2 py-1 border rounded w/full sm:w-auto"
+              className="px-2 py-1 border rounded w-full sm:w-auto"
             />
           </label>
         </div>
@@ -784,36 +807,7 @@ function TeacherSelect({
   tooltipText?: string;
   disabled?: boolean;
 }) {
-  const teacherEmailMap: Record<string, string> = {
-    Prima: "prima.luminedge@gmail.com",
-    Neelima: "neelima.luminedge2023@gmail.com",
-    Tamim: "tamim.luminedge@gmail.com",
-    Raisa: "raisa.luminedge@gmail.com",
-    Rafi: "rafi.luminedge@gmail.com",
-    Saiham: "saiham.luminedge@gmail.com",
-    Tanvir: "tanvirkhan.luminedge@gmail.com",
-    Iffat: "iffat.luminedge@gmail.com",
-    Najia: "najia.luminedge@gmail.com",
-    Sazzadur: "sazzadur.luminedge@gmail.com",
-    Mubasshira: "mubasshira.luminedge@gmail.com",
-
-    // Rahul: "rahul1921@cseku.ac.bd",
-  };
-  const teacherColorMap: Record<string, string> = {
-    Prima: "bg-green-500 text-white",
-    Neelima: "bg-blue-600 text-white",
-    Tamim: "bg-yellow-500 text-black",
-    Raisa: "bg-red-600 text-white",
-    Rafi: "bg-indigo-600 text-white",
-    Saiham: "bg-emerald-600 text-white",
-    Tanvir: "bg-purple-600 text-white",
-    Iffat: "bg-pink-600 text-white",
-    Najia: "bg-cyan-600 text-white",
-    Sazzadur: "bg-lime-600 text-white",
-    Mubasshira: "bg-rose-600 text-white",
-    // Rahul: "bg-gray-600 text-white",
-  };
-  const getTeacherBgClass = (val: string) => teacherColorMap[val] || "bg-white text-black";
+  const getTeacherBgClass = (val: string) => TEACHER_COLOR_MAP[val] || "bg-white text-black";
 
   return (
     <div className="relative w-full">
@@ -826,7 +820,7 @@ function TeacherSelect({
         )} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         <option value="">Select</option>
-        {Object.keys(teacherEmailMap).map((code) => (
+        {Object.keys(TEACHER_EMAIL_MAP).map((code) => (
           <option key={code} value={code}>
             {code}
           </option>

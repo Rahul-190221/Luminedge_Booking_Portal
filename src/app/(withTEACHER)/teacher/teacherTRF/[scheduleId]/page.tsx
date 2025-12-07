@@ -1,708 +1,346 @@
 "use client";
-
-import { useState, useEffect, useCallback, useMemo } from "react";
-import axios from "axios";
-import toast from "react-hot-toast";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
-
-type Booking = {
-  id: string;
-  name: string;
-  testType: string;
-  testSystem: string;
-  bookingDate: string;
-  scheduleId: string;
+// ---------- Types ----------
+type TimeSlot = {
   slotId: string;
   startTime: string;
   endTime: string;
-  userId: string[] | string;
-  userCount: number;
-  attendance?: string;
+  totalSlot?: number;
+  slot?: string; // available seats
 };
 
-type FeedbackStatus = {
-  listening?: boolean;
-  reading?: boolean;
-  writing?: boolean;
-  speaking?: boolean;
+type Schedule = {
+  _id?: string;
+  id?: string;
+  name: string;
+  testType: string;
+  startDate?: unknown; // API can vary; we normalize
+  status?: string;
+  timeSlots?: TimeSlot[];
+  [x: string]: any;
 };
 
-type ApiFeedbackStatusResponse = {
-  success: boolean;
-  status: {
-    listening?: boolean;
-    reading?: boolean;
-    writing?: boolean;
-    speaking?: boolean;
-    [k: string]: any;
-  };
-};
+// ---------- Dhaka helpers ----------
+const ymdDhaka = (d: Date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Dhaka",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d); // YYYY-MM-DD
 
-type AttendanceMap = Record<string, string>;
+// Normalize many shapes to YYYY-MM-DD (Asia/Dhaka)
+const toYMD = (v: unknown): string | null => {
+  if (!v) return null;
 
-const toId = (v: any) => String(v ?? "").trim();
-
-const hasUserInBooking = (b: Booking, userId: string) =>
-  Array.isArray(b.userId)
-    ? b.userId.map(toId).includes(userId)
-    : toId(b.userId) === userId;
-
-/** Page /admin/users until all of `userIds` are found (usually 1 call for ~50 users) */
-async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
-  const need = new Set(userIds.map(toId));
-  const found = new Map<string, any>();
-
-  if (!need.size) return [];
-
-  // First page — backend might cap the limit
-  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-    params: { page: 1, limit: requestedPageSize },
-  });
-
-  const firstPageUsers: any[] = first.data?.users || [];
-  const total: number =
-    first.data?.total ?? (firstPageUsers.length || 0);
-
-  const effectivePageSize = firstPageUsers.length || requestedPageSize;
-  const totalPages =
-    effectivePageSize > 0 ? Math.max(1, Math.ceil(total / effectivePageSize)) : 1;
-
-  const ingest = (usersPage: any[]) => {
-    for (const u of usersPage || []) {
-      const id = toId(u._id);
-      if (need.has(id) && !found.has(id)) found.set(id, u);
-    }
-  };
-
-  ingest(firstPageUsers);
-
-  if (found.size === need.size || totalPages === 1) {
-    return Array.from(found.values());
+  if (typeof v === "string") {
+    const m = v.match(/^(\d{4}-\d{2}-\d{2})/); // "YYYY-MM-DD" or ISO prefix
+    if (m) return m[1];
+    const d = new Date(v);
+    return isNaN(+d) ? null : ymdDhaka(d);
   }
-
-  for (let page = 2; page <= totalPages && found.size < need.size; page++) {
-    const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-      params: { page, limit: effectivePageSize },
-    });
-    ingest(pageRes.data?.users || []);
+  if (typeof v === "number") {
+    const d = new Date(v);
+    return isNaN(+d) ? null : ymdDhaka(d);
   }
+  if (v instanceof Date) return isNaN(+v) ? null : ymdDhaka(v);
+  if (typeof v === "object" && v && "$date" in (v as any)) {
+    const d = new Date((v as any).$date);
+    return isNaN(+d) ? null : ymdDhaka(d);
+  }
+  return null;
+};
 
-  return Array.from(found.values());
-}
+// Pick a start date from various possible shapes
+const getStartDateYMD = (s: any): string | null =>
+  toYMD(
+    s?.startDate ??
+      s?.examDate ??
+      s?.date ??
+      s?.start?.date ??
+      s?.start?.dateTime ??
+      s?.schedule?.startDate
+  );
 
-const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) => {
-  const { scheduleId } = params || {};
+const displayDate = (v: unknown): string => {
+  const ymd = toYMD(v);
+  if (!ymd) return "—";
+  const [y, m, d] = ymd.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(dt);
+};
+
+const safeRowKey = (s: Schedule, fallback: number) =>
+  s._id ?? s.id ?? `${s.name}-${getStartDateYMD(s) ?? "na"}-${fallback}`;
+
+// Consider it a schedule only if it has a usable date and some identifying fields
+const isScheduleLike = (x: any): boolean => {
+  if (!x || typeof x !== "object") return false;
+  const ymd = getStartDateYMD(x);
+  const hasNameOrType = typeof x?.name === "string" || typeof x?.testType === "string";
+  return !!ymd && hasNameOrType;
+};
+
+// ---------- Component ----------
+function TrfAvailableSchedulesBDMPage() {
   const router = useRouter();
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [schedulesPerPage, setSchedulesPerPage] = useState<number>(20);
 
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  // UI controls (some are enforced/disabled)
+  const [testTypeFilter] = useState<string>("IELTS"); // enforced, UI locked
+  const [dateSortOrder, setDateSortOrder] = useState<"ascending" | "descending">("descending");
+  const [scheduletestType, setscheduletestType] = useState<string>(""); // Paper/Computer
+  const [dateFilter] = useState<"all" | "past" | "upcoming">("past"); // enforced, UI locked
+  const [startDateFilter, setStartDateFilter] = useState<string>("");
 
-  const [attendance, setAttendance] = useState<Record<string, string>>({});
-  const [attendanceCounts, setAttendanceCounts] = useState({
-    present: 0,
-    absent: 0,
-  });
-  const [userAttendance, setUserAttendance] = useState<Record<string, number | null>>({});
-
-  const [filter, setFilter] = useState<string>("");
-  const [testTypeFilter, setTestTypeFilter] = useState<string>("");
-  const [testSystemFilter, setTestSystemFilter] = useState<string>("");
-  const [attendanceFilter, setAttendanceFilter] = useState<string>("");
-
-  // Map userId -> their first booking (for fast lookups)
-  const bookingByUser = useMemo(() => {
-    const map = new Map<string, Booking>();
-    for (const b of bookings) {
-      const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
-      ids.forEach((uid) => map.set(toId(uid), b));
-    }
-    return map;
-  }, [bookings]);
-
-  // ---- Feedback flags per user (runs in background, not blocking main loader) ----
-  const hydrateFeedbackStatus = useCallback(
-    async (userIds: string[]) => {
-      if (!userIds?.length || !scheduleId) return;
-
-      try {
-        const results = await Promise.all(
-          userIds.map(async (uid) => {
-            try {
-              const { data } = await axios.get<ApiFeedbackStatusResponse>(
-                `${API_BASE}/api/v1/admin/feedback-status/${uid}/${scheduleId}`
-              );
-              const s = data?.status || {};
-              const fs: FeedbackStatus = {
-                listening: !!s.listening,
-                reading: !!s.reading,
-                writing: !!s.writing,
-                speaking: !!s.speaking,
-              };
-              return { uid, fs, detail: s };
-            } catch (e) {
-              console.error("feedback-status fetch failed:", uid, e);
-              return { uid, fs: {}, detail: null as any };
-            }
-          })
-        );
-
-        const map = new Map(results.map((r) => [r.uid, r]));
-        setUsers((prev) =>
-          prev.map((u) => {
-            const hit = map.get(u._id);
-            if (!hit) return u;
-            return {
-              ...u,
-              feedbackStatus: { ...(u.feedbackStatus || {}), ...hit.fs },
-              feedbackDetail: hit.detail ?? u.feedbackDetail,
-            };
-          })
-        );
-      } catch (err) {
-        console.error("hydrateFeedbackStatus failed:", err);
-      }
-    },
-    [scheduleId]
-  );
-
-  const fetchBookingsAndUsers = useCallback(async () => {
-    if (!scheduleId) return;
-
-    const controller = new AbortController();
-    const { signal } = controller;
-    (fetchBookingsAndUsers as any)._abort?.();
-    (fetchBookingsAndUsers as any)._abort = () => controller.abort();
-
-    try {
-      setLoading(true);
-
-      // ---------- Special HOME case: server already joins bookings + users ----------
-      if (String(scheduleId).toLowerCase() === "home") {
-        const { data } = await axios.get(
-          `${API_BASE}/api/v1/admin/bookings/home-with-users`,
-          { signal }
-        );
-        const rows: any[] = data?.bookings || [];
-        if (!rows.length) {
-          setBookings([]);
-          setUsers([]);
-          setAttendance({});
-          setAttendanceCounts({ present: 0, absent: 0 });
-          setUserAttendance({});
-          setLoading(false);
-          return;
-        }
-
-        const normalizedBookings: Booking[] = rows.map((r) => ({
-          id: String(r._id),
-          name: r.name || "N/A",
-          testType: r.testType || "N/A",
-          testSystem: r.testSystem || "N/A",
-          bookingDate: r.bookingDate || "",
-          scheduleId: "home",
-          slotId: "",
-          startTime: r.testTime || "",
-          endTime: "",
-          userId: r.userId,
-          userCount: 1,
-          attendance: r.attendance || "N/A",
-        }));
-
-        const userList = rows.map((r) => ({
-          ...r.user,
-          feedbackStatus: r.user?.feedbackStatus || {},
-        }));
-
-        const initialAttendance: AttendanceMap = {};
-        for (const b of normalizedBookings) {
-          const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
-          const att = (b.attendance || "N/A").toString().trim().toLowerCase();
-          ids.forEach((uid) => (initialAttendance[toId(uid)] = att));
-        }
-        const presentCount = Object.values(initialAttendance).filter(
-          (s) => s === "present"
-        ).length;
-        const absentCount = Object.values(initialAttendance).filter(
-          (s) => s === "absent"
-        ).length;
-
-        setBookings(normalizedBookings);
-        setUsers(userList);
-        setAttendance(initialAttendance);
-        setAttendanceCounts({ present: presentCount, absent: absentCount });
-
-        // Bulk attendance for HOME
-        const homeUserIds = userList.map((u: any) => toId(u._id));
-        if (homeUserIds.length) {
-          try {
-            const { data: att } = await axios.post(
-              `${API_BASE}/api/v1/user/attendance/bulk`,
-              { userIds: homeUserIds },
-              { headers: { "Content-Type": "application/json" }, signal }
-            );
-            const map: Record<string, number | null> = {};
-            for (const id of homeUserIds) map[id] = att.attendance?.[id] ?? null;
-            setUserAttendance(map);
-          } catch (err) {
-            if (!axios.isCancel(err)) toast.error("Attendance lookup failed.");
-          }
-        }
-
-        setLoading(false);
-
-        const isIELTS =
-          normalizedBookings[0]?.name?.toUpperCase().includes("IELTS");
-        if (isIELTS && homeUserIds.length) {
-          void hydrateFeedbackStatus(homeUserIds);
-        }
-
-        return;
-      }
-
-      // ---------- Regular schedules ----------
-      const { data } = await axios.get(
-        `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
-        { params: { page: 1, limit: 500 }, signal }
-      );
-      const filteredBookings: Booking[] = data?.bookings || [];
-
-      if (!filteredBookings.length) {
-        setBookings([]);
-        setUsers([]);
-        setAttendance({});
-        setAttendanceCounts({ present: 0, absent: 0 });
-        setUserAttendance({});
-        setLoading(false);
-        return;
-      }
-
-      const userIds = Array.from(
-        new Set(
-          filteredBookings.flatMap((b) =>
-            Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)]
-          )
-        )
-      );
-
-      // Users + bulk attendance in PARALLEL
-      const [matchedUsers, attendanceResult] = await Promise.all([
-        userIds.length ? fetchUsersByIds(userIds) : Promise.resolve([]),
-        userIds.length
-          ? axios
-              .post(
-                `${API_BASE}/api/v1/user/attendance/bulk`,
-                { userIds },
-                { headers: { "Content-Type": "application/json" }, signal }
-              )
-              .catch((err) => {
-                if (!axios.isCancel(err)) toast.error("Attendance lookup failed.");
-                return null;
-              })
-          : Promise.resolve(null),
-      ]);
-
-      const usersPlus = matchedUsers.map((u: any) => ({
-        ...u,
-        feedbackStatus: u.feedbackStatus || {},
-      }));
-
-      const initialAttendance: AttendanceMap = {};
-      for (const b of filteredBookings) {
-        const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
-        const att = (b.attendance || "N/A").toString().trim().toLowerCase();
-        ids.forEach((uid) => (initialAttendance[toId(uid)] = att));
-      }
-      const presentCount = Object.values(initialAttendance).filter(
-        (s) => s === "present"
-      ).length;
-      const absentCount = Object.values(initialAttendance).filter(
-        (s) => s === "absent"
-      ).length;
-
-      setBookings(filteredBookings);
-      setUsers(usersPlus);
-      setAttendance(initialAttendance);
-      setAttendanceCounts({ present: presentCount, absent: absentCount });
-
-      if (attendanceResult && "data" in attendanceResult) {
-        const attRes = attendanceResult.data;
-        const attMap: Record<string, number | null> = {};
-        for (const id of userIds) attMap[id] = attRes.attendance?.[id] ?? null;
-        setUserAttendance(attMap);
-      } else {
-        setUserAttendance({});
-      }
-
-      setLoading(false);
-
-      const isIELTS =
-        filteredBookings[0]?.name?.toUpperCase().includes("IELTS");
-      if (isIELTS && userIds.length) {
-        void hydrateFeedbackStatus(userIds);
-      }
-    } catch (err: any) {
-      if (!axios.isCancel(err)) {
-        console.error(err);
-        toast.error("Error fetching data. Please try again.");
-      }
-      setLoading(false);
-    }
-  }, [scheduleId, hydrateFeedbackStatus]);
-
+  // Fetch schedules once on mount
   useEffect(() => {
-    fetchBookingsAndUsers();
-    return () => {
-      (fetchBookingsAndUsers as any)._abort?.();
+    const fetchSchedules = async () => {
+      try {
+        const response = await fetch(
+          "https://luminedge-server.vercel.app/api/v1/admin/get-schedules"
+        );
+        const raw = await response.json();
+        const cleaned = Array.isArray(raw) ? raw.filter(isScheduleLike) : [];
+        setSchedules(cleaned);
+      } catch (error) {
+        toast.error("Error fetching schedules");
+        console.error("Error fetching schedules:", error);
+      }
     };
-  }, [fetchBookingsAndUsers]);
 
-  const formatCustomDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, "0");
-    const month = date.toLocaleString("en-US", { month: "long" });
-    const year = date.getFullYear();
-    return `${day} ${month}, ${year}`;
-  };
+    fetchSchedules();
+  }, []);
 
-  const formatCustomTime = (start: string, end: string) => {
-    const fmt = (time: string) =>
-      new Date(`1970-01-01T${time}`).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    return `${fmt(start)} - ${fmt(end)}`;
-  };
+  // Derived data (no hooks needed)
+  const todayYmd = ymdDhaka(new Date());
 
-  const isFeedbackComplete = (u: any) =>
-    !!(
-      u?.feedbackStatus?.listening &&
-      u?.feedbackStatus?.reading &&
-      u?.feedbackStatus?.writing &&
-      u?.feedbackStatus?.speaking
-    );
+  const filteredSchedules = schedules.filter((schedule) => {
+    const ymd = getStartDateYMD(schedule);
+    if (!ymd) return false;
 
-  const confirmDownload = () => {
-    if (!bookings.length) {
-      toast.error("No booking data to download.");
-      return;
+    // Enforce IELTS by name (case-insensitive, partial match)
+    const isIELTS = String(schedule.name || "").toLowerCase().includes("ielts");
+    if (testTypeFilter === "IELTS" && !isIELTS) return false;
+
+    // Enforce date filter: currently locked to past/today
+    if (dateFilter === "past") {
+      if (ymd > todayYmd) return false; // hide future
+    } else if (dateFilter === "upcoming") {
+      if (ymd < todayYmd) return false; // hide past
     }
 
-    const bookingToDownload = bookings[0];
-    const doc = new jsPDF({ orientation: "landscape", format: "a4" });
+    // Optional user filters (within enforced subset)
+    const typeOk = !scheduletestType || schedule.testType === scheduletestType;
+    const startOk = !startDateFilter || ymd === startDateFilter;
 
-    doc.setFontSize(10);
-    doc.text("Booking Details", 10, 15);
-    doc.text(`Test Name: ${bookingToDownload.name}`, 10, 20);
-    doc.text(`Date: ${bookingToDownload.bookingDate}`, 10, 25);
-    doc.text(
-      `Schedule Time: ${bookingToDownload.startTime} - ${bookingToDownload.endTime}`,
-      10,
-      30
-    );
+    return typeOk && startOk;
+  });
 
-    autoTable(doc, {
-      head: [
-        [
-          "List",
-          "User Name",
-          "Email",
-          "Phone",
-          "Transaction ID",
-          "Passport Number",
-          "Test Type",
-          "Test System",
-          "Purchased",
-          "Attend",
-        ],
-      ],
-      body: users.map((user: any, index: number) => {
-        const uid = toId(user._id);
-        const relatedBooking = bookingByUser.get(uid);
+  const sortedSchedules = [...filteredSchedules].sort((a, b) => {
+    const ay = getStartDateYMD(a) ?? "";
+    const by = getStartDateYMD(b) ?? "";
+    if (ay === by) return 0;
+    const cmp = ay < by ? -1 : 1;
+    return dateSortOrder === "ascending" ? cmp : -cmp;
+  });
 
-        return [
-          index + 1,
-          user?.name || "N/A",
-          user?.email || "N/A",
-          user?.contactNo || "N/A",
-          user?.transactionId || "N/A",
-          user?.passportNumber || "N/A",
-          relatedBooking?.testType || "N/A",
-          relatedBooking?.testSystem || "N/A",
-          user?.totalMock || "N/A",
-          userAttendance[uid] !== null ? userAttendance[uid] : "N/A",
-        ];
-      }),
-      theme: "grid",
-      styles: { fontSize: 10, overflow: "linebreak" },
-      headStyles: { fillColor: [250, 206, 57] },
-      columnStyles: {
-        0: { cellWidth: 10 },
-        1: { cellWidth: 35 },
-        2: { cellWidth: 47 },
-        3: { cellWidth: 26 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 25 },
-        6: { cellWidth: 30 },
-        7: { cellWidth: 25 },
-        8: { cellWidth: 22 },
-        9: { cellWidth: 15 },
-      },
-      margin: { top: 35 },
-      tableWidth: "auto",
-    });
+  const indexOfLastSchedule = currentPage * schedulesPerPage;
+  const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;
+  const currentSchedules = sortedSchedules.slice(indexOfFirstSchedule, indexOfLastSchedule);
 
-    const currentDate = new Date().toISOString().split("T")[0];
-    doc.save(`booking_requests_${currentDate}.pdf`);
-  };
-
-  if (!scheduleId) {
-    return <div>No Schedule ID provided.</div>;
+  function formatTime(time: string) {
+    const [hour, minute] = (time ?? "").split(":").map(Number);
+    const h = Number.isFinite(hour) ? (hour as number) : 0;
+    const m = Number.isFinite(minute) ? (minute as number) : 0;
+    const period = h >= 12 ? "PM" : "AM";
+    const formattedHour = h % 12 || 12;
+    return `${formattedHour}:${m.toString().padStart(2, "0")} ${period}`;
   }
-
-  const filterUsers = (
-    usersArr: any[],
-    _bookingsArr: Booking[],
-    filterText: string,
-    typeFilter: string,
-    systemFilter: string,
-    _attendanceFilter: string
-  ) => {
-    const q = filterText.toLowerCase();
-
-    return usersArr.filter((user) => {
-      const uid = toId(user._id);
-      const userBooking = bookingByUser.get(uid);
-
-      const matchesFilter =
-        String(user?.name || "").toLowerCase().includes(q) ||
-        String(user?.email || "").toLowerCase().includes(q);
-
-      const matchesTestType =
-        !typeFilter ||
-        String(userBooking?.testType || "")
-          .toLowerCase()
-          .trim() === typeFilter.toLowerCase().trim();
-
-      const matchesTestSystem =
-        !systemFilter ||
-        String(userBooking?.testSystem || "")
-          .toLowerCase()
-          .trim() === systemFilter.toLowerCase().trim();
-
-      return matchesFilter && matchesTestType && matchesTestSystem;
-    });
-  };
-
-  const filteredUsers = useMemo(
-    () =>
-      filterUsers(
-        users,
-        bookings,
-        filter,
-        testTypeFilter,
-        testSystemFilter,
-        attendanceFilter
-      ),
-    [users, bookings, filter, testTypeFilter, testSystemFilter, attendanceFilter, bookingByUser]
-  );
 
   return (
     <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <>
-          {/* Filters */}
-          <div className="bg-gray-100 p-4 h-22 mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex flex-col">
-              <label htmlFor="filter" className="font-semibold mb-2">
-                Filter by Name or Email:
-              </label>
-              <input
-                id="filter"
-                type="text"
-                placeholder="Search by name or email"
-                className="border px-2 py-1 rounded w-full"
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-              />
-            </div>
+      <motion.h1
+        className="text-2xl font-semibold mt-0 mb-0 text-[#00000f]  p-2 rounded"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        Available Schedules
+      </motion.h1>
 
-            <div className="flex flex-col">
-              <label htmlFor="testTypeFilter" className="font-semibold mb-2">
-                Filter by Test Type:
-              </label>
-              <select
-                id="testTypeFilter"
-                value={testTypeFilter}
-                onChange={(e) => setTestTypeFilter(e.target.value)}
-                className="border px-2 py-1 rounded w-full"
-              >
-                <option value="">All</option>
-                <option value="paper-based">Paper-Based</option>
-                <option value="computer-based">Computer-Based</option>
-              </select>
-            </div>
+      <div className="bg-gray-100 p-2 h-22 mb-0 text-[#00000f]">
+        <h3 className="font-semibold">Filter by</h3>
+        <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
+          {/* Locked to IELTS */}
+          <select
+            value={testTypeFilter}
+            onChange={() => {}}
+            className="px-2 py-1 border rounded w-full sm:w-auto opacity-70 cursor-not-allowed"
+            disabled
+            title="Locked to IELTS (enforced)"
+          >
+            <option value="IELTS">IELTS (enforced)</option>
+          </select>
 
-            <div className="flex flex-col">
-              <label htmlFor="testSystemFilter" className="font-semibold mb-2">
-                Filter by Test System:
-              </label>
-              <select
-                id="testSystemFilter"
-                value={testSystemFilter}
-                onChange={(e) => setTestSystemFilter(e.target.value)}
-                className="border px-2 py-1 rounded w-full"
-              >
-                <option value="">All</option>
-                <option value="academic">Academic</option>
-                <option value="general training">General Training</option>
-              </select>
-            </div>
-          </div>
+          <select
+            value={scheduletestType}
+            onChange={(e) => {
+              setCurrentPage(1);
+              setscheduletestType(e.target.value);
+            }}
+            className="px-2 py-1 border rounded w-full sm:w-auto"
+          >
+            <option value="">All Test Types</option>
+            <option value="Paper-Based">Paper-Based</option>
+            <option value="Computer-Based">Computer-Based</option>
+          </select>
 
-          {/* Booking Details */}
-          <div className="mt-2 p-2 rounded shadow grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold">Booking Details</h2>
-              <p>
-                <strong>Test Name:</strong> {bookings[0]?.name || "N/A"}
-              </p>
-              <p>
-                <strong>Date:</strong>{" "}
-                {bookings[0]?.bookingDate
-                  ? formatCustomDate(bookings[0].bookingDate)
-                  : "N/A"}
-              </p>
-              <p>
-                <strong>Schedule Time:</strong>{" "}
-                {bookings[0]?.startTime && bookings[0]?.endTime
-                  ? formatCustomTime(
-                      bookings[0].startTime,
-                      bookings[0].endTime
-                    )
-                  : "N/A"}
-              </p>
-              <p>
-                <strong>Total Users:</strong> {users.length}
-              </p>
-            </div>
+          <select
+            value={dateSortOrder}
+            onChange={(e) => {
+              setCurrentPage(1);
+              setDateSortOrder(e.target.value as "ascending" | "descending");
+            }}
+            className="px-2 py-1 border rounded w-full sm:w-auto"
+          >
+            <option value="ascending">Start Date Ascending</option>
+            <option value="descending">Start Date Descending</option>
+          </select>
 
-            <div className="mb-4">
-              <p>
-                <strong>Total Present:</strong> {attendanceCounts.present}
-              </p>
-              <p>
-                <strong>Total Absent:</strong> {attendanceCounts.absent}
-              </p>
-            </div>
-          </div>
+          {/* Locked to past/today */}
+          <select
+            value={dateFilter}
+            onChange={() => {}}
+            className="px-2 py-1 border rounded w-full sm:w-auto opacity-70 cursor-not-allowed"
+            disabled
+            title="Locked to Past/Today (enforced)"
+          >
+            <option value="past">Past/Today (enforced)</option>
+          </select>
 
-          {/* Users Table */}
-          <div className="overflow-x-auto">
-            <table className="table-auto w-full border-collapse mt-2">
-              <thead>
-                <tr className="bg-[#face39]">
-                  <th className="px-4 py-2 text-left">List</th>
-                  <th className="px-4 py-2 text-left">User Name</th>
-                  <th className="px-4 py-2 text-left">Email</th>
-                  <th className="px-4 py-2 text-left">Phone</th>
-                  <th className="px-4 py-2 text-left">Transaction ID</th>
-                  <th className="px-4 py-2 text-left">Passport Number</th>
-                  <th className="px-4 py-2 text-left">Attendance</th>
-                  <th className="px-4 py-2 text-left">TRF</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user, index) => {
-                  const uid = toId(user._id);
-                  const isAbsent =
-                    (attendance[uid] || "").toLowerCase() === "absent";
-                  const allSaved = isFeedbackComplete(user);
+          <input
+            type="date"
+            value={startDateFilter}
+            onChange={(e) => {
+              setCurrentPage(1);
+              setStartDateFilter(e.target.value);
+            }}
+            className="px-2 py-1 border rounded w-full sm:w-auto"
+          />
+        </div>
+      </div>
 
-                  return (
-                    <tr key={uid} className="border-b">
-                      <td className="px-4 py-2 text-sm">{index + 1}</td>
-                      <td className="px-4 py-2 text-sm">
-                        {user?.name || "N/A"}
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        {user?.email || "N/A"}
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        {user?.contactNo || "N/A"}
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        {user?.transactionId || "N/A"}
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        {user?.passportNumber || "N/A"}
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        {attendance[uid] || "N/A"}
-                      </td>
-                      <td className="px-4 py-2">
-                        {String(bookings[0]?.name)
-                          .toUpperCase()
-                          .includes("IELTS") ? (
-                          <button
-                            onClick={() =>
-                              router.push(
-                                `/teacher/trf?userId=${encodeURIComponent(
-                                  uid
-                                )}&scheduleId=${encodeURIComponent(
-                                  scheduleId
-                                )}`
-                              )
-                            }
-                            disabled={isAbsent}
-                            className={`inline-flex items-center justify-center px-5 py-2 rounded-xl
-                              font-medium shadow-lg ring-2 ring-[#00000f]
-                              focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#face39]
-                              transition-all duration-300 ease-in-out
-                              ${
-                                isAbsent
-                                  ? "bg-red-500 text-white opacity-70 cursor-not-allowed"
-                                  : allSaved
-                                  ? "bg-green-600 text-white hover:bg-green-700 hover:shadow-2xl hover:scale-105 hover:ring-green-600"
-                                  : "bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f] hover:shadow-2xl hover:ring-[#face39] hover:scale-105"
-                              }`}
-                          >
-                            View TRF
-                          </button>
-                        ) : (
-                          <span className="text-gray-400 italic">N/A</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      <div className="overflow-x-auto">
+        <table className="table-auto w-full border-collapse">
+          <thead>
+            <tr className="bg-[#face39]">
+              <th className="px-4 py-2 text-left">List</th>
+              <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Test Type</th>
+              <th className="px-4 py-2 text-left">Exam Date</th>
+              <th className="px-4 py-2 text-left">Exam Time</th>
+              <th className="px-4 py-2 text-left">Total Seats</th>
+              <th className="px-4 py-2 text-left">Available Seats</th>
+              <th className="px-4 py-2 text-left">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentSchedules.map((schedule, idx) => (
+              <tr key={safeRowKey(schedule, idx)} className="border-b">
+                <td className="px-4 py-2 text-sm">{indexOfFirstSchedule + idx + 1}</td>
+                <td className="px-4 py-2">{schedule.name}</td>
+                <td className="px-4 py-2">{schedule.testType}</td>
+                <td className="px-4 py-2">{displayDate(getStartDateYMD(schedule))}</td>
+                <td className="px-4 py-2">
+                  {schedule.timeSlots?.length
+                    ? schedule.timeSlots.map((slot, i) => (
+                        <div
+                          key={`${schedule._id ?? schedule.id ?? idx}-slot-${slot.slotId ?? i}`}
+                        >
+                          {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                        </div>
+                      ))
+                    : "—"}
+                </td>
+                <td className="px-4 py-2">{schedule.timeSlots?.[0]?.totalSlot ?? "N/A"}</td>
+                <td className="px-4 py-2">{schedule.timeSlots?.[0]?.slot ?? "N/A"}</td>
+                <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                  <button
+                    onClick={() =>
+                      router.push(`/teacher/teacherTRF/${schedule?._id ?? schedule?.id}`)
+                    }
+                    className="px-5 py-2 rounded-xl bg-[#00000f] text-white font-medium shadow-md hover:bg-[#face39] hover:text-[#00000f] hover:font-semibold hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out"
+                  >
+                    View Bookings
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {currentSchedules.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-gray-500 text-sm">
+                  No IELTS schedules for today/past.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-          {/* Actions */}
-          <div className="mt-8 flex justify-start space-x-4">
-            <button
-              onClick={confirmDownload}
-              className="w-64 px-6 py-2 rounded-full font-bold text-sm uppercase tracking-wider bg-[#00000f] text-white transition-all duration-300 ease-in-out shadow-lg hover:bg-[#face39] hover:text-[#00000f] hover:shadow-2xl ring-2 ring-[#00000f] hover:ring-[#face39] hover:scale-105 flex items-center justify-center gap-1"
-            >
-              <span className="text-lg">📄</span>
-              Download as PDF
-            </button>
-          </div>
-        </>
-      )}
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-4 space-y-4 sm:space-y-0">
+        <div>
+          <label htmlFor="schedulesPerPage" className="mr-2">
+            Schedules per page:
+          </label>
+          <select
+            id="schedulesPerPage"
+            value={schedulesPerPage}
+            onChange={(e) => {
+              setSchedulesPerPage(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="px-2 py-1 border rounded"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={30}>30</option>
+          </select>
+        </div>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="mx-2">
+            Page {currentPage} /{" "}
+            {Math.max(1, Math.ceil(filteredSchedules.length / schedulesPerPage))}
+          </span>
+          <button
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+            disabled={indexOfLastSchedule >= filteredSchedules.length}
+            className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   );
-};
+}
 
-export default TrfBookingRequestsPage;
+export default TrfAvailableSchedulesBDMPage;
