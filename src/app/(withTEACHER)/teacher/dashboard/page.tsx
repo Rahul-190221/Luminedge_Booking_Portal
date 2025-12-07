@@ -3,7 +3,7 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import DonutChart from "@/components/DonutChart";
-import TableTeacher, { User as TeacherUser } from "@/components/tableBDM"; // adjust path
+import TableBDM, { User as BDMUser } from "@/components/tableBDM";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { motion } from "framer-motion";
@@ -12,8 +12,8 @@ import { motion } from "framer-motion";
    Types + helpers
    ========================= */
 
-// Reuse teacher user shape from tableTeacher
-type UserDoc = TeacherUser;
+// Reuse the user shape from TableBDM
+type UserDoc = BDMUser;
 
 const TZ = "Asia/Dhaka";
 
@@ -75,27 +75,27 @@ const buildBuckets = (docs: UserDoc[]) => {
 /* =========================
    Component
    ========================= */
-const TeacherDashboardPage = () => {
-  const [allTeachers, setAllTeachers] = useState<UserDoc[]>([]);
-  const [dailyCreated, setDailyCreated] = useState<number>(0);
-  const [monthlyCreated, setMonthlyCreated] = useState<number>(0);
+const BDMDashboardPage = () => {
+  const [allUsers, setAllUsers] = useState<UserDoc[]>([]);
+  const [dailyRequests, setDailyRequests] = useState<number>(0);
+  const [monthlyRequests, setMonthlyRequests] = useState<number>(0);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
     localMonthKey(new Date())
   );
-  const [totalTeachers, setTotalTeachers] = useState<number>(0);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
 
   const { monthMap, dayMap } = useMemo(
-    () => buildBuckets(allTeachers),
-    [allTeachers]
+    () => buildBuckets(allUsers),
+    [allUsers]
   );
 
-  /* -------- Fetch ALL teachers (role = "teacher") with pagination -------- */
+  /* -------- Fetch ALL students (role = "user") with pagination -------- */
   useEffect(() => {
     const ctrl = new AbortController();
 
-    const fetchAllTeachers = async () => {
+    const fetchAllStudents = async () => {
       try {
         setLoading(true);
 
@@ -113,7 +113,7 @@ const TeacherDashboardPage = () => {
             params: {
               page,
               limit: requestedLimit,
-              role: "teacher", // teachers only
+              role: "user", // students only
             },
             signal: ctrl.signal,
           });
@@ -146,37 +146,37 @@ const TeacherDashboardPage = () => {
           page += 1;
         }
 
-        setAllTeachers(acc);
-        setTotalTeachers(acc.length);
+        setAllUsers(acc);
+        setTotalUsers(acc.length);
 
         const today = new Date();
         const dayKey = localDayKey(today);
         const monthKey = localMonthKey(today);
         const buckets = buildBuckets(acc);
 
-        setDailyCreated(buckets.dayMap[dayKey] ?? 0);
-        setMonthlyCreated(buckets.monthMap[monthKey] ?? 0);
+        setDailyRequests(buckets.dayMap[dayKey] ?? 0);
+        setMonthlyRequests(buckets.monthMap[monthKey] ?? 0);
         setSelectedMonthKey(monthKey);
         setSelectedDate(today);
       } catch (err: any) {
         if (err?.name !== "CanceledError") {
-          console.error("Failed to load teachers:", err?.message || err);
+          console.error("Failed to load BDM users:", err?.message || err);
         }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAllTeachers();
+    fetchAllStudents();
     return () => ctrl.abort();
   }, []);
 
   /* -------- Handlers -------- */
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
-    if (!date) return setDailyCreated(0);
+    if (!date) return setDailyRequests(0);
     const key = localDayKey(date);
-    setDailyCreated(dayMap[key] || 0);
+    setDailyRequests(dayMap[key] || 0);
   };
 
   const handleMonthChange = (date: Date | null) => {
@@ -184,7 +184,7 @@ const TeacherDashboardPage = () => {
     setSelectedDate(d);
     const mk = localMonthKey(d);
     setSelectedMonthKey(mk);
-    setMonthlyCreated(monthMap[mk] || 0);
+    setMonthlyRequests(monthMap[mk] || 0);
   };
 
   const currentMonthName = useMemo(
@@ -197,7 +197,7 @@ const TeacherDashboardPage = () => {
   );
 
   /* =========================
-     UI
+     UI (same layout as admin)
      ========================= */
   return (
     <div className="w-full max-w-[1500px] mx-auto p-0 sm:p-1">
@@ -207,21 +207,21 @@ const TeacherDashboardPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: "easeOut" }}
       >
-        Teacher Overview
+        BDM Overview
       </motion.h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2">
-        {/* Daily Teacher Creation */}
+        {/* Daily Booking Requests */}
         <div className="bg-white border border-slate-200/70 shadow-sm hover:shadow-md transition-shadow rounded-lg p-2 sm:p-2 text-slate-900">
           <div className="text-[14px] font-semibold tracking-[-0.01em] mb-0">
-            Teachers Created by Date
+            Booking Requests by Date
           </div>
 
           <div className="flex items-center justify-center">
             <div className="origin-center scale-[0.85] sm:scale-90">
               <DonutChart
-                completedCount={dailyCreated}
-                totalCount={dailyCreated || 1}
+                completedCount={dailyRequests}
+                totalCount={dailyRequests || 1}
               />
             </div>
           </div>
@@ -244,17 +244,17 @@ const TeacherDashboardPage = () => {
           </div>
         </div>
 
-        {/* Monthly Teacher Creation */}
+        {/* Monthly Booking Requests */}
         <div className="bg-white border border-slate-200/70 shadow-sm hover:shadow-md transition-shadow rounded-lg p-2 sm:p-2 text-slate-900">
           <div className="text-[14px] font-semibold tracking-[-0.01em] mb-1">
-            {currentMonthName} Teachers Created
+            {currentMonthName} Booking Requests
           </div>
 
           <div className="flex items-center justify-center">
             <div className="origin-center scale-[0.85] sm:scale-90">
               <DonutChart
-                completedCount={monthlyCreated}
-                totalCount={monthlyCreated || 1}
+                completedCount={monthlyRequests}
+                totalCount={monthlyRequests || 1}
               />
             </div>
           </div>
@@ -279,24 +279,24 @@ const TeacherDashboardPage = () => {
           </div>
         </div>
 
-        {/* Total Teachers */}
+        {/* Total Users (students) */}
         <div className="bg-white border border-slate-200/70 shadow-sm hover:shadow-md transition-shadow rounded-lg p-2 sm:p-2 text-slate-900">
           <div className="text-[14px] font-semibold tracking-[-0.01em] mb-1">
-            Total Teachers
+            Total Students
           </div>
 
           <div className="flex items-center justify-center">
             <div className="origin-center scale-[0.85] sm:scale-90">
               <DonutChart
-                completedCount={totalTeachers}
-                totalCount={totalTeachers || 1}
+                completedCount={totalUsers}
+                totalCount={totalUsers || 1}
               />
             </div>
           </div>
 
           {loading && (
             <div className="text-[11px] mt-1.5 text-slate-500 text-center">
-              Loading all teachers…
+              Loading all students…
             </div>
           )}
         </div>
@@ -304,12 +304,12 @@ const TeacherDashboardPage = () => {
 
       <div className="mt-1 sm:mt-1 bg-white border border-slate-200/70 shadow-sm rounded-xl">
         <div className="p-1 sm:p-1 overflow-x-auto">
-          {/* Teacher list table */}
-          <TableTeacher rows={allTeachers} />
+          {/* BDM table: students list */}
+          <TableBDM rows={allUsers} />
         </div>
       </div>
     </div>
   );
 };
 
-export default TeacherDashboardPage;
+export default BDMDashboardPage;
