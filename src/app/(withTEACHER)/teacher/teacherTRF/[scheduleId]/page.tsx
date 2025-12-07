@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
@@ -44,6 +44,58 @@ type ApiFeedbackStatusResponse = {
   };
 };
 
+type AttendanceMap = Record<string, string>;
+
+const toId = (v: any) => String(v ?? "").trim();
+
+const hasUserInBooking = (b: Booking, userId: string) =>
+  Array.isArray(b.userId)
+    ? b.userId.map(toId).includes(userId)
+    : toId(b.userId) === userId;
+
+/** Page /admin/users until all of `userIds` are found (usually 1 call for ~50 users) */
+async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
+  const need = new Set(userIds.map(toId));
+  const found = new Map<string, any>();
+
+  if (!need.size) return [];
+
+  // First page — backend might cap the limit
+  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    params: { page: 1, limit: requestedPageSize },
+  });
+
+  const firstPageUsers: any[] = first.data?.users || [];
+  const total: number =
+    first.data?.total ?? (firstPageUsers.length || 0);
+
+  const effectivePageSize = firstPageUsers.length || requestedPageSize;
+  const totalPages =
+    effectivePageSize > 0 ? Math.max(1, Math.ceil(total / effectivePageSize)) : 1;
+
+  const ingest = (usersPage: any[]) => {
+    for (const u of usersPage || []) {
+      const id = toId(u._id);
+      if (need.has(id) && !found.has(id)) found.set(id, u);
+    }
+  };
+
+  ingest(firstPageUsers);
+
+  if (found.size === need.size || totalPages === 1) {
+    return Array.from(found.values());
+  }
+
+  for (let page = 2; page <= totalPages && found.size < need.size; page++) {
+    const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+      params: { page, limit: effectivePageSize },
+    });
+    ingest(pageRes.data?.users || []);
+  }
+
+  return Array.from(found.values());
+}
+
 const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) => {
   const { scheduleId } = params || {};
   const router = useRouter();
@@ -53,7 +105,10 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
   const [loading, setLoading] = useState<boolean>(false);
 
   const [attendance, setAttendance] = useState<Record<string, string>>({});
-  const [attendanceCounts, setAttendanceCounts] = useState({ present: 0, absent: 0 });
+  const [attendanceCounts, setAttendanceCounts] = useState({
+    present: 0,
+    absent: 0,
+  });
   const [userAttendance, setUserAttendance] = useState<Record<string, number | null>>({});
 
   const [filter, setFilter] = useState<string>("");
@@ -61,162 +116,90 @@ const TrfBookingRequestsPage = ({ params }: { params: { scheduleId: string } }) 
   const [testSystemFilter, setTestSystemFilter] = useState<string>("");
   const [attendanceFilter, setAttendanceFilter] = useState<string>("");
 
-
-
-
-type AttendanceMap = Record<string, string>;
-
-// /** Page /admin/users until all of `userIds` are found */
-// async function fetchUsersByIds(userIds: string[], pageSize = 500) {
-//   const need = new Set(userIds.map(toId));
-//   const found = new Map<string, any>();
-
-//   // page 1 first (get total)
-//   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-//     params: { page: 1, limit: pageSize },
-//   });
-//   const total: number = Number(first.data?.total ?? (first.data?.users?.length || 0));
-//   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-//   const ingest = (arr: any[] = []) => {
-//     for (const u of arr) {
-//       const id = toId(u._id);
-//       if (need.has(id) && !found.has(id)) found.set(id, u);
-//     }
-//   };
-//   ingest(first.data?.users);
-
-//   if (found.size < need.size) {
-//     for (let page = 2; page <= totalPages; page++) {
-//       const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-//         params: { page, limit: pageSize },
-//       });
-//       ingest(data?.users);
-//       if (found.size === need.size) break;
-//     }
-//   }
-//   return Array.from(found.values());
-// }
-
-// ---------- helpers for id handling & user fetching (fixes 6/10 issue) ----------
-const toId = (v: any) => String(v ?? "").trim();
-const hasUserInBooking = (b: Booking, userId: string) =>
-  Array.isArray(b.userId)
-    ? b.userId.map(toId).includes(userId)
-    : toId(b.userId) === userId;
-
-/** Page through /admin/users until we've collected all of the ids needed */
-async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
-  const need = new Set(userIds.map(toId));
-  const found = new Map<string, any>();
-
-  // page 1 to get total + actual page size (backend may cap `limit`)
-  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-    params: { page: 1, limit: requestedPageSize },
-  });
-
-  const firstPageUsers: any[] = first.data?.users || [];
-  const total: number =
-    first.data?.total ?? (firstPageUsers.length || 0);
-
-  // effective page size is what the backend really returned
-  const effectivePageSize = firstPageUsers.length || requestedPageSize;
-  const totalPages = Math.max(
-    1,
-    effectivePageSize > 0 ? Math.ceil(total / effectivePageSize) : 1
-  );
-
-  const ingest = (usersPage: any[]) => {
-    for (const u of usersPage || []) {
-      const id = toId(u._id);
-      if (need.has(id) && !found.has(id)) {
-        found.set(id, u);
-      }
+  // Map userId -> their first booking (for fast lookups)
+  const bookingByUser = useMemo(() => {
+    const map = new Map<string, Booking>();
+    for (const b of bookings) {
+      const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
+      ids.forEach((uid) => map.set(toId(uid), b));
     }
-  };
+    return map;
+  }, [bookings]);
 
-  // ingest page 1
-  ingest(firstPageUsers);
-  if (found.size === need.size || totalPages === 1) {
-    return Array.from(found.values());
-  }
-
-  // fetch remaining pages until we've found everyone or hit last page
-  for (let page = 2; page <= totalPages; page++) {
-    const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-      params: { page, limit: requestedPageSize },
-    });
-    ingest(pageRes.data?.users || []);
-    if (found.size === need.size) break;
-  }
-
-  return Array.from(found.values());
-}
-
-  // --- Schedule-scoped feedback flags per user
+  // ---- Feedback flags per user (runs in background, not blocking main loader) ----
   const hydrateFeedbackStatus = useCallback(
     async (userIds: string[]) => {
       if (!userIds?.length || !scheduleId) return;
 
-      const results = await Promise.all(
-        userIds.map(async (uid) => {
-          try {
-            const { data } = await axios.get<ApiFeedbackStatusResponse>(
-              `${API_BASE}/api/v1/admin/feedback-status/${uid}/${scheduleId}`
-            );
-            const s = data?.status || {};
-            const fs: FeedbackStatus = {
-              listening: !!s.listening,
-              reading: !!s.reading,
-              writing: !!s.writing,
-              speaking: !!s.speaking,
-            };
-            return { uid, fs, detail: s };
-          } catch (e) {
-            console.error("feedback-status fetch failed:", uid, e);
-            return { uid, fs: {}, detail: null as any };
-          }
-        })
-      );
+      try {
+        const results = await Promise.all(
+          userIds.map(async (uid) => {
+            try {
+              const { data } = await axios.get<ApiFeedbackStatusResponse>(
+                `${API_BASE}/api/v1/admin/feedback-status/${uid}/${scheduleId}`
+              );
+              const s = data?.status || {};
+              const fs: FeedbackStatus = {
+                listening: !!s.listening,
+                reading: !!s.reading,
+                writing: !!s.writing,
+                speaking: !!s.speaking,
+              };
+              return { uid, fs, detail: s };
+            } catch (e) {
+              console.error("feedback-status fetch failed:", uid, e);
+              return { uid, fs: {}, detail: null as any };
+            }
+          })
+        );
 
-      const map = new Map(results.map((r) => [r.uid, r]));
-      setUsers((prev) =>
-        prev.map((u) => {
-          const hit = map.get(u._id);
-          if (!hit) return u;
-          return {
-            ...u,
-            feedbackStatus: { ...(u.feedbackStatus || {}), ...hit.fs },
-            feedbackDetail: hit.detail ?? u.feedbackDetail,
-          };
-        })
-      );
+        const map = new Map(results.map((r) => [r.uid, r]));
+        setUsers((prev) =>
+          prev.map((u) => {
+            const hit = map.get(u._id);
+            if (!hit) return u;
+            return {
+              ...u,
+              feedbackStatus: { ...(u.feedbackStatus || {}), ...hit.fs },
+              feedbackDetail: hit.detail ?? u.feedbackDetail,
+            };
+          })
+        );
+      } catch (err) {
+        console.error("hydrateFeedbackStatus failed:", err);
+      }
     },
     [scheduleId]
   );
 
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
-  
-    // cancel in-flight if scheduleId changes
+
     const controller = new AbortController();
     const { signal } = controller;
     (fetchBookingsAndUsers as any)._abort?.();
     (fetchBookingsAndUsers as any)._abort = () => controller.abort();
-  
+
     try {
       setLoading(true);
-  
-      // 🔹 0) Fast path for HOME: server returns bookings joined with users
+
+      // ---------- Special HOME case: server already joins bookings + users ----------
       if (String(scheduleId).toLowerCase() === "home") {
-        const { data } = await axios.get(`${API_BASE}/api/v1/admin/bookings/home-with-users`, { signal });
+        const { data } = await axios.get(
+          `${API_BASE}/api/v1/admin/bookings/home-with-users`,
+          { signal }
+        );
         const rows: any[] = data?.bookings || [];
         if (!rows.length) {
-          setBookings([]); setUsers([]); setAttendance({}); setAttendanceCounts({ present: 0, absent: 0 }); setUserAttendance({});
+          setBookings([]);
+          setUsers([]);
+          setAttendance({});
+          setAttendanceCounts({ present: 0, absent: 0 });
+          setUserAttendance({});
+          setLoading(false);
           return;
         }
-  
-        // Normalize to your Booking shape (map testTime -> startTime)
+
         const normalizedBookings: Booking[] = rows.map((r) => ({
           id: String(r._id),
           name: r.name || "N/A",
@@ -224,35 +207,38 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
           testSystem: r.testSystem || "N/A",
           bookingDate: r.bookingDate || "",
           scheduleId: "home",
-          slotId: "", // not used for HOME
+          slotId: "",
           startTime: r.testTime || "",
           endTime: "",
           userId: r.userId,
           userCount: 1,
           attendance: r.attendance || "N/A",
         }));
-  
+
         const userList = rows.map((r) => ({
           ...r.user,
           feedbackStatus: r.user?.feedbackStatus || {},
         }));
-  
-        // Attendance map + counts
+
         const initialAttendance: AttendanceMap = {};
         for (const b of normalizedBookings) {
           const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
           const att = (b.attendance || "N/A").toString().trim().toLowerCase();
           ids.forEach((uid) => (initialAttendance[toId(uid)] = att));
         }
-        const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
-        const absentCount  = Object.values(initialAttendance).filter((s) => s === "absent").length;
-  
+        const presentCount = Object.values(initialAttendance).filter(
+          (s) => s === "present"
+        ).length;
+        const absentCount = Object.values(initialAttendance).filter(
+          (s) => s === "absent"
+        ).length;
+
         setBookings(normalizedBookings);
         setUsers(userList);
         setAttendance(initialAttendance);
         setAttendanceCounts({ present: presentCount, absent: absentCount });
-  
-        // Bulk attendance totals (HOME uses same endpoint)
+
+        // Bulk attendance for HOME
         const homeUserIds = userList.map((u: any) => toId(u._id));
         if (homeUserIds.length) {
           try {
@@ -268,25 +254,35 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
             if (!axios.isCancel(err)) toast.error("Attendance lookup failed.");
           }
         }
-  
-        // Feedback flags per user for this “home” scheduleId (bookingId isn’t needed)
-        await hydrateFeedbackStatus(homeUserIds);
+
+        setLoading(false);
+
+        const isIELTS =
+          normalizedBookings[0]?.name?.toUpperCase().includes("IELTS");
+        if (isIELTS && homeUserIds.length) {
+          void hydrateFeedbackStatus(homeUserIds);
+        }
+
         return;
       }
-  
-      // 🔹 1) Non-HOME: pull only bookings for this schedule from the server
+
+      // ---------- Regular schedules ----------
       const { data } = await axios.get(
         `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
         { params: { page: 1, limit: 500 }, signal }
       );
       const filteredBookings: Booking[] = data?.bookings || [];
-  
+
       if (!filteredBookings.length) {
-        setBookings([]); setUsers([]); setAttendance({}); setAttendanceCounts({ present: 0, absent: 0 }); setUserAttendance({});
+        setBookings([]);
+        setUsers([]);
+        setAttendance({});
+        setAttendanceCounts({ present: 0, absent: 0 });
+        setUserAttendance({});
+        setLoading(false);
         return;
       }
-  
-      // 🔹 2) Unique userIds for this schedule
+
       const userIds = Array.from(
         new Set(
           filteredBookings.flatMap((b) =>
@@ -294,57 +290,77 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
           )
         )
       );
-  
-      // 🔹 3) Fetch only the users we need (paged internally)
-      const matchedUsers = userIds.length ? await fetchUsersByIds(userIds) : [];
+
+      // Users + bulk attendance in PARALLEL
+      const [matchedUsers, attendanceResult] = await Promise.all([
+        userIds.length ? fetchUsersByIds(userIds) : Promise.resolve([]),
+        userIds.length
+          ? axios
+              .post(
+                `${API_BASE}/api/v1/user/attendance/bulk`,
+                { userIds },
+                { headers: { "Content-Type": "application/json" }, signal }
+              )
+              .catch((err) => {
+                if (!axios.isCancel(err)) toast.error("Attendance lookup failed.");
+                return null;
+              })
+          : Promise.resolve(null),
+      ]);
+
       const usersPlus = matchedUsers.map((u: any) => ({
         ...u,
         feedbackStatus: u.feedbackStatus || {},
       }));
-  
-      // 🔹 4) Attendance map + counts
+
       const initialAttendance: AttendanceMap = {};
       for (const b of filteredBookings) {
         const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
         const att = (b.attendance || "N/A").toString().trim().toLowerCase();
         ids.forEach((uid) => (initialAttendance[toId(uid)] = att));
       }
-      const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
-      const absentCount  = Object.values(initialAttendance).filter((s) => s === "absent").length;
-  
+      const presentCount = Object.values(initialAttendance).filter(
+        (s) => s === "present"
+      ).length;
+      const absentCount = Object.values(initialAttendance).filter(
+        (s) => s === "absent"
+      ).length;
+
       setBookings(filteredBookings);
       setUsers(usersPlus);
       setAttendance(initialAttendance);
       setAttendanceCounts({ present: presentCount, absent: absentCount });
-  
-      // 🔹 5) Bulk attendance totals per user
-      try {
-        const { data: attRes } = await axios.post(
-          `${API_BASE}/api/v1/user/attendance/bulk`,
-          { userIds },
-          { headers: { "Content-Type": "application/json" }, signal }
-        );
+
+      if (attendanceResult && "data" in attendanceResult) {
+        const attRes = attendanceResult.data;
         const attMap: Record<string, number | null> = {};
         for (const id of userIds) attMap[id] = attRes.attendance?.[id] ?? null;
         setUserAttendance(attMap);
-      } catch (err) {
-        if (!axios.isCancel(err)) toast.error("Attendance lookup failed.");
+      } else {
+        setUserAttendance({});
       }
-  
-      // 🔹 6) Hydrate schedule-scoped feedback flags
-      await hydrateFeedbackStatus(userIds);
+
+      setLoading(false);
+
+      const isIELTS =
+        filteredBookings[0]?.name?.toUpperCase().includes("IELTS");
+      if (isIELTS && userIds.length) {
+        void hydrateFeedbackStatus(userIds);
+      }
     } catch (err: any) {
       if (!axios.isCancel(err)) {
         console.error(err);
         toast.error("Error fetching data. Please try again.");
       }
-    } finally {
       setLoading(false);
     }
   }, [scheduleId, hydrateFeedbackStatus]);
-  
+
   useEffect(() => {
     fetchBookingsAndUsers();
+    return () => {
+      (fetchBookingsAndUsers as any)._abort?.();
+    };
   }, [fetchBookingsAndUsers]);
 
   const formatCustomDate = (dateString: string) => {
@@ -408,11 +424,8 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
         ],
       ],
       body: users.map((user: any, index: number) => {
-        let uid = user._id;
-        if (Array.isArray(uid)) uid = uid[0];
-        const relatedBooking = bookings.find((b) =>
-          Array.isArray(b.userId) ? b.userId.includes(uid) : b.userId === uid
-        );
+        const uid = toId(user._id);
+        const relatedBooking = bookingByUser.get(uid);
 
         return [
           index + 1,
@@ -429,7 +442,7 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
       }),
       theme: "grid",
       styles: { fontSize: 10, overflow: "linebreak" },
-      headStyles: { fillColor: [250, 206, 57] }, // RGB array, not hex string
+      headStyles: { fillColor: [250, 206, 57] },
       columnStyles: {
         0: { cellWidth: 10 },
         1: { cellWidth: 35 },
@@ -455,41 +468,50 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   }
 
   const filterUsers = (
-    users: any[],
-    bookings: Booking[],
-    filter: string,
-    testTypeFilter: string,
-    testSystemFilter: string,
+    usersArr: any[],
+    _bookingsArr: Booking[],
+    filterText: string,
+    typeFilter: string,
+    systemFilter: string,
     _attendanceFilter: string
   ) => {
-    return users.filter((user) => {
-      const userBooking = bookings.find((b) =>
-        Array.isArray(b.userId) ? b.userId.includes(user._id) : b.userId === user._id
-      );
+    const q = filterText.toLowerCase();
+
+    return usersArr.filter((user) => {
+      const uid = toId(user._id);
+      const userBooking = bookingByUser.get(uid);
 
       const matchesFilter =
-        user?.name?.toLowerCase().includes(filter.toLowerCase()) ||
-        user?.email?.toLowerCase().includes(filter.toLowerCase());
+        String(user?.name || "").toLowerCase().includes(q) ||
+        String(user?.email || "").toLowerCase().includes(q);
 
       const matchesTestType =
-        !testTypeFilter ||
-        userBooking?.testType?.toLowerCase().trim() === testTypeFilter.toLowerCase().trim();
+        !typeFilter ||
+        String(userBooking?.testType || "")
+          .toLowerCase()
+          .trim() === typeFilter.toLowerCase().trim();
 
       const matchesTestSystem =
-        !testSystemFilter ||
-        userBooking?.testSystem?.toLowerCase().trim() === testSystemFilter.toLowerCase().trim();
+        !systemFilter ||
+        String(userBooking?.testSystem || "")
+          .toLowerCase()
+          .trim() === systemFilter.toLowerCase().trim();
 
       return matchesFilter && matchesTestType && matchesTestSystem;
     });
   };
 
-  const filteredUsers = filterUsers(
-    users,
-    bookings,
-    filter,
-    testTypeFilter,
-    testSystemFilter,
-    attendanceFilter
+  const filteredUsers = useMemo(
+    () =>
+      filterUsers(
+        users,
+        bookings,
+        filter,
+        testTypeFilter,
+        testSystemFilter,
+        attendanceFilter
+      ),
+    [users, bookings, filter, testTypeFilter, testSystemFilter, attendanceFilter, bookingByUser]
   );
 
   return (
@@ -556,12 +578,17 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
               </p>
               <p>
                 <strong>Date:</strong>{" "}
-                {bookings[0]?.bookingDate ? formatCustomDate(bookings[0].bookingDate) : "N/A"}
+                {bookings[0]?.bookingDate
+                  ? formatCustomDate(bookings[0].bookingDate)
+                  : "N/A"}
               </p>
               <p>
                 <strong>Schedule Time:</strong>{" "}
                 {bookings[0]?.startTime && bookings[0]?.endTime
-                  ? formatCustomTime(bookings[0].startTime, bookings[0].endTime)
+                  ? formatCustomTime(
+                      bookings[0].startTime,
+                      bookings[0].endTime
+                    )
                   : "N/A"}
               </p>
               <p>
@@ -596,27 +623,44 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
               </thead>
               <tbody>
                 {filteredUsers.map((user, index) => {
-                  const isAbsent = (attendance[user._id] || "").toLowerCase() === "absent";
+                  const uid = toId(user._id);
+                  const isAbsent =
+                    (attendance[uid] || "").toLowerCase() === "absent";
                   const allSaved = isFeedbackComplete(user);
 
                   return (
-                    <tr key={user._id} className="border-b">
+                    <tr key={uid} className="border-b">
                       <td className="px-4 py-2 text-sm">{index + 1}</td>
-                      <td className="px-4 py-2 text-sm">{user?.name || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{user?.email || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{user?.contactNo || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{user?.transactionId || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{user?.passportNumber || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{attendance[user._id] || "N/A"}</td>
-
+                      <td className="px-4 py-2 text-sm">
+                        {user?.name || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {user?.email || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {user?.contactNo || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {user?.transactionId || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {user?.passportNumber || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {attendance[uid] || "N/A"}
+                      </td>
                       <td className="px-4 py-2">
-                        {String(bookings[0]?.name).toUpperCase().includes("IELTS") ? (
+                        {String(bookings[0]?.name)
+                          .toUpperCase()
+                          .includes("IELTS") ? (
                           <button
                             onClick={() =>
                               router.push(
                                 `/teacher/trf?userId=${encodeURIComponent(
-                                  user._id
-                                )}&scheduleId=${encodeURIComponent(scheduleId)}`
+                                  uid
+                                )}&scheduleId=${encodeURIComponent(
+                                  scheduleId
+                                )}`
                               )
                             }
                             disabled={isAbsent}

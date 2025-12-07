@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
 
-// ✅ Define User Interface
 export interface User {
   _id: string;
   name: string;
@@ -21,10 +20,8 @@ export interface User {
   isDeleted: boolean;
   testType?: string;
   testSystem?: string;
-  // role?: string; // add if your backend returns role
 }
 
-// ✅ Define Table Item Interface
 interface ItemType {
   mockType: string;
   testType: string;
@@ -35,12 +32,17 @@ interface ItemType {
   mrValidationExpiry?: string;
 }
 
+interface TableBDMProps {
+  // When provided (like from Dashboard), NO global /admin/users fetch is done
+  rows?: User[];
+}
+
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "https://luminedge-server.vercel.app";
 
-const TableBDM = () => {
-  const [users, setUsers] = useState<User[]>([]);
+const TableBDM: React.FC<TableBDMProps> = ({ rows }) => {
+  const [users, setUsers] = useState<User[]>(rows || []);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,8 +60,15 @@ const TableBDM = () => {
   const [submittedItems, setSubmittedItems] = useState<ItemType[]>([]);
   const [lastMock, setLastMock] = useState<ItemType | null>(null);
 
-  // ---------- fetch all users (robust, server-paginated) ----------
   useEffect(() => {
+    // If parent passed rows (Dashboard use-case), just use them and skip fetch
+    if (Array.isArray(rows)) {
+      setUsers(rows);
+      setIsLoading(false);
+      return;
+    }
+
+    // Standalone fallback: fetch all users with server-side pagination
     const fetchAllUsers = async () => {
       setIsLoading(true);
       try {
@@ -79,7 +88,6 @@ const TableBDM = () => {
 
           const batch: User[] = (data?.users ?? []) as User[];
 
-          // First page: detect real page size & total if provided
           if (page === 1) {
             effectiveLimit = batch.length || requestedLimit;
             if (typeof data?.total === "number") {
@@ -99,19 +107,13 @@ const TableBDM = () => {
             }
           }
 
-          // If nothing new was added, stop (backend may be ignoring page)
           if (newCount === 0) break;
-
-          // If total is known and we already have all, stop
           if (totalFromServer && acc.length >= totalFromServer) break;
-
-          // If this page is shorter than the effective page size, it is the last page
           if (effectiveLimit && batch.length < effectiveLimit) break;
 
           page += 1;
         }
 
-        // sort by createdAt desc
         acc.sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -128,9 +130,8 @@ const TableBDM = () => {
     };
 
     fetchAllUsers();
-  }, []);
+  }, [rows]);
 
-  // ---------- filtering (memoized) ----------
   const filteredUsers = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     let list = users;
@@ -159,17 +160,14 @@ const TableBDM = () => {
     return list;
   }, [users, statusFilter, actionFilter, searchTerm]);
 
-  // Reset to page 1 whenever filters/search change to avoid empty pages
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, actionFilter, searchTerm]);
+  }, [statusFilter, actionFilter, searchTerm, rows]);
 
-  // ---------- pagination slice ----------
   const indexOfLastUser = currentPage * usersPerPage;
   const indexOfFirstUser = indexOfLastUser - usersPerPage;
   const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
 
-  // ---------- user mock details ----------
   const fetchUserMockData = async (userId: string) => {
     try {
       const { data, status } = await axios.get(
@@ -322,7 +320,6 @@ const TableBDM = () => {
 
             {!isLoading && currentUsers.length === 0 && (
               <tr>
-                {/* 4 columns in thead, so colSpan = 4 */}
                 <td
                   colSpan={4}
                   className="px-4 py-6 text-center text-sm text-gray-600"

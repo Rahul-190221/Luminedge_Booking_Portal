@@ -1,10 +1,9 @@
-
 "use client";
 
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import DonutChart from "@/components/DonutChart";
-import TableAdmin from "@/components/tableAdmin";
+import TableAdmin, { User as AdminUser } from "@/components/tableAdmin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { motion } from "framer-motion";
@@ -12,19 +11,15 @@ import { motion } from "framer-motion";
 /* =========================
    Types + helpers
    ========================= */
-type UserDoc = {
-  _id: string; // Mongo ObjectId (string)
-  role?: string;
-  createdAt?: string | number | Date;
-};
+
+// Reuse/admin user shape (same fields used by TableAdmin)
+type UserDoc = AdminUser;
 
 const TZ = "Asia/Dhaka";
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE ?? "https://luminedge-server.vercel.app"; // change if needed
 
-// allow passing rows without editing TableAdmin now
-const TableAdminWithRows =
-  TableAdmin as unknown as React.ComponentType<{ rows?: UserDoc[] }>;
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://luminedge-server.vercel.app";
 
 // YYYY-MM-DD in given timezone
 const localDayKey = (d: Date) =>
@@ -77,27 +72,24 @@ const buildBuckets = (docs: UserDoc[]) => {
   return { monthMap, dayMap };
 };
 
-// filter by month YYYY-MM
-const filterByMonth = (docs: UserDoc[], monthKey: string) =>
-  docs.filter((u) => {
-    const d = getCreatedDate(u);
-    return d ? localMonthKey(d) === monthKey : false;
-  });
-
 /* =========================
    Component
    ========================= */
 const DashboardPage = () => {
   const [allUsers, setAllUsers] = useState<UserDoc[]>([]);
-  const [tableRows, setTableRows] = useState<UserDoc[]>([]);
   const [dailyRequests, setDailyRequests] = useState<number>(0);
   const [monthlyRequests, setMonthlyRequests] = useState<number>(0);
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(localMonthKey(new Date()));
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
+    localMonthKey(new Date())
+  );
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const { monthMap, dayMap } = useMemo(() => buildBuckets(allUsers), [allUsers]);
+  const { monthMap, dayMap } = useMemo(
+    () => buildBuckets(allUsers),
+    [allUsers]
+  );
 
   /* -------- Fetch ALL users (paginate) -------- */
   useEffect(() => {
@@ -113,15 +105,21 @@ const DashboardPage = () => {
         const acc: UserDoc[] = [];
 
         while (acc.length < total) {
-          const { data } = await axios.get(`${BASE_URL}/api/v1/admin/users`, {
-            params: { page, limit: pageSize },
-            signal: ctrl.signal,
-          });
+          const { data } = await axios.get(
+            `${API_BASE}/api/v1/admin/users`,
+            {
+              params: { page, limit: pageSize },
+              signal: ctrl.signal,
+            }
+          );
 
-          const batch: UserDoc[] = (data?.users || []).filter((u: UserDoc) => u.role === "user");
+          const batch: UserDoc[] = (data?.users || []).filter(
+            (u: UserDoc) => u.role === "user"
+          );
           acc.push(...batch);
 
-          total = typeof data?.total === "number" ? data.total : acc.length;
+          total =
+            typeof data?.total === "number" ? data.total : acc.length;
           if (!batch.length) break;
           page += 1;
         }
@@ -137,7 +135,6 @@ const DashboardPage = () => {
         setDailyRequests(buckets.dayMap[dayKey] ?? 0);
         setMonthlyRequests(buckets.monthMap[monthKey] ?? 0);
         setSelectedMonthKey(monthKey);
-        setTableRows(filterByMonth(acc, monthKey));
       } catch (err: any) {
         if (err?.name !== "CanceledError") {
           console.error("Failed to load users:", err?.message || err);
@@ -164,7 +161,6 @@ const DashboardPage = () => {
     const mk = localMonthKey(d);
     setSelectedMonthKey(mk);
     setMonthlyRequests(monthMap[mk] || 0);
-    setTableRows(filterByMonth(allUsers, mk));
   };
 
   const currentMonthName = useMemo(
@@ -197,15 +193,20 @@ const DashboardPage = () => {
             Booking Requests by Date
           </div>
 
-          {/* compact donut area */}
           <div className="flex items-center justify-center">
             <div className="origin-center scale-[0.85] sm:scale-90">
-              <DonutChart completedCount={dailyRequests} totalCount={dailyRequests || 1} />
+              <DonutChart
+                completedCount={dailyRequests}
+                totalCount={dailyRequests || 1}
+              />
             </div>
           </div>
 
           <div className="mt-1.5 flex items-center justify-center gap-1">
-            <label htmlFor="datePicker" className="text-[13px] font-medium  text-slate-900">
+            <label
+              htmlFor="datePicker"
+              className="text-[13px] font-medium  text-slate-900"
+            >
               Select Date:
             </label>
             <DatePicker
@@ -227,12 +228,18 @@ const DashboardPage = () => {
 
           <div className="flex items-center justify-center">
             <div className="origin-center scale-[0.85] sm:scale-90">
-              <DonutChart completedCount={monthlyRequests} totalCount={monthlyRequests || 1} />
+              <DonutChart
+                completedCount={monthlyRequests}
+                totalCount={monthlyRequests || 1}
+              />
             </div>
           </div>
 
           <div className="mt-1.5 flex items-center justify-center gap-1">
-            <label htmlFor="monthPicker" className="text-[13px] font-medium  text-slate-900">
+            <label
+              htmlFor="monthPicker"
+              className="text-[13px] font-medium  text-slate-900"
+            >
               Select Month:
             </label>
             <DatePicker
@@ -250,23 +257,31 @@ const DashboardPage = () => {
 
         {/* Total Users */}
         <div className="bg-white border border-slate-200/70 shadow-sm hover:shadow-md transition-shadow rounded-lg p-2 sm:p-2 text-slate-900">
-          <div className="text-[14px] font-semibold tracking-[-0.01em] mb-1">Total Users</div>
+          <div className="text-[14px] font-semibold tracking-[-0.01em] mb-1">
+            Total Users
+          </div>
 
           <div className="flex items-center justify-center">
             <div className="origin-center scale-[0.85] sm:scale-90">
-              <DonutChart completedCount={totalUsers} totalCount={totalUsers || 1} />
+              <DonutChart
+                completedCount={totalUsers}
+                totalCount={totalUsers || 1}
+              />
             </div>
           </div>
 
           {loading && (
-            <div className="text-[11px] mt-1.5 text-slate-500 text-center">Loading all users…</div>
+            <div className="text-[11px] mt-1.5 text-slate-500 text-center">
+              Loading all users…
+            </div>
           )}
         </div>
       </div>
 
       <div className="mt-1 sm:mt-1 bg-white border border-slate-200/70 shadow-sm rounded-xl">
         <div className="p-1 sm:p-1 overflow-x-auto">
-          <TableAdminWithRows rows={tableRows} />
+          {/* ✅ Single source of data for TableAdmin */}
+          <TableAdmin rows={allUsers} externalLoading={loading} />
         </div>
       </div>
     </div>
@@ -274,4 +289,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-

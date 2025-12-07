@@ -35,6 +35,53 @@ interface ItemType {
   isEditing?: boolean;
 }
 
+// ✅ API base (prod + local)
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://luminedge-server.vercel.app";
+
+// ✅ Pagination for /admin/users (fetch ALL pages)
+const toId = (v: any) => String(v ?? "").trim();
+
+async function fetchAllUsers(requestedPageSize = 500): Promise<User[]> {
+  const all: User[] = [];
+
+  // First page – also gives us total + real page size
+  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    params: { page: 1, limit: requestedPageSize },
+  });
+
+  const firstPageUsers: User[] = first.data?.users || [];
+  const total: number =
+    typeof first.data?.total === "number"
+      ? first.data.total
+      : firstPageUsers.length;
+
+  all.push(...firstPageUsers);
+
+  // If backend capped page size (e.g. 120), respect that
+  const serverLimit = firstPageUsers.length || requestedPageSize;
+  if (!total || serverLimit === 0 || total <= serverLimit) {
+    return all;
+  }
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(total / serverLimit)
+  );
+
+  for (let page = 2; page <= totalPages; page++) {
+    const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+      params: { page, limit: serverLimit },
+    });
+    const usersPage: User[] = data?.users || [];
+    if (!usersPage.length) break;
+    all.push(...usersPage);
+  }
+
+  return all;
+}
+
 const BookingsTable = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -47,28 +94,35 @@ const BookingsTable = () => {
   const [usersPerPage, setUsersPerPage] = useState<number>(20);
   const [lastMock, setLastMock] = useState<ItemType | null>(null);
   const [submittedItems, setSubmittedItems] = useState<ItemType[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  // ✅ Fetch users on load
+  // ✅ Fetch ALL users (paged) on load
   useEffect(() => {
-    const fetchUsers = async () => {
+    const run = async () => {
       try {
-        const response = await axios.get(`https://luminedge-server.vercel.app/api/v1/admin/users`);
-        const sortedUsers = response.data.users.sort(
+        setLoading(true);
+        const allUsers = await fetchAllUsers(500); // this will walk all pages
+
+        const sortedUsers = allUsers.sort(
           (a: User, b: User) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
+
         setUsers(sortedUsers);
         setFilteredUsers(sortedUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
+        toast.error("Failed to load users.");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchUsers();
+    run();
   }, []);
 
   // ✅ Filter logic
   useEffect(() => {
-    let filtered = users;
+    let filtered = [...users];
 
     if (statusFilter !== "all") {
       filtered = filtered.filter((user) => user.status === statusFilter);
@@ -79,8 +133,9 @@ const BookingsTable = () => {
       filtered = filtered.filter((user) => !user.isDeleted);
     }
     if (searchTerm) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter((user) =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase())
+        (user.name || "").toLowerCase().includes(term)
       );
     }
 
@@ -99,7 +154,9 @@ const BookingsTable = () => {
   // ✅ Fetch mocks
   const fetchUserMockData = async (userId: string) => {
     try {
-      const response = await axios.get(`https://luminedge-server.vercel.app/api/v1/user/${userId}`);
+      const response = await axios.get(
+        `${API_BASE}/api/v1/user/${encodeURIComponent(userId)}`
+      );
       if (response.status === 200 && response.data.success) {
         setSubmittedItems(response.data.mocks);
         setLastMock(response.data.lastMock);
@@ -129,175 +186,217 @@ const BookingsTable = () => {
 
   return (
     <>
-        <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
-      <h1 className="text-2xl font-minibold text-[#00000f] mb-2">
-        🎓 Students Booking Details
-      </h1>
+      <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
+        <h1 className="text-2xl font-minibold text-[#00000f] mb-2">
+          🎓 Students Booking Details
+        </h1>
 
-      {/* Filters */}
-      <div className="bg-gray-100 p-4 h-22 mb-3 flex flex-col sm:flex-row gap-4 py-2">
-        {/* Search */}
-        <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="search" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
-            Search by Name:
-          </label>
-          <input
-            type="text"
-            id="search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
-          />
-        </div>
+        {/* Filters */}
+        <div className="bg-gray-100 p-4 h-22 mb-3 flex flex-col sm:flex-row gap-4 py-2">
+          {/* Search */}
+          <div className="flex items-center w-full sm:w-auto">
+            <label
+              htmlFor="search"
+              className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+            >
+              Search by Name:
+            </label>
+            <input
+              type="text"
+              id="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
+            />
+          </div>
 
-        {/* Status Filter */}
-        <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="statusFilter" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
-            Filter by Status:
-          </label>
-          <select
-            id="statusFilter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
-          >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="checked">Checked</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
+          {/* Status Filter */}
+          <div className="flex items-center w-full sm:w-auto">
+            <label
+              htmlFor="statusFilter"
+              className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+            >
+              Filter by Status:
+            </label>
+            <select
+              id="statusFilter"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="checked">Checked</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
 
-        {/* Action Filter */}
-        <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="actionFilter" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
-            Active:
-          </label>
-          <select
-            id="actionFilter"
-            value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
-            className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
-          >
-            <option value="all">All</option>
-            <option value="blocked">Blocked</option>
-            <option value="unblocked">Unblocked</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="table-auto w-full border-collapse text-[#00000f]">
-          <thead>
-            <tr className="bg-[#face39]">
-              <th className="px-4 py-2 text-left">Name</th>
-              <th className="px-4 py-2 text-left">Enrollment Date</th>
-              <th className="px-4 py-2 text-left">Email</th>
-              <th className="px-4 py-2 text-left">Status</th>
-              <th className="px-4 py-2 text-left">Purshed</th>
-              <th className="px-4 py-2 text-left">Booked</th>
-              <th className="px-4 py-2 text-left">Bookings</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentUsers.map((user: User) => (
-              <tr key={user._id} className="border-b">
-                <td className="px-4 py-2 break-words">{user.name}</td>
-                <td className="px-4 py-2 break-words">
-                  {new Date(user.createdAt).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "2-digit",
-                    year: "numeric",
-                  }).replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
-                </td>
-                <td className="px-4 py-2 break-words">{user.email}</td>
-                <td className="px-4 py-2 break-words">{user.status}</td>
-                <td className="px-4 py-2 break-words text-center">
-                  {user.totalMock !== undefined ? user.totalMock : "N/A"}
-                </td>
-
-                <td className="px-4 py-2 break-words text-center">
-                  {user.totalMock && user.mock !== undefined
-                  ? (typeof user.totalMock === "number" && typeof user.mock === "number"
-                    ? user.totalMock - user.mock
-                    : "N/A")
-                  : "N/A"}
-                </td>
-                <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 break-words">
-                  <button
-                    onClick={() => onViewDetails(user)}
-                    className="px-5 py-2 rounded-xl bg-[#00000f] text-white font-semibold hover:bg-[#face39] hover:text-[#00000f] hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out flex items-center gap-1"
-                  >
-                    <AiOutlineEye className="text-xl" />
-                    View Details
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal */}
-      {isModalOpen && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white w-full max-w-5xl p-2 rounded-2xl shadow-2xl border border-[#face39] relative">
-          <h2 className="text-[#00000f]">{selectedUser.name}&rsquo;s Booking Summary</h2>
-
-            <div className="border border-gray-300 rounded-xl p-4 shadow-inner">
-              <UserTable userId={selectedUser._id} />
-            </div>
-            <div className="flex justify-center mt-2 space-x-2">
-              <button
-                onClick={closeModal}
-                className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-2.5 rounded-full text-lg font-bold tracking-wide shadow-lg hover:scale-105 hover:from-red-700 hover:to-red-800 transition-all duration-300 ease-in-out"
-              >
-                ❌Close
-              </button>
-            </div>
+          {/* Action Filter */}
+          <div className="flex items-center w-full sm:w-auto">
+            <label
+              htmlFor="actionFilter"
+              className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+            >
+              Active:
+            </label>
+            <select
+              id="actionFilter"
+              value={actionFilter}
+              onChange={(e) => setActionFilter(e.target.value)}
+              className="px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base"
+            >
+              <option value="all">All</option>
+              <option value="blocked">Blocked</option>
+              <option value="unblocked">Unblocked</option>
+            </select>
           </div>
         </div>
-      )}
 
-      {/* Pagination Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-center mt-4">
-        <div className="mb-4 sm:mb-0 text-[#00000f]">
-          <label htmlFor="usersPerPage" className="mr-2">
-            Users per page:
-          </label>
-          <select
-            id="usersPerPage"
-            value={usersPerPage}
-            onChange={(e) => setUsersPerPage(Number(e.target.value))}
-            className="px-2 py-1 border rounded w-full sm:w-auto"
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={20}>20</option>
-            <option value={30}>30</option>
-          </select>
-        </div>
-        <div className="flex space-x-2 text-[#00000f]">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-          >
-            Previous
-          </button>
-          <span className="mx-2">
-            Page {currentPage} / {Math.ceil(filteredUsers.length / usersPerPage)}
-          </span>
-          <button
-            onClick={() => setCurrentPage((prev) => prev + 1)}
-            disabled={currentPage >= Math.ceil(filteredUsers.length / usersPerPage)}
-            className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+        {loading ? (
+          <p className="px-4 py-2">Loading users…</p>
+        ) : (
+          <>
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="table-auto w-full border-collapse text-[#00000f]">
+                <thead>
+                  <tr className="bg-[#face39]">
+                    <th className="px-4 py-2 text-left">Name</th>
+                    <th className="px-4 py-2 text-left">Enrollment Date</th>
+                    <th className="px-4 py-2 text-left">Email</th>
+                    <th className="px-4 py-2 text-left">Status</th>
+                    <th className="px-4 py-2 text-left">Purshed</th>
+                    <th className="px-4 py-2 text-left">Booked</th>
+                    <th className="px-4 py-2 text-left">Bookings</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentUsers.map((user: User) => (
+                    <tr key={user._id} className="border-b">
+                      <td className="px-4 py-2 break-words">{user.name}</td>
+                      <td className="px-4 py-2 break-words">
+                        {new Date(user.createdAt)
+                          .toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "2-digit",
+                            year: "numeric",
+                          })
+                          .replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
+                      </td>
+                      <td className="px-4 py-2 break-words">{user.email}</td>
+                      <td className="px-4 py-2 break-words">{user.status}</td>
+                      <td className="px-4 py-2 break-words text-center">
+                        {user.totalMock !== undefined ? user.totalMock : "N/A"}
+                      </td>
+
+                      <td className="px-4 py-2 break-words text-center">
+                        {user.totalMock && user.mock !== undefined
+                          ? typeof user.totalMock === "number" &&
+                            typeof user.mock === "number"
+                            ? user.totalMock - user.mock
+                            : "N/A"
+                          : "N/A"}
+                      </td>
+                      <td className="px-4 py-2 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 break-words">
+                        <button
+                          onClick={() => onViewDetails(user)}
+                          className="px-5 py-2 rounded-xl bg-[#00000f] text-white font-semibold hover:bg-[#face39] hover:text-[#00000f] hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out flex items-center gap-1"
+                        >
+                          <AiOutlineEye className="text-xl" />
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {!currentUsers.length && (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-4 py-4 text-center text-sm text-gray-500"
+                      >
+                        No users found for the current filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal */}
+            {isModalOpen && selectedUser && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                <div className="bg-white w-full max-w-5xl p-2 rounded-2xl shadow-2xl border border-[#face39] relative">
+                  <h2 className="text-[#00000f]">
+                    {selectedUser.name}
+                    &rsquo;s Booking Summary
+                  </h2>
+
+                  <div className="border border-gray-300 rounded-xl p-4 shadow-inner">
+                    <UserTable userId={selectedUser._id} />
+                  </div>
+                  <div className="flex justify-center mt-2 space-x-2">
+                    <button
+                      onClick={closeModal}
+                      className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-2.5 rounded-full text-lg font-bold tracking-wide shadow-lg hover:scale-105 hover:from-red-700 hover:to-red-800 transition-all duration-300 ease-in-out"
+                    >
+                      ❌Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-4">
+              <div className="mb-4 sm:mb-0 text-[#00000f]">
+                <label htmlFor="usersPerPage" className="mr-2">
+                  Users per page:
+                </label>
+                <select
+                  id="usersPerPage"
+                  value={usersPerPage}
+                  onChange={(e) => setUsersPerPage(Number(e.target.value))}
+                  className="px-2 py-1 border rounded w-full sm:w-auto"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={30}>30</option>
+                </select>
+              </div>
+              <div className="flex space-x-2 text-[#00000f]">
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-60"
+                >
+                  Previous
+                </button>
+                <span className="mx-2">
+                  Page {currentPage} /{" "}
+                  {Math.max(
+                    1,
+                    Math.ceil(filteredUsers.length / usersPerPage) || 1
+                  )}
+                </span>
+                <button
+                  onClick={() => setCurrentPage((prev) => prev + 1)}
+                  disabled={
+                    currentPage >=
+                    Math.ceil(filteredUsers.length / usersPerPage) ||
+                    filteredUsers.length === 0
+                  }
+                  className="px-2 py-1 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-60"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

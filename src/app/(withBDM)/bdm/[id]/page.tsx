@@ -17,7 +17,7 @@ type Booking = {
   slotId: string;
   startTime: string;
   endTime: string;
-  userId: string[] | string;    // <— backend can return string or array
+  userId: string[] | string; // backend can return string or array
   userCount?: number;
   attendance?: string;
 };
@@ -26,106 +26,12 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "https://luminedge-server.vercel.app";
 
+const PAGE_SIZE = 500;
 
+// -------- helpers --------
+const toId = (v: any) => String(v ?? "").trim();
 
-
-const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
-  const scheduleId = params.id;
-
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [attendance, setAttendance] = useState<Record<string, string>>({});
-  const [filter, setFilter] = useState<string>("");
-  const [testTypeFilter, setTestTypeFilter] = useState<string>("");
-  const [testSystemFilter, setTestSystemFilter] = useState<string>("");
-  const [attendanceFilter /* unused but kept to match your UI */] = useState<string>("");
-  const [userAttendance, setUserAttendance] = useState<Record<string, number | null>>({});
-  const [attendanceCounts, setAttendanceCounts] = useState({ present: 0, absent: 0 });
-
-
- 
-  // -------- helpers --------
-  const idsOf = (v: string | string[]) => (Array.isArray(v) ? v.map(String) : [String(v)]);
-
-  const formatCustomDate = (dateString: string) => {
-    const d = new Date(dateString);
-    if (isNaN(+d)) return "N/A";
-    const day = d.getDate().toString().padStart(2, "0");
-    const month = d.toLocaleString("en-US", { month: "long" });
-    const year = d.getFullYear();
-    return `${day} ${month}, ${year}`;
-  };
-
-  const formatCustomTime = (start: string, end: string) => {
-    const fmt = (time: string) => {
-      if (!time || !/^\d{2}:\d{2}/.test(time)) return "N/A";
-      return new Date(`1970-01-01T${time}`).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-    return `${fmt(start)} - ${fmt(end)}`;
-  };
-
-  // Map userId -> their (first) booking row for quick joins
-  const bookingByUser = useMemo(() => {
-    const m = new Map<string, Booking>();
-    for (const b of bookings) idsOf(b.userId).forEach((uid) => m.set(String(uid), b));
-    return m;
-  }, [bookings]);
-
-  // -------- paginated fetchers --------
-  const fetchAllBookings = async (): Promise<Booking[]> => {
-    const all: Booking[] = [];
-    let page = 1;
-    while (true) {
-      const { data } = await axios.get(`${API_BASE}/api/v1/admin/bookings`, {
-        params: { page, limit: PAGE_SIZE },
-      });
-      const batch: Booking[] = data?.bookings ?? [];
-      all.push(...batch);
-      if (batch.length < PAGE_SIZE) break;
-      page += 1;
-    }
-    return all;
-  };
-
-  const toId = (v: any) => String(v ?? "").trim();
-
-// /** Fetch only the users we need by paging /admin/users until all are found */
-// async function fetchUsersByIds(userIds: string[], pageSize = 500) {
-//   const need = new Set(userIds.map(toId));
-//   const found = new Map<string, any>();
-
-//   // page 1 first (get total)
-//   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-//     params: { page: 1, limit: pageSize },
-//   });
-//   const total: number = Number(first.data?.total ?? (first.data?.users?.length || 0));
-//   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-//   const ingest = (arr: any[] = []) => {
-//     for (const u of arr) {
-//       const id = toId(u._id);
-//       if (need.has(id) && !found.has(id)) found.set(id, u);
-//     }
-//   };
-
-//   ingest(first.data?.users);
-
-//   if (found.size < need.size) {
-//     for (let page = 2; page <= totalPages; page++) {
-//       const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-//         params: { page, limit: pageSize },
-//       });
-//       ingest(data?.users);
-//       if (found.size === need.size) break;
-//     }
-//   }
-//   return Array.from(found.values());
-// }
+/** Page through /admin/users until we've collected all of the ids needed */
 async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   const need = new Set(userIds.map(toId));
   const found = new Map<string, any>();
@@ -171,93 +77,136 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   return Array.from(found.values());
 }
 
-const fetchBookingsAndUsers = useCallback(async () => {
-  if (!scheduleId) return;
+const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
+  const scheduleId = params.id;
 
-  try {
-    setLoading(true);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
-    // ✅ Ask backend for only this schedule’s bookings (no client-side full crawl)
-    const { data } = await axios.get(
-      `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
-      { params: { page: 1, limit: PAGE_SIZE } }
-    );
-    const scheduleBookings: Booking[] = data?.bookings || [];
+  const [filter, setFilter] = useState<string>("");
+  const [testTypeFilter, setTestTypeFilter] = useState<string>("");
+  const [testSystemFilter, setTestSystemFilter] = useState<string>("");
+  const [userAttendance, setUserAttendance] = useState<
+    Record<string, number | null>
+  >({});
+  const [attendanceCounts, setAttendanceCounts] = useState({
+    present: 0,
+    absent: 0,
+  });
 
-    if (!scheduleBookings.length) {
-      setBookings([]);
-      setUsers([]);
-      setAttendanceCounts({ present: 0, absent: 0 });
-      setUserAttendance({});
-      return;
-    }
+  const formatCustomDate = (dateString: string) => {
+    const d = new Date(dateString);
+    if (isNaN(+d)) return "N/A";
+    const day = d.getDate().toString().padStart(2, "0");
+    const month = d.toLocaleString("en-US", { month: "long" });
+    const year = d.getFullYear();
+    return `${day} ${month}, ${year}`;
+  };
 
-    // Unique user ids for this schedule
-    const userIds = Array.from(
-      new Set(
-        scheduleBookings.flatMap((b) =>
-          Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)]
-        )
-      )
-    );
+  const formatCustomTime = (start: string, end: string) => {
+    const fmt = (time: string) => {
+      if (!time || !/^\d{2}:\d{2}/.test(time)) return "N/A";
+      return new Date(`1970-01-01T${time}`).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
+    return `${fmt(start)} - ${fmt(end)}`;
+  };
 
-    // ✅ Fetch only the users we need (paged until all found)
-    const matchedUsers = userIds.length ? await fetchUsersByIds(userIds, 500) : [];
+  const fetchBookingsAndUsers = useCallback(async () => {
+    if (!scheduleId) return;
 
-    // Attendance map + totals (case-insensitive)
-    const attMap: Record<string, string> = {};
-    for (const b of scheduleBookings) {
-      const att = String(b.attendance || "N/A").trim().toLowerCase();
-      const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
-      ids.forEach((uid) => (attMap[toId(uid)] = att));
-    }
-    const present = Object.values(attMap).filter((s) => s === "present").length;
-    const absent  = Object.values(attMap).filter((s) => s === "absent").length;
+    try {
+      setLoading(true);
 
-    setBookings(scheduleBookings);
-    setUsers(matchedUsers);
-    setAttendanceCounts({ present, absent });
+      // Ask backend for only this schedule’s bookings (no client-side full crawl)
+      const { data } = await axios.get(
+        `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
+        { params: { page: 1, limit: PAGE_SIZE } }
+      );
+      const scheduleBookings: Booking[] = data?.bookings || [];
 
-    // Optional bulk totals per user
-    if (userIds.length) {
-      try {
-        const { data: att } = await axios.post(
-          `${API_BASE}/api/v1/user/attendance/bulk`,
-          { userIds },
-          { headers: { "Content-Type": "application/json" } }
-        );
-        const totals: Record<string, number | null> = {};
-        for (const id of userIds) totals[id] = att?.attendance?.[id] ?? null;
-        setUserAttendance(totals);
-      } catch (err: any) {
-        console.error("bulk attendance error:", err);
-        toast.error(
-          axios.isAxiosError(err) && err.response
-            ? `Attendance API error: ${err.response.data?.message || "Check the API"}`
-            : "An unexpected error occurred."
-        );
+      if (!scheduleBookings.length) {
+        setBookings([]);
+        setUsers([]);
+        setAttendanceCounts({ present: 0, absent: 0 });
+        setUserAttendance({});
+        return;
       }
+
+      // Unique user ids for this schedule
+      const userIds = Array.from(
+        new Set(
+          scheduleBookings.flatMap((b) =>
+            Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)]
+          )
+        )
+      );
+
+      // Fetch only the users we need (paged until all found)
+      const matchedUsers = userIds.length
+        ? await fetchUsersByIds(userIds, 500)
+        : [];
+
+      // Attendance map + totals (case-insensitive)
+      const attMap: Record<string, string> = {};
+      for (const b of scheduleBookings) {
+        const att = String(b.attendance || "N/A").trim().toLowerCase();
+        const ids = Array.isArray(b.userId) ? b.userId : [b.userId];
+        ids.forEach((uid) => (attMap[toId(uid)] = att));
+      }
+      const present = Object.values(attMap).filter((s) => s === "present")
+        .length;
+      const absent = Object.values(attMap).filter((s) => s === "absent").length;
+
+      setBookings(scheduleBookings);
+      setUsers(matchedUsers);
+      setAttendanceCounts({ present, absent });
+
+      // Optional bulk totals per user
+      if (userIds.length) {
+        try {
+          const { data: att } = await axios.post(
+            `${API_BASE}/api/v1/user/attendance/bulk`,
+            { userIds },
+            { headers: { "Content-Type": "application/json" } }
+          );
+          const totals: Record<string, number | null> = {};
+          for (const id of userIds) totals[id] = att?.attendance?.[id] ?? null;
+          setUserAttendance(totals);
+        } catch (err: any) {
+          console.error("bulk attendance error:", err);
+          toast.error(
+            axios.isAxiosError(err) && err.response
+              ? `Attendance API error: ${
+                  err.response.data?.message || "Check the API"
+                }`
+              : "An unexpected error occurred."
+          );
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Error fetching data. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  } catch (e) {
-    console.error(e);
-    toast.error("Error fetching data. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-}, [scheduleId]);
+  }, [scheduleId]);
 
-
-  const PAGE_SIZE = 500;
   useEffect(() => {
     fetchBookingsAndUsers();
   }, [fetchBookingsAndUsers]);
 
- 
   // Precompute userId -> booking (avoids repeated .find in render)
   const bookingByUserId = useMemo(() => {
     const map = new Map<string, Booking>();
     for (const b of bookings) {
-      const ids = Array.isArray(b.userId) ? b.userId.map(toId) : [toId(b.userId)];
+      const ids = Array.isArray(b.userId)
+        ? b.userId.map(toId)
+        : [toId(b.userId)];
       for (const id of ids) if (!map.has(id)) map.set(id, b);
     }
     return map;
@@ -277,8 +226,10 @@ const fetchBookingsAndUsers = useCallback(async () => {
           (u?.name || "").toLowerCase().includes(f) ||
           (u?.email || "").toLowerCase().includes(f);
 
-        const matchesType = !type || (b?.testType || "").toLowerCase().trim() === type;
-        const matchesSys = !sys || (b?.testSystem || "").toLowerCase().trim() === sys;
+        const matchesType =
+          !type || (b?.testType || "").toLowerCase().trim() === type;
+        const matchesSys =
+          !sys || (b?.testSystem || "").toLowerCase().trim() === sys;
 
         return matchesText && matchesType && matchesSys;
       });
@@ -371,7 +322,12 @@ const fetchBookingsAndUsers = useCallback(async () => {
       ],
       body,
       theme: "grid",
-      styles: { fontSize: 8, cellPadding: 1.5, overflow: "linebreak", valign: "middle" },
+      styles: {
+        fontSize: 8,
+        cellPadding: 1.5,
+        overflow: "linebreak",
+        valign: "middle",
+      },
       headStyles: { fillColor: [250, 206, 57] },
       columnStyles,
       margin,
@@ -449,7 +405,9 @@ const fetchBookingsAndUsers = useCallback(async () => {
               </p>
               <p>
                 <strong>Date:</strong>{" "}
-                {bookings[0]?.bookingDate ? formatCustomDate(bookings[0].bookingDate) : "N/A"}
+                {bookings[0]?.bookingDate
+                  ? formatCustomDate(bookings[0].bookingDate)
+                  : "N/A"}
               </p>
               <p>
                 <strong>Schedule Time:</strong>{" "}
@@ -496,13 +454,25 @@ const fetchBookingsAndUsers = useCallback(async () => {
                       <td className="px-4 py-2 text-sm">{u?.name || "N/A"}</td>
                       <td className="px-4 py-2 text-sm">{u?.email || "N/A"}</td>
                       <td className="px-4 py-2 text-sm">{u?.contactNo || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{u?.transactionId || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{u?.passportNumber || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{b?.testType || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{b?.testSystem || "N/A"}</td>
-                      <td className="px-4 py-2 text-sm">{u?.totalMock ?? "N/A"}</td>
                       <td className="px-4 py-2 text-sm">
-                        {userAttendance[uid] !== null ? userAttendance[uid] : "N/A"}
+                        {u?.transactionId || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {u?.passportNumber || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {b?.testType || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {b?.testSystem || "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {u?.totalMock ?? "N/A"}
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        {userAttendance[uid] !== null
+                          ? userAttendance[uid]
+                          : "N/A"}
                       </td>
                     </tr>
                   );

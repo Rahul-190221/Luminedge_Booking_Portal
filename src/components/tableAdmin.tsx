@@ -23,6 +23,7 @@ export interface User {
   isDeleted: boolean;
   testType?: string;
   testSystem?: string;
+  role?: string; // used for filtering/analytics elsewhere
 }
 
 // ✅ Define Table Item Interface
@@ -33,15 +34,22 @@ interface ItemType {
   mock: string;
   transactionId: string;
   mrValidation: string;
-  mrValidationExpiry?: string; // Added this property
+  mrValidationExpiry?: string;
   isEditing?: boolean;
 }
-// ✅ Add this constant here:
+
+// ✅ API base (shared with Dashboard)
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "https://luminedge-server.vercel.app";
 
-const TableAdmin = () => {
+// ✅ Props: parent can pass rows + external loading state
+interface TableAdminProps {
+  rows?: User[];
+  externalLoading?: boolean;
+}
+
+const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -60,82 +68,63 @@ const TableAdmin = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [items, setItems] = useState<ItemType[]>([
-    { mockType: "", testType: "", testSystem: "", mock: "", transactionId: "", mrValidation: "" },
+    {
+      mockType: "",
+      testType: "",
+      testSystem: "",
+      mock: "",
+      transactionId: "",
+      mrValidation: "",
+    },
   ]);
   const [submittedItems, setSubmittedItems] = useState<ItemType[]>([]);
 
-  // 🧲 Fetch ALL users (iterate pages) so filtering is complete client-side
-  // useEffect(() => {
-  //   const fetchAllUsers = async () => {
-  //     setIsLoading(true);
-  //     try {
-  //       const acc: User[] = [];
-  //       let page = 1;
-  //       const limit = 500; // big page size to minimize roundtrips
-  //       // loop until the received page is shorter than limit
-  //       // supports both paginated & non-paginated backends
-  //       // (if backend ignores page/limit we still just set once)
-  //       // eslint-disable-next-line no-constant-condition
-  //       while (true) {
-  //         const { data } = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/users", {
-  //           params: { page, limit },
-  //         });
-  //         const batch: User[] = (data?.users ?? []) as User[];
-  //         acc.push(...batch);
-  //         if (!Array.isArray(batch) || batch.length < limit) break;
-  //         page += 1;
-  //       }
+  const loading = externalLoading ?? isLoading;
 
-  //       const sorted = acc.sort(
-  //         (a, b) =>
-  //           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  //       );
-
-  //       setUsers(sorted);
-  //       setFilteredUsers(sorted);
-  //     } catch (error) {
-  //       console.error("Error fetching users:", error);
-  //       setUsers([]);
-  //       setFilteredUsers([]);
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-
-  //   fetchAllUsers();
-  // }, []);
-
+  // 🧲 Fetch ALL users ONLY if parent did not provide rows
   useEffect(() => {
+    let cancelled = false;
+
+    // If parent passes rows (even an empty array), we treat this as source of truth
+    if (rows !== undefined) {
+      if (!cancelled) {
+        setUsers(rows || []);
+        setFilteredUsers(rows || []);
+        setIsLoading(false);
+      }
+      return;
+    }
+
     const fetchAllUsers = async () => {
       setIsLoading(true);
       try {
         const acc: User[] = [];
         const seen = new Set<string>();
-  
+
         const requestedLimit = 500;
         let page = 1;
         let effectiveLimit: number | null = null;
         let totalFromServer: number | null = null;
-  
+
         // eslint-disable-next-line no-constant-condition
         while (true) {
-          const { data } = await axios.get(
-            `${API_BASE}/api/v1/admin/users`,
-            { params: { page, limit: requestedLimit } }
-          );
-  
+          if (cancelled) break;
+
+          const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+            params: { page, limit: requestedLimit },
+          });
+
           const batch: User[] = (data?.users ?? []) as User[];
-  
-          // First page: detect real page size & total if provided
+
           if (page === 1) {
             effectiveLimit = batch.length || requestedLimit;
             if (typeof data?.total === "number") {
               totalFromServer = data.total;
             }
           }
-  
+
           if (!batch.length) break;
-  
+
           let newCount = 0;
           for (const u of batch) {
             const id = String(u._id);
@@ -145,39 +134,44 @@ const TableAdmin = () => {
               newCount++;
             }
           }
-  
-          // If nothing new was added, stop (backend may be ignoring page)
+
           if (newCount === 0) break;
-  
-          // If total is known and we already have all, stop
           if (totalFromServer && acc.length >= totalFromServer) break;
-  
-          // If this page is shorter than the effective page size, it is the last page
           if (effectiveLimit && batch.length < effectiveLimit) break;
-  
+
           page += 1;
         }
-  
-        const sorted = acc.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        );
-  
-        setUsers(sorted);
-        setFilteredUsers(sorted);
+
+        if (!cancelled) {
+          const sorted = acc.sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          setUsers(sorted);
+          setFilteredUsers(sorted);
+        }
       } catch (error) {
-        console.error("Error fetching users:", error);
-        setUsers([]);
-        setFilteredUsers([]);
-        toast.error("Failed to load users.");
+        if (!cancelled) {
+          console.error("Error fetching users:", error);
+          setUsers([]);
+          setFilteredUsers([]);
+          toast.error("Failed to load users.");
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
-  
-    fetchAllUsers();
-  }, []);
-  
+
+    // Only run internal fetch when parent does NOT provide rows
+    if (rows === undefined) {
+      fetchAllUsers();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [rows]);
+
   // 🔎 Compute filtered list (status, blocked/unblocked, search)
   useEffect(() => {
     let filtered = users;
@@ -209,7 +203,7 @@ const TableAdmin = () => {
     }
 
     setFilteredUsers(filtered);
-    setCurrentPage(1); // prevent landing on empty pages after a filter/search change
+    setCurrentPage(1); // reset to first page on filter/search change
   }, [statusFilter, actionFilter, searchTerm, users]);
 
   // 📄 Pagination
@@ -230,7 +224,7 @@ const TableAdmin = () => {
 
   const fetchUserMockData = async (userId: string) => {
     try {
-      const response = await axios.get(`https://luminedge-server.vercel.app/api/v1/user/${userId}`);
+      const response = await axios.get(`${API_BASE}/api/v1/user/${userId}`);
       if (response.status === 200 && response.data.success) {
         setSubmittedItems(response.data.mocks || []);
         setLastMock(response.data.lastMock || null);
@@ -278,7 +272,14 @@ const TableAdmin = () => {
   const addItem = () => {
     setItems((prev) => [
       ...prev,
-      { mockType: "", testType: "", testSystem: "", mock: "", transactionId: "", mrValidation: "" },
+      {
+        mockType: "",
+        testType: "",
+        testSystem: "",
+        mock: "",
+        transactionId: "",
+        mrValidation: "",
+      },
     ]);
   };
   const removeItem = (index: number) => {
@@ -292,7 +293,7 @@ const TableAdmin = () => {
 
     const newStatus = user.isDeleted ? "active" : "blocked";
     try {
-      await axios.put(`https://luminedge-server.vercel.app/api/v1/user/block/${userId}`, {
+      await axios.put(`${API_BASE}/api/v1/user/block/${userId}`, {
         isDeleted: !user.isDeleted,
       });
       setUsers((prevUsers) =>
@@ -309,7 +310,7 @@ const TableAdmin = () => {
 
   const onChangeStatus = async (_id: string, value: string) => {
     try {
-      const response = await axios.put(`https://luminedge-server.vercel.app/api/v1/user/status/${_id}`, {
+      const response = await axios.put(`${API_BASE}/api/v1/user/status/${_id}`, {
         status: value,
       });
 
@@ -326,7 +327,8 @@ const TableAdmin = () => {
     } catch (error: any) {
       console.error("❌ Error updating user status:", error);
       const errorMessage =
-        error.response?.data?.message || `⚠ Failed to update status (Error: ${error.code})`;
+        error.response?.data?.message ||
+        `⚠ Failed to update status (Error: ${error.code})`;
       toast.error(errorMessage);
     }
   };
@@ -362,13 +364,17 @@ const TableAdmin = () => {
 
     const newItems = items.filter(
       (item) =>
-        item.mockType && item.testType && item.mock && item.transactionId && item.mrValidation
+        item.mockType &&
+        item.testType &&
+        item.mock &&
+        item.transactionId &&
+        item.mrValidation
     );
 
     if (newItems.length > 0) {
       try {
         const response = await axios.put(
-          `https://luminedge-server.vercel.app/api/v1/user/update-multiple/${selectedUser._id}`,
+          `${API_BASE}/api/v1/user/update-multiple/${selectedUser._id}`,
           {
             mocks: newItems.map((item) => ({
               ...item,
@@ -384,7 +390,14 @@ const TableAdmin = () => {
             ...newItems.map((item) => ({ ...item, isEditing: false })),
           ]);
           setItems([
-            { mockType: "", testType: "", testSystem: "", mock: "", transactionId: "", mrValidation: "" },
+            {
+              mockType: "",
+              testType: "",
+              testSystem: "",
+              mock: "",
+              transactionId: "",
+              mrValidation: "",
+            },
           ]);
         }
       } catch (err) {
@@ -410,7 +423,7 @@ const TableAdmin = () => {
         };
 
         const res = await axios.put(
-          `https://luminedge-server.vercel.app/api/v1/user/update-one/${selectedUser._id}`,
+          `${API_BASE}/api/v1/user/update-one/${selectedUser._id}`,
           payload
         );
 
@@ -428,7 +441,9 @@ const TableAdmin = () => {
         }
       } catch (err: any) {
         toast.error(
-          `Error updating mock: ${edited.transactionId}\n${err.response?.data?.message || err.message}`
+          `Error updating mock: ${edited.transactionId}\n${
+            err.response?.data?.message || err.message
+          }`
         );
       }
     }
@@ -442,8 +457,11 @@ const TableAdmin = () => {
 
       <div className="bg-gray-100 p-4 h-22 mb-3 flex flex-col sm:flex-row gap-4 py-2">
         <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="search" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
-          Search <span className="font-normal">(Name/Email)</span>:
+          <label
+            htmlFor="search"
+            className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+          >
+            Search <span className="font-normal">(Name/Email)</span>:
           </label>
           <input
             type="text"
@@ -456,7 +474,10 @@ const TableAdmin = () => {
 
         {/* Filter by Status */}
         <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="statusFilter" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
+          <label
+            htmlFor="statusFilter"
+            className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+          >
             Filter by Status:
           </label>
           <select
@@ -474,7 +495,10 @@ const TableAdmin = () => {
 
         {/* Filter by Action */}
         <div className="flex items-center w-full sm:w-auto">
-          <label htmlFor="actionFilter" className="mr-2 text-xs sm:text-sm md:text-base font-bold">
+          <label
+            htmlFor="actionFilter"
+            className="mr-2 text-xs sm:text-sm md:text-base font-bold"
+          >
             Active:
           </label>
           <select
@@ -490,8 +514,10 @@ const TableAdmin = () => {
         </div>
       </div>
 
-      {isLoading && (
-        <div className="text-center text-sm text-gray-600 mb-2">Loading users…</div>
+      {loading && (
+        <div className="text-center text-sm text-gray-600 mb-2">
+          Loading users…
+        </div>
       )}
 
       <div className="overflow-x-auto">
@@ -523,11 +549,11 @@ const TableAdmin = () => {
                     onChange={(e) => onChangeStatus(user._id, e.target.value)}
                     className={`px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base font-semibold shadow-sm transition-all duration-300 ease-in-out
       ${
-        user.status === 'active'
-          ? 'bg-red-100 text-red-700 border-red-300'
-          : user.status === 'completed'
-          ? 'bg-green-100 text-green-700 border-green-300'
-          : 'bg-yellow-100 text-yellow-700 border-yellow-400'
+        user.status === "active"
+          ? "bg-red-100 text-red-700 border-red-300"
+          : user.status === "completed"
+          ? "bg-green-100 text-green-700 border-green-300"
+          : "bg-yellow-100 text-yellow-700 border-yellow-400"
       }
     `}
                   >
@@ -548,9 +574,10 @@ const TableAdmin = () => {
                   <button
                     onClick={() => onToggleBlockUser(user._id)}
                     className={`px-5 py-2 w-full sm:w-28 rounded-lg font-semibold text-sm uppercase tracking-wide transition-all duration-300 ease-in-out  flex items-center justify-center gap-1 
-    ${user.isDeleted 
-      ? "bg-red-600 text-white hover:bg-red-700" 
-      : "bg-yellow-400 text-black hover:bg-yellow-500"
+    ${
+      user.isDeleted
+        ? "bg-red-600 text-white hover:bg-red-700"
+        : "bg-yellow-400 text-black hover:bg-yellow-500"
     }`}
                   >
                     {user.isDeleted ? "Unblock" : "Block"}
@@ -558,9 +585,12 @@ const TableAdmin = () => {
                 </td>
               </tr>
             ))}
-            {currentUsers.length === 0 && !isLoading && (
+            {currentUsers.length === 0 && !loading && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-600">
+                <td
+                  colSpan={4}
+                  className="px-4 py-6 text-center text-sm text-gray-600"
+                >
                   No users match your filters.
                 </td>
               </tr>
@@ -580,7 +610,7 @@ const TableAdmin = () => {
             value={usersPerPage}
             onChange={(e) => {
               setUsersPerPage(Number(e.target.value));
-              setCurrentPage(1); // keep pagination sane after page-size change
+              setCurrentPage(1);
             }}
             className="px-2 py-1 border rounded w-full sm:w-auto"
           >
@@ -599,7 +629,8 @@ const TableAdmin = () => {
             Previous
           </button>
           <span className="mx-2">
-            Page {currentPage} / {Math.ceil(filteredUsers.length / usersPerPage) || 1}
+            Page {currentPage} /{" "}
+            {Math.ceil(filteredUsers.length / usersPerPage) || 1}
           </span>
           <button
             onClick={() => setCurrentPage((prev) => prev + 1)}
@@ -617,37 +648,86 @@ const TableAdmin = () => {
           <div className="bg-white p-5 rounded-lg shadow-lg w-full sm:w-3/4 flex flex-col sm:flex-row gap-5">
             {/* User Details Section */}
             <div className="w-full sm:w-[25%] bg-white rounded-xl shadow-md p-2 border border-gray-300">
-              <h2 className="text-2xl font-semibold text-[#00000f] mb-1">👤User Details</h2>
+              <h2 className="text-2xl font-semibold text-[#00000f] mb-1">
+                👤User Details
+              </h2>
               <div className="space-y-1 text-sm text-[#00000f]">
-                <p><strong>Name:</strong> {selectedUser?.name || "N/A"}</p>
-                <p><strong>Email:</strong> {selectedUser?.email || "N/A"}</p>
-                <p><strong>Phone:</strong> {selectedUser?.contactNo || "N/A"}</p>
-                <p><strong>Passport No:</strong> {selectedUser?.passportNumber || "N/A"}</p>
-                <p><strong>Transaction ID:</strong> {selectedUser?.transactionId || "N/A"}</p>
+                <p>
+                  <strong>Name:</strong> {selectedUser?.name || "N/A"}
+                </p>
+                <p>
+                  <strong>Email:</strong> {selectedUser?.email || "N/A"}
+                </p>
+                <p>
+                  <strong>Phone:</strong> {selectedUser?.contactNo || "N/A"}
+                </p>
+                <p>
+                  <strong>Passport No:</strong> {selectedUser?.passportNumber || "N/A"}
+                </p>
+                <p>
+                  <strong>Transaction ID:</strong>{" "}
+                  {selectedUser?.transactionId || "N/A"}
+                </p>
                 {!submittedItems.length && (
                   <>
-                    <p><strong>Test Name:</strong> {selectedUser?.mockType || "N/A"}</p>
-                    <p><strong>Test Type:</strong> {selectedUser?.testType || "N/A"}</p>
+                    <p>
+                      <strong>Test Name:</strong>{" "}
+                      {selectedUser?.mockType || "N/A"}
+                    </p>
+                    <p>
+                      <strong>Test Type:</strong>{" "}
+                      {selectedUser?.testType || "N/A"}
+                    </p>
                   </>
                 )}
-                <p><strong>Purchased:</strong> {selectedUser?.totalMock ?? "N/A"}</p>
-                <p><strong>Booked:</strong> {
-                  selectedUser?.totalMock != null && selectedUser?.mock != null
-                    ? Number(selectedUser?.totalMock) - Number(selectedUser?.mock)
-                    : "N/A"
-                }</p>
-                <p><strong>Remaining:</strong> {selectedUser?.mock ?? "N/A"}</p>
-                <p><strong>Status:</strong> <span className={`font-semibold ${selectedUser?.status === 'blocked' ? 'text-red-500' : 'text-green-600'}`}>{selectedUser?.status || "N/A"}</span></p>
+                <p>
+                  <strong>Purchased:</strong>{" "}
+                  {selectedUser?.totalMock ?? "N/A"}
+                </p>
+                <p>
+                  <strong>Booked:</strong>{" "}
+                  {selectedUser?.totalMock != null &&
+                  selectedUser?.mock != null
+                    ? Number(selectedUser?.totalMock) -
+                      Number(selectedUser?.mock)
+                    : "N/A"}
+                </p>
+                <p>
+                  <strong>Remaining:</strong> {selectedUser?.mock ?? "N/A"}
+                </p>
+                <p>
+                  <strong>Status:</strong>{" "}
+                  <span
+                    className={`font-semibold ${
+                      selectedUser?.status === "blocked"
+                        ? "text-red-500"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {selectedUser?.status || "N/A"}
+                  </span>
+                </p>
               </div>
 
               {lastMock && (
                 <div className="mt-0 border-t pt-3 text-sm">
                   <h3 className="text-lg font-bold mb-0">📄Latest Mock</h3>
-                  <p><strong>Mock Type:</strong> {lastMock.mockType || "N/A"}</p>
-                  <p><strong>Test Type:</strong> {lastMock.testType || "N/A"}</p>
-                  <p><strong>System:</strong> {lastMock.testSystem || "N/A"}</p>
-                  <p><strong>Mock #:</strong> {lastMock.mock || "N/A"}</p>
-                  <p><strong>Txn ID:</strong> {lastMock.transactionId || "N/A"}</p>
+                  <p>
+                    <strong>Mock Type:</strong> {lastMock.mockType || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Test Type:</strong> {lastMock.testType || "N/A"}
+                  </p>
+                  <p>
+                    <strong>System:</strong> {lastMock.testSystem || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Mock #:</strong> {lastMock.mock || "N/A"}
+                  </p>
+                  <p>
+                    <strong>Txn ID:</strong>{" "}
+                    {lastMock.transactionId || "N/A"}
+                  </p>
                 </div>
               )}
             </div>
@@ -657,56 +737,97 @@ const TableAdmin = () => {
 
             {/* Update User Section */}
             <div className="w-full sm:w-[78%] bg-white rounded-2xl shadow-lg border  p-2">
-              <h2 className="text-2xl font-semibold text-[#00000f] mb-1">🛠Update User</h2>
+              <h2 className="text-2xl font-semibold text-[#00000f] mb-1">
+                🛠Update User
+              </h2>
 
               <div className="overflow-x-auto">
                 <table className="table-fixed w-full border-collapse text-[#00000f]">
                   <thead>
                     <tr className="bg-yellow-300 text-gray-900 font-semibold text-center">
-                      <th className="w-[13%] p-1 border border-gray-300">Mock Type</th>
-                      <th className="w-[20%] p-1 border border-gray-300">Test Type</th>
-                      <th className="w-[15%] p-1 border border-gray-300">Test System</th>
-                      <th className="w-[10%] p-1 border border-gray-300">Mock #</th>
-                      <th className="w-[15%] p-1 border border-gray-300">MR Number</th>
-                      <th className="w-[15%] p-1 border border-gray-300">MR Validation</th>
-                      <th className="w-[20%] p-1 border border-gray-300">Expired Date</th>
-                      <th className="w-[6%] p-1 border border-gray-300">✏️</th>
+                      <th className="w-[13%] p-1 border border-gray-300">
+                        Mock Type
+                      </th>
+                      <th className="w-[20%] p-1 border border-gray-300">
+                        Test Type
+                      </th>
+                      <th className="w-[15%] p-1 border border-gray-300">
+                        Test System
+                      </th>
+                      <th className="w-[10%] p-1 border border-gray-300">
+                        Mock #
+                      </th>
+                      <th className="w-[15%] p-1 border border-gray-300">
+                        MR Number
+                      </th>
+                      <th className="w-[15%] p-1 border border-gray-300">
+                        MR Validation
+                      </th>
+                      <th className="w-[20%] p-1 border border-gray-300">
+                        Expired Date
+                      </th>
+                      <th className="w-[6%] p-1 border border-gray-300">
+                        ✏️
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody className="text-center bg-white">
                     {submittedItems.map((item, index) => (
-                      <tr key={`submitted-${index}`} className="hover:bg-gray-50">
+                      <tr
+                        key={`submitted-${index}`}
+                        className="hover:bg-gray-50"
+                      >
                         {item.isEditing ? (
                           <>
                             <td className="p-1 border border-gray-300">
                               <select
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.mockType || ""}
-                                onChange={(e) => updateSubmittedItem(index, 'mockType', e.target.value)}
+                                onChange={(e) =>
+                                  updateSubmittedItem(
+                                    index,
+                                    "mockType",
+                                    e.target.value
+                                  )
+                                }
                               >
                                 <option value="">Select</option>
                                 <option value="IELTS">IELTS</option>
                                 <option value="GRE">GRE</option>
                                 <option value="TOEFL">TOEFL</option>
-                                <option value="Pearson PTE">Pearson PTE</option>
+                                <option value="Pearson PTE">
+                                  Pearson PTE
+                                </option>
                               </select>
                             </td>
                             <td className="p-1 border border-gray-300">
                               <select
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.testType || ""}
-                                onChange={(e) => updateSubmittedItem(index, 'testType', e.target.value)}
+                                onChange={(e) =>
+                                  updateSubmittedItem(
+                                    index,
+                                    "testType",
+                                    e.target.value
+                                  )
+                                }
                                 disabled={!item.mockType}
                               >
                                 <option value="">Select</option>
                                 {item.mockType === "IELTS" ? (
                                   <>
-                                    <option value="Paper-Based">Paper-Based</option>
-                                    <option value="Computer-Based">Computer-Based</option>
+                                    <option value="Paper-Based">
+                                      Paper-Based
+                                    </option>
+                                    <option value="Computer-Based">
+                                      Computer-Based
+                                    </option>
                                   </>
                                 ) : (
-                                  <option value="Computer-Based">Computer-Based</option>
+                                  <option value="Computer-Based">
+                                    Computer-Based
+                                  </option>
                                 )}
                               </select>
                             </td>
@@ -714,20 +835,36 @@ const TableAdmin = () => {
                               <select
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.testSystem || ""}
-                                onChange={(e) => updateSubmittedItem(index, 'testSystem', e.target.value)}
+                                onChange={(e) =>
+                                  updateSubmittedItem(
+                                    index,
+                                    "testSystem",
+                                    e.target.value
+                                  )
+                                }
                                 disabled={!item.mockType}
                               >
                                 <option value="">Select</option>
-                                {mockSystemOptions[item.mockType]?.map((system) => (
-                                  <option key={system} value={system}>{system}</option>
-                                ))}
+                                {mockSystemOptions[item.mockType]?.map(
+                                  (system) => (
+                                    <option key={system} value={system}>
+                                      {system}
+                                    </option>
+                                  )
+                                )}
                               </select>
                             </td>
                             <td className="p-1 border border-gray-300">
                               <input
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.mock}
-                                onChange={(e) => updateSubmittedItem(index, 'mock', e.target.value)}
+                                onChange={(e) =>
+                                  updateSubmittedItem(
+                                    index,
+                                    "mock",
+                                    e.target.value
+                                  )
+                                }
                               />
                             </td>
                             <td className="p-1 border border-gray-300">
@@ -741,7 +878,13 @@ const TableAdmin = () => {
                               <select
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.mrValidation || ""}
-                                onChange={(e) => updateSubmittedItem(index, 'mrValidation', e.target.value)}
+                                onChange={(e) =>
+                                  updateSubmittedItem(
+                                    index,
+                                    "mrValidation",
+                                    e.target.value
+                                  )
+                                }
                               >
                                 <option value="">Select Duration</option>
                                 <option value="7 Days">7 Days</option>
@@ -754,7 +897,9 @@ const TableAdmin = () => {
                             </td>
                             <td className="p-1 border border-gray-300">
                               {item.mrValidationExpiry
-                                ? new Date(item.mrValidationExpiry).toLocaleDateString("en-US", {
+                                ? new Date(
+                                    item.mrValidationExpiry
+                                  ).toLocaleDateString("en-US", {
                                     year: "numeric",
                                     month: "long",
                                     day: "2-digit",
@@ -764,7 +909,9 @@ const TableAdmin = () => {
                             <td className="p-1 border border-gray-300">
                               <button
                                 className="bg-green-600 text-white px-1 py-1 rounded"
-                                onClick={() => toggleEditSubmittedItem(index)}
+                                onClick={() =>
+                                  toggleEditSubmittedItem(index)
+                                }
                               >
                                 ✅
                               </button>
@@ -772,15 +919,29 @@ const TableAdmin = () => {
                           </>
                         ) : (
                           <>
-                            <td className="p-1 border border-gray-300">{item.mockType}</td>
-                            <td className="p-1 border border-gray-300">{item.testType}</td>
-                            <td className="p-1 border border-gray-300">{item.testSystem}</td>
-                            <td className="p-1 border border-gray-300">{item.mock}</td>
-                            <td className="p-1 border border-gray-300">{item.transactionId}</td>
-                            <td className="p-1 border border-gray-300">{item.mrValidation}</td>
+                            <td className="p-1 border border-gray-300">
+                              {item.mockType}
+                            </td>
+                            <td className="p-1 border border-gray-300">
+                              {item.testType}
+                            </td>
+                            <td className="p-1 border border-gray-300">
+                              {item.testSystem}
+                            </td>
+                            <td className="p-1 border border-gray-300">
+                              {item.mock}
+                            </td>
+                            <td className="p-1 border border-gray-300">
+                              {item.transactionId}
+                            </td>
+                            <td className="p-1 border border-gray-300">
+                              {item.mrValidation}
+                            </td>
                             <td className="p-1 border border-gray-300">
                               {item.mrValidationExpiry
-                                ? new Date(item.mrValidationExpiry).toLocaleDateString("en-US", {
+                                ? new Date(
+                                    item.mrValidationExpiry
+                                  ).toLocaleDateString("en-US", {
                                     year: "numeric",
                                     month: "long",
                                     day: "2-digit",
@@ -790,7 +951,9 @@ const TableAdmin = () => {
                             <td className="p-1 border border-gray-300">
                               <button
                                 className="bg-blue-600 text-white px-1 py-1 rounded"
-                                onClick={() => toggleEditSubmittedItem(index)}
+                                onClick={() =>
+                                  toggleEditSubmittedItem(index)
+                                }
                               >
                                 ✏️
                               </button>
@@ -805,7 +968,9 @@ const TableAdmin = () => {
                         <td className="p-1 border border-gray-300">
                           <select
                             value={item.mockType}
-                            onChange={(e) => updateItem(index, "mockType", e.target.value)}
+                            onChange={(e) =>
+                              updateItem(index, "mockType", e.target.value)
+                            }
                             className="w-full px-1 py-1 border rounded"
                             required
                           >
@@ -819,7 +984,9 @@ const TableAdmin = () => {
                         <td className="p-1 border border-gray-300">
                           <select
                             value={item.testType}
-                            onChange={(e) => updateItem(index, "testType", e.target.value)}
+                            onChange={(e) =>
+                              updateItem(index, "testType", e.target.value)
+                            }
                             className="w-full px-2 py-1 border rounded"
                             disabled={!item.mockType}
                             required
@@ -827,33 +994,47 @@ const TableAdmin = () => {
                             <option value="">Select</option>
                             {item.mockType === "IELTS" ? (
                               <>
-                                <option value="Paper-Based">Paper-Based</option>
-                                <option value="Computer-Based">Computer-Based</option>
+                                <option value="Paper-Based">
+                                  Paper-Based
+                                </option>
+                                <option value="Computer-Based">
+                                  Computer-Based
+                                </option>
                               </>
                             ) : (
-                              <option value="Computer-Based">Computer-Based</option>
+                              <option value="Computer-Based">
+                                Computer-Based
+                              </option>
                             )}
                           </select>
                         </td>
                         <td className="p-1 border border-gray-300">
                           <select
                             value={item.testSystem}
-                            onChange={(e) => updateItem(index, "testSystem", e.target.value)}
+                            onChange={(e) =>
+                              updateItem(index, "testSystem", e.target.value)
+                            }
                             className="w-full px-1 py-1 border rounded"
                             disabled={!item.mockType}
                             required={item.mockType !== "IELTS"}
                           >
                             <option value="">Select</option>
-                            {mockSystemOptions[item.mockType]?.map((system) => (
-                              <option key={system} value={system}>{system}</option>
-                            ))}
+                            {mockSystemOptions[item.mockType]?.map(
+                              (system) => (
+                                <option key={system} value={system}>
+                                  {system}
+                                </option>
+                              )
+                            )}
                           </select>
                         </td>
                         <td className="p-1 border border-gray-300">
                           <input
                             type="text"
                             value={item.mock}
-                            onChange={(e) => updateItem(index, "mock", e.target.value)}
+                            onChange={(e) =>
+                              updateItem(index, "mock", e.target.value)
+                            }
                             className="w-full px-1 py-1 border rounded"
                             required
                           />
@@ -862,7 +1043,13 @@ const TableAdmin = () => {
                           <input
                             type="text"
                             value={item.transactionId}
-                            onChange={(e) => updateItem(index, "transactionId", e.target.value)}
+                            onChange={(e) =>
+                              updateItem(
+                                index,
+                                "transactionId",
+                                e.target.value
+                              )
+                            }
                             className="w-full px-1 py-1 border rounded"
                             required
                           />
@@ -870,7 +1057,13 @@ const TableAdmin = () => {
                         <td className="p-1 border border-gray-300">
                           <select
                             value={item.mrValidation}
-                            onChange={(e) => updateItem(index, "mrValidation", e.target.value)}
+                            onChange={(e) =>
+                              updateItem(
+                                index,
+                                "mrValidation",
+                                e.target.value
+                              )
+                            }
                             className="w-full px-1 py-1 border rounded"
                             required
                           >
@@ -885,7 +1078,9 @@ const TableAdmin = () => {
                         </td>
                         <td className="p-1 border border-gray-300">
                           {item.mrValidationExpiry
-                            ? new Date(item.mrValidationExpiry).toLocaleDateString("en-US", {
+                            ? new Date(
+                                item.mrValidationExpiry
+                              ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",
                                 day: "2-digit",
@@ -906,7 +1101,7 @@ const TableAdmin = () => {
                 </table>
               </div>
 
-              {/* Spacer to push the button to the bottom */}
+              {/* Actions */}
               <div className="flex justify-between items-center mt-8 flex-wrap gap-4">
                 <div>
                   <button
@@ -933,7 +1128,6 @@ const TableAdmin = () => {
                   </button>
                 </div>
               </div>
-
             </div>
           </div>
         </div>

@@ -49,47 +49,6 @@ type BudgetResponse = {
   budget: number;
 };
 
-// // ---------- helpers for id handling & user fetching (fixes 6/10 issue) ----------
-// const toId = (v: any) => String(v ?? "").trim();
-// const hasUserInBooking = (b: Booking, userId: string) =>
-//   Array.isArray(b.userId)
-//     ? b.userId.map(toId).includes(userId)
-//     : toId(b.userId) === userId;
-
-// /** Page through /admin/users until we've collected all of the ids needed */
-// async function fetchUsersByIds(userIds: string[], pageSize = 500) {
-//   const need = new Set(userIds.map(toId));
-//   const found = new Map<string, any>();
-
-//   // page 1 to get total
-//   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-//     params: { page: 1, limit: pageSize },
-//   });
-//   const total: number = first.data?.total ?? (first.data?.users?.length || 0);
-//   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-//   const ingest = (usersPage: any[]) => {
-//     for (const u of usersPage || []) {
-//       const id = toId(u._id);
-//       if (need.has(id) && !found.has(id)) found.set(id, u);
-//     }
-//   };
-
-//   ingest(first.data?.users || []);
-//   if (found.size === need.size) return Array.from(found.values());
-
-//   for (let page = 2; page <= totalPages; page++) {
-//     const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-//       params: { page, limit: pageSize },
-//     });
-//     ingest(pageRes.data?.users || []);
-//     if (found.size === need.size) break;
-//   }
-
-//   return Array.from(found.values());
-// }
-// // -------------------------------------------------------------------------------
-
 // ---------- helpers for id handling & user fetching (fixes 6/10 issue) ----------
 const toId = (v: any) => String(v ?? "").trim();
 const hasUserInBooking = (b: Booking, userId: string) =>
@@ -102,14 +61,15 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   const need = new Set(userIds.map(toId));
   const found = new Map<string, any>();
 
+  if (!need.size) return [];
+
   // page 1 to get total + actual page size (backend may cap `limit`)
   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-    params: { page: 1, limit: requestedPageSize },
+    params: { page: 1, limit: requestedPageSize, role: "user" },
   });
 
   const firstPageUsers: any[] = first.data?.users || [];
-  const total: number =
-    first.data?.total ?? (firstPageUsers.length || 0);
+  const total: number = first.data?.total ?? (firstPageUsers.length || 0);
 
   // effective page size is what the backend really returned
   const effectivePageSize = firstPageUsers.length || requestedPageSize;
@@ -134,12 +94,11 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   }
 
   // fetch remaining pages until we've found everyone or hit last page
-  for (let page = 2; page <= totalPages; page++) {
+  for (let page = 2; page <= totalPages && found.size < need.size; page++) {
     const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-      params: { page, limit: requestedPageSize },
+      params: { page, limit: effectivePageSize, role: "user" },
     });
     ingest(pageRes.data?.users || []);
-    if (found.size === need.size) break;
   }
 
   return Array.from(found.values());
@@ -190,7 +149,6 @@ const TrfBookingRequestsPage = ({
     Sazzadur: "sazzadur.luminedge@gmail.com",
     Mubasshira: "mubasshira.luminedge@gmail.com",
     // Rahul: "rahul1921@cseku.ac.bd",
-   
   };
 
   // Pull per-schedule feedback flags
@@ -246,7 +204,9 @@ const TrfBookingRequestsPage = ({
               const { data } = await axios.get<{
                 sent: boolean;
                 lastSentAt?: string;
-              }>(`${API_BASE}/api/v1/admin/trf-email-status/${uid}/${scheduleId}`);
+              }>(
+                `${API_BASE}/api/v1/admin/trf-email-status/${uid}/${scheduleId}`
+              );
               return { uid, sent: !!data?.sent };
             } catch (e) {
               console.error("trf-email-status fetch failed:", uid, e);
@@ -269,49 +229,66 @@ const TrfBookingRequestsPage = ({
   );
 
   // Hydrate budget for each user
-  const hydrateUserBudgets = useCallback(async (userIds: string[]) => {
-    if (!userIds?.length || !scheduleId) return;
-    try {
-      const results = await Promise.all(
-        userIds.map(async (uid) => {
-          try {
-            const { data } = await axios.get<BudgetResponse>(
-              `${API_BASE}/api/v1/admin/user-budget/${uid}/${scheduleId}`
-            );
-            return { uid, budget: data.budget || 0 };
-          } catch (e) {
-            console.error("budget fetch failed:", uid, e);
-            return { uid, budget: 0 };
-          }
-        })
-      );
-      setUserBudgets((prev) => {
-        const next = { ...prev };
-        results.forEach(({ uid, budget }) => {
-          next[uid] = budget;
+  const hydrateUserBudgets = useCallback(
+    async (userIds: string[]) => {
+      if (!userIds?.length || !scheduleId) return;
+      try {
+        const results = await Promise.all(
+          userIds.map(async (uid) => {
+            try {
+              const { data } = await axios.get<BudgetResponse>(
+                `${API_BASE}/api/v1/admin/user-budget/${uid}/${scheduleId}`
+              );
+              return { uid, budget: data.budget || 0 };
+            } catch (e) {
+              console.error("budget fetch failed:", uid, e);
+              return { uid, budget: 0 };
+            }
+          })
+        );
+        setUserBudgets((prev) => {
+          const next = { ...prev };
+          results.forEach(({ uid, budget }) => {
+            next[uid] = budget;
+          });
+          return next;
         });
-        return next;
-      });
-    } catch (e) {
-      console.error("hydrateUserBudgets error:", e);
-    }
-  }, [scheduleId]);
+      } catch (e) {
+        console.error("hydrateUserBudgets error:", e);
+      }
+    },
+    [scheduleId]
+  );
 
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
-  
+
+    // cancel any in-flight call if schedule changes / unmounts
+    const controller = new AbortController();
+    const { signal } = controller;
+    (fetchBookingsAndUsers as any)._abort?.();
+    (fetchBookingsAndUsers as any)._abort = () => controller.abort();
+
     try {
       setLoading(true);
-  
-      // 1) Fetch ONLY bookings for this schedule (paged & fast)
+
+      // 1) Fetch ONLY bookings for this schedule (server already filters)
       const { data: bookingsData } = await axios.get(
         `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
-        { params: { page: 1, limit: 500 } } // keep modest
+        { params: { page: 1, limit: 500 }, signal }
       );
-  
-      // already filtered server-side
+
       const filteredBookings: Booking[] = bookingsData?.bookings || [];
-  
+
+      if (!filteredBookings.length) {
+        setBookings([]);
+        setUsers([]);
+        setAttendance({});
+        setAttendanceCounts({ present: 0, absent: 0 });
+        setUserAttendance({});
+        return;
+      }
+
       // 2) Collect unique user ids
       const userIds: string[] = Array.from(
         new Set(
@@ -320,10 +297,27 @@ const TrfBookingRequestsPage = ({
           )
         )
       );
-  
-      // 3) Fetch ONLY the users we need (page through users API until done)
-      const baseUsers = userIds.length ? await fetchUsersByIds(userIds) : [];
-  
+
+      // 3) Fetch ONLY the users we need + bulk attendance, IN PARALLEL
+      const [baseUsers, attendanceRes] = await Promise.all([
+        userIds.length ? fetchUsersByIds(userIds) : Promise.resolve([]),
+        userIds.length
+          ? axios
+              .post(
+                `${API_BASE}/api/v1/user/attendance/bulk`,
+                { userIds },
+                { headers: { "Content-Type": "application/json" }, signal }
+              )
+              .catch((err) => {
+                if (!axios.isCancel(err)) {
+                  console.error("Error fetching bulk attendance:", err);
+                  toast.error("Attendance lookup failed.");
+                }
+                return null;
+              })
+          : Promise.resolve(null),
+      ]);
+
       // 3b) Enrich with schedule-scoped teacher fields (fallback to legacy)
       const matchedUsers = baseUsers.map((u: any) => {
         const sched = u.teachersBySchedule?.[scheduleId] || {};
@@ -340,56 +334,69 @@ const TrfBookingRequestsPage = ({
           feedbackStatus: u.feedbackStatus || {},
         };
       });
-  
+
       // 4) Seed attendance map & counts
       const initialAttendance: Record<string, string> = {};
       for (const bk of filteredBookings) {
-        const ids = Array.isArray(bk.userId) ? bk.userId.map(toId) : [toId(bk.userId)];
+        const ids = Array.isArray(bk.userId)
+          ? bk.userId.map(toId)
+          : [toId(bk.userId)];
         for (const uid of ids) initialAttendance[uid] = bk.attendance || "N/A";
       }
-      const presentCount = Object.values(initialAttendance).filter((s) => s === "present").length;
-      const absentCount  = Object.values(initialAttendance).filter((s) => s === "absent").length;
-  
+      const presentCount = Object.values(initialAttendance).filter(
+        (s) => s === "present"
+      ).length;
+      const absentCount = Object.values(initialAttendance).filter(
+        (s) => s === "absent"
+      ).length;
+
       setBookings(filteredBookings);
       setUsers(matchedUsers);
       setAttendance(initialAttendance);
       setAttendanceCounts({ present: presentCount, absent: absentCount });
-  
-      // 5) Bulk attendance summary
-      if (userIds.length) {
-        try {
-          const { data: attRes } = await axios.post(
-            `${API_BASE}/api/v1/user/attendance/bulk`,
-            { userIds },
-            { headers: { "Content-Type": "application/json" } }
-          );
-          const attMap: Record<string, number | null> = {};
-          for (const id of userIds) attMap[id] = attRes.attendance?.[id] ?? null;
-          setUserAttendance(attMap);
-        } catch (err) {
-          console.error("Error fetching bulk attendance:", err);
-          toast.error("Attendance lookup failed.");
+
+      // 5) Bulk attendance summary result -> map
+      if (attendanceRes && "data" in attendanceRes) {
+        const attRes = attendanceRes.data;
+        const attMap: Record<string, number | null> = {};
+        for (const id of userIds) {
+          attMap[id] = attRes.attendance?.[id] ?? null;
         }
+        setUserAttendance(attMap);
+      } else {
+        setUserAttendance({});
       }
-  
-      // 6) Hydrate schedule-scoped feedback flags
-      await hydrateFeedbackStatus(userIds);
-  
-      // 7) Hydrate TRF sent status for Done badge
-      await hydrateTrfSentStatus(userIds);
-  
-      // 8) Hydrate budgets for users
-      await hydrateUserBudgets(userIds);
-    } catch (err) {
-      console.error(err);
-      toast.error("Error fetching data. Please try again.");
+
+      // 6) Determine if this schedule is TRF-eligible (IELTS/PTE/GRE/TOEFL).
+      const nameUpper = String(filteredBookings[0]?.name || "").toUpperCase();
+      const isTrfSchedule =
+        nameUpper.includes("IELTS") ||
+        nameUpper.includes("PTE") ||
+        nameUpper.includes("GRE") ||
+        nameUpper.includes("TOEFL");
+
+      // 7) Fire per-user lookups in the background ONLY when needed.
+      if (isTrfSchedule && userIds.length) {
+        // do not await – they run concurrently, after the table is already visible
+        void hydrateFeedbackStatus(userIds);
+        void hydrateTrfSentStatus(userIds);
+        void hydrateUserBudgets(userIds);
+      }
+    } catch (err: any) {
+      if (!axios.isCancel(err)) {
+        console.error(err);
+        toast.error("Error fetching data. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   }, [scheduleId, hydrateFeedbackStatus, hydrateTrfSentStatus, hydrateUserBudgets]);
-  
+
   useEffect(() => {
     fetchBookingsAndUsers();
+    return () => {
+      (fetchBookingsAndUsers as any)._abort?.();
+    };
   }, [fetchBookingsAndUsers]);
 
   const formatCustomDate = (dateString: string) => {
@@ -448,7 +455,7 @@ const TrfBookingRequestsPage = ({
           "Test System",
           "Purchased",
           "Attend",
-          "Budget",
+        
         ],
       ],
       body: users.map((user: any, index: number) => {
@@ -465,7 +472,7 @@ const TrfBookingRequestsPage = ({
           related?.testSystem || "N/A",
           user?.totalMock ?? "N/A",
           userAttendance[uid] ?? "N/A",
-          userBudgets[uid] !== undefined ? `$${userBudgets[uid]}` : "N/A",
+        
         ];
       }),
       theme: "grid",
@@ -482,7 +489,7 @@ const TrfBookingRequestsPage = ({
         7: { cellWidth: 25 },
         8: { cellWidth: 22 },
         9: { cellWidth: 15 },
-        10: { cellWidth: 20 }, // New column for budget
+        
       },
       margin: { top: 35 },
       tableWidth: "auto",
@@ -530,7 +537,8 @@ const TrfBookingRequestsPage = ({
   const filteredUsers = filterUsers(
     users,
     bookings,
-    filter, testTypeFilter,
+    filter,
+    testTypeFilter,
     testSystemFilter,
     attendanceFilter
   );
