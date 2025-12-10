@@ -81,96 +81,120 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
 
   const loading = externalLoading ?? isLoading;
 
-  // 🧲 Fetch ALL users ONLY if parent did not provide rows
+  // // 🧲 Fetch ALL users ONLY if parent did not provide rows
+  // useEffect(() => {
+  //   let cancelled = false;
+
+  //   // If parent passes rows (even an empty array), we treat this as source of truth
+  //   if (rows !== undefined) {
+  //     if (!cancelled) {
+  //       setUsers(rows || []);
+  //       setFilteredUsers(rows || []);
+  //       setIsLoading(false);
+  //     }
+  //     return;
+  //   }
+
+  //   const fetchAllUsers = async () => {
+  //     setIsLoading(true);
+  //     try {
+  //       const acc: User[] = [];
+  //       const seen = new Set<string>();
+
+  //       const requestedLimit = 500;
+  //       let page = 1;
+  //       let effectiveLimit: number | null = null;
+  //       let totalFromServer: number | null = null;
+
+  //       // eslint-disable-next-line no-constant-condition
+  //       while (true) {
+  //         if (cancelled) break;
+
+  //         const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+  //           params: { page, limit: requestedLimit },
+  //         });
+
+  //         const batch: User[] = (data?.users ?? []) as User[];
+
+  //         if (page === 1) {
+  //           effectiveLimit = batch.length || requestedLimit;
+  //           if (typeof data?.total === "number") {
+  //             totalFromServer = data.total;
+  //           }
+  //         }
+
+  //         if (!batch.length) break;
+
+  //         let newCount = 0;
+  //         for (const u of batch) {
+  //           const id = String(u._id);
+  //           if (!seen.has(id)) {
+  //             seen.add(id);
+  //             acc.push(u);
+  //             newCount++;
+  //           }
+  //         }
+
+  //         if (newCount === 0) break;
+  //         if (totalFromServer && acc.length >= totalFromServer) break;
+  //         if (effectiveLimit && batch.length < effectiveLimit) break;
+
+  //         page += 1;
+  //       }
+
+  //       if (!cancelled) {
+  //         const sorted = acc.sort(
+  //           (a, b) =>
+  //             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  //         );
+  //         setUsers(sorted);
+  //         setFilteredUsers(sorted);
+  //       }
+  //     } catch (error) {
+  //       if (!cancelled) {
+  //         console.error("Error fetching users:", error);
+  //         setUsers([]);
+  //         setFilteredUsers([]);
+  //         toast.error("Failed to load users.");
+  //       }
+  //     } finally {
+  //       if (!cancelled) setIsLoading(false);
+  //     }
+  //   };
+
+  //   // Only run internal fetch when parent does NOT provide rows
+  //   if (rows === undefined) {
+  //     fetchAllUsers();
+  //   }
+
+  //   return () => {
+  //     cancelled = true;
+  //   };
+  // }, [rows]);
+
   useEffect(() => {
     let cancelled = false;
-
-    // If parent passes rows (even an empty array), we treat this as source of truth
+  
     if (rows !== undefined) {
+      const byId = new Map<string, User>();
+      (rows || []).forEach((u) => {
+        byId.set(String(u._id), u);
+      });
+      const unique = Array.from(byId.values());
+  
       if (!cancelled) {
-        setUsers(rows || []);
-        setFilteredUsers(rows || []);
+        setUsers(unique);
+        setFilteredUsers(unique);
         setIsLoading(false);
       }
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
-
-    const fetchAllUsers = async () => {
-      setIsLoading(true);
-      try {
-        const acc: User[] = [];
-        const seen = new Set<string>();
-
-        const requestedLimit = 500;
-        let page = 1;
-        let effectiveLimit: number | null = null;
-        let totalFromServer: number | null = null;
-
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          if (cancelled) break;
-
-          const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-            params: { page, limit: requestedLimit },
-          });
-
-          const batch: User[] = (data?.users ?? []) as User[];
-
-          if (page === 1) {
-            effectiveLimit = batch.length || requestedLimit;
-            if (typeof data?.total === "number") {
-              totalFromServer = data.total;
-            }
-          }
-
-          if (!batch.length) break;
-
-          let newCount = 0;
-          for (const u of batch) {
-            const id = String(u._id);
-            if (!seen.has(id)) {
-              seen.add(id);
-              acc.push(u);
-              newCount++;
-            }
-          }
-
-          if (newCount === 0) break;
-          if (totalFromServer && acc.length >= totalFromServer) break;
-          if (effectiveLimit && batch.length < effectiveLimit) break;
-
-          page += 1;
-        }
-
-        if (!cancelled) {
-          const sorted = acc.sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          setUsers(sorted);
-          setFilteredUsers(sorted);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error("Error fetching users:", error);
-          setUsers([]);
-          setFilteredUsers([]);
-          toast.error("Failed to load users.");
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    // Only run internal fetch when parent does NOT provide rows
-    if (rows === undefined) {
-      fetchAllUsers();
-    }
-
-    return () => {
-      cancelled = true;
-    };
+  
+    // ... your existing internal fetch for standalone usage
   }, [rows]);
+  
 
   // 🔎 Compute filtered list (status, blocked/unblocked, search)
   useEffect(() => {

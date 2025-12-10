@@ -91,61 +91,122 @@ const DashboardPage = () => {
     [allUsers]
   );
 
-  /* -------- Fetch ALL users (paginate) -------- */
-  useEffect(() => {
-    const ctrl = new AbortController();
+  // /* -------- Fetch ALL users (paginate) -------- */
+  // useEffect(() => {
+  //   const ctrl = new AbortController();
 
-    (async () => {
-      try {
-        setLoading(true);
+  //   (async () => {
+  //     try {
+  //       setLoading(true);
 
-        const pageSize = 1000;
-        let page = 1;
-        let total = Infinity;
-        const acc: UserDoc[] = [];
+  //       const pageSize = 1000;
+  //       let page = 1;
+  //       let total = Infinity;
+  //       const acc: UserDoc[] = [];
 
-        while (acc.length < total) {
-          const { data } = await axios.get(
-            `${API_BASE}/api/v1/admin/users`,
-            {
-              params: { page, limit: pageSize },
-              signal: ctrl.signal,
-            }
-          );
+  //       while (acc.length < total) {
+  //         const { data } = await axios.get(
+  //           `${API_BASE}/api/v1/admin/users`,
+  //           {
+  //             params: { page, limit: pageSize },
+  //             signal: ctrl.signal,
+  //           }
+  //         );
 
+  //         const batch: UserDoc[] = (data?.users || []).filter(
+  //           (u: UserDoc) => u.role === "user"
+  //         );
+  //         acc.push(...batch);
+
+  //         total =
+  //           typeof data?.total === "number" ? data.total : acc.length;
+  //         if (!batch.length) break;
+  //         page += 1;
+  //       }
+
+  //       setAllUsers(acc);
+  //       setTotalUsers(acc.length);
+
+  //       const today = new Date();
+  //       const dayKey = localDayKey(today);
+  //       const monthKey = localMonthKey(today);
+  //       const buckets = buildBuckets(acc);
+
+  //       setDailyRequests(buckets.dayMap[dayKey] ?? 0);
+  //       setMonthlyRequests(buckets.monthMap[monthKey] ?? 0);
+  //       setSelectedMonthKey(monthKey);
+  //     } catch (err: any) {
+  //       if (err?.name !== "CanceledError") {
+  //         console.error("Failed to load users:", err?.message || err);
+  //       }
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   })();
+
+  //   return () => ctrl.abort();
+  // }, []);
+
+    /* -------- Fetch ALL users (single bulk call, dedup by _id) -------- */
+    useEffect(() => {
+      const ctrl = new AbortController();
+  
+      (async () => {
+        try {
+          setLoading(true);
+  
+          // ✅ Backend bulk mode: returns all users in one go (<= 10k)
+          const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+            params: {
+              page: 1,
+              limit: 1000,   // triggers bulk mode on server
+              role: "user",  // let server filter ONLY real users
+            },
+            signal: ctrl.signal,
+          });
+  
+          // Still filter by role on client for extra safety
           const batch: UserDoc[] = (data?.users || []).filter(
             (u: UserDoc) => u.role === "user"
           );
-          acc.push(...batch);
-
-          total =
-            typeof data?.total === "number" ? data.total : acc.length;
-          if (!batch.length) break;
-          page += 1;
+  
+          // ✅ De-duplicate by _id in case the server ever returns duplicates
+          const seen = new Set<string>();
+          const unique: UserDoc[] = [];
+          for (const u of batch) {
+            const id = String(u._id);
+            if (!seen.has(id)) {
+              seen.add(id);
+              unique.push(u);
+            }
+          }
+  
+          setAllUsers(unique);
+          setTotalUsers(unique.length);
+  
+          // Recalculate daily & monthly aggregates from the unique list
+          const today = new Date();
+          const dayKey = localDayKey(today);
+          const monthKey = localMonthKey(today);
+          const buckets = buildBuckets(unique);
+  
+          setDailyRequests(buckets.dayMap[dayKey] ?? 0);
+          setMonthlyRequests(buckets.monthMap[monthKey] ?? 0);
+          setSelectedMonthKey(monthKey);
+        } catch (err: any) {
+          if (err?.name !== "CanceledError") {
+            console.error("Failed to load users:", err?.message || err);
+          }
+        } finally {
+          setLoading(false);
         }
-
-        setAllUsers(acc);
-        setTotalUsers(acc.length);
-
-        const today = new Date();
-        const dayKey = localDayKey(today);
-        const monthKey = localMonthKey(today);
-        const buckets = buildBuckets(acc);
-
-        setDailyRequests(buckets.dayMap[dayKey] ?? 0);
-        setMonthlyRequests(buckets.monthMap[monthKey] ?? 0);
-        setSelectedMonthKey(monthKey);
-      } catch (err: any) {
-        if (err?.name !== "CanceledError") {
-          console.error("Failed to load users:", err?.message || err);
-        }
-      } finally {
-        setLoading(false);
-      }
-    })();
-
-    return () => ctrl.abort();
-  }, []);
+      })();
+  
+      return () => {
+        ctrl.abort();
+      };
+    }, []);
+  
 
   /* -------- Handlers -------- */
   const handleDateChange = (date: Date | null) => {
