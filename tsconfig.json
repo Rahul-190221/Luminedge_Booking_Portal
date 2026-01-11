@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
+    "types": ["node"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -12,11 +13,7 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"]
     }
