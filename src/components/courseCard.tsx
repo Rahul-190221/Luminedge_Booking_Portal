@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Course } from "@/app/types";
 import { FaLongArrowAltRight } from "react-icons/fa";
 import { useRouter, useSearchParams } from "next/navigation";
+import { courseLinks, courseDescriptions } from "@/lib/courseConfig";
 
 type Props = {
   allowed: boolean;
@@ -23,21 +24,6 @@ export default function CourseCard({
   const router = useRouter();
   const searchParams = useSearchParams();
   const oldBookingId = searchParams.get("oldBookingId");
-
-  const courseLinks: Record<string, string> = {
-    IELTS: "https://luminedge.com.bd/ielts/",
-    "Pearson PTE": "https://luminedge.com.bd/pte/",
-    GRE: "https://luminedge.com.bd/gre/",
-    TOEFL: "https://luminedge.com.bd/best-toefl-coaching-in-dhaka/",
-  };
-
-  const courseDescriptions: Record<string, string> = {
-    IELTS:
-      "Book Your IELTS Test with Confidence – Convenient, Reliable, and Trusted by Thousands.",
-    "Pearson PTE": "Book Your PTE Mock Test – Practice, Prepare, and Excel!",
-    GRE: "Book Your GRE General Mock Test – Ace Your Preparation!",
-    TOEFL: "Book Your TOEFL iBT Mock Test – Get Ready to Succeed!",
-  };
 
   const handleGo = () => {
     if (allowed) {

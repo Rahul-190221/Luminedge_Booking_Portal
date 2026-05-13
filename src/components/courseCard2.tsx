@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { FaLongArrowAltRight } from "react-icons/fa";
+import { courseDescriptions } from "@/lib/courseConfig";
 
 interface Course2 {
   _id: string;
@@ -29,14 +30,6 @@ const CourseCard2 = ({
 }: CourseCard2Props) => {
   const fallbackImage = "/default-image.jpg";
 
-  const courseDescriptions: Record<string, string> = {
-    IELTS:
-      "Book Your IELTS Test with Confidence – Convenient, Reliable, and Trusted by Thousands.",
-    "Pearson PTE": "Book Your PTE Mock Test – Practice, Prepare, and Excel!",
-    GRE: "Book Your GRE General Mock Test – Ace Your Preparation!",
-    TOEFL: "Book Your TOEFL iBT Mock Test – Get Ready to Succeed!",
-  };
-
   const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!isRegistered) return;
     if (e.key === "Enter" || e.key === " ") {
@@ -49,7 +42,7 @@ const CourseCard2 = ({
     <div
       role="button"
       tabIndex={isRegistered ? 0 : -1}
-      aria-disabled={!isRegistered}
+      aria-disabled={!isRegistered ? "true" : undefined}
       onClick={isRegistered ? onClick : undefined}
       onKeyDown={handleKey}
       title={isRegistered ? `Open ${course.name}` : "Register to access"}

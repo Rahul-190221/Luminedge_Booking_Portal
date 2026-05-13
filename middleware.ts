@@ -2,24 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 
 export default function middleware(req: NextRequest) {
   const verify = req.cookies.get("loggedin");
-  const url = req.url;
+  const { pathname, origin } = req.nextUrl;
 
-  const protectedRoutes = [
-    "/dashboard",
-    "/admin",
-    "/bdm",
-    "/admin/create-schedule",
-    "/booking"
-  ];
+  const protectedRoutes = ["/dashboard", "/admin", "/bdm", "/booking"];
 
-  // Check if the request URL matches any of the protected routes
-  const isProtectedRoute = protectedRoutes.some(route => url.startsWith(`https://luminedge.netlify.app${route}`));
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
 
   if (!verify && isProtectedRoute) {
-    return NextResponse.redirect("https://luminedge.netlify.app/login");
+    return NextResponse.redirect(`${origin}/login`);
   }
 
-  if (verify && url === "https://luminedge.netlify.app/") {
-    return NextResponse.redirect("https://luminedge.netlify.app/dashboard");
+  if (verify && pathname === "/") {
+    return NextResponse.redirect(`${origin}/dashboard`);
   }
 }
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api).*)"],
+};
