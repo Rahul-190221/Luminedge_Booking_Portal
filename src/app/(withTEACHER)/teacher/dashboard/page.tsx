@@ -82,6 +82,7 @@ const BDMDashboardPage = () => {
   );
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const { monthMap, dayMap } = useMemo(
     () => buildBuckets(allUsers),
@@ -159,7 +160,8 @@ const BDMDashboardPage = () => {
         setSelectedDate(today);
       } catch (err: any) {
         if (err?.name !== "CanceledError") {
-          console.error("Failed to load BDM users:", err?.message || err);
+          console.error("Failed to load teacher users:", err?.message || err);
+          setFetchError("Unable to reach the server. Please check your connection and try again.");
         }
       } finally {
         setLoading(false);
@@ -300,6 +302,12 @@ const BDMDashboardPage = () => {
           )}
         </div>
       </div>
+
+      {fetchError && (
+        <div className="mt-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {fetchError}
+        </div>
+      )}
 
       <div className="mt-1 sm:mt-1 bg-white border border-slate-200/70 shadow-sm rounded-xl">
         <div className="p-1 sm:p-1 overflow-x-auto">
