@@ -54,7 +54,7 @@ function AvailableSchedulesBDMPage() {
       // keep ONLY real schedules; normalize fields
       const normalized: Schedule[] = raw
         .filter((it: unknown) => it && typeof it === "object" && typeof (it as any).startDate === "string" && Array.isArray((it as any).timeSlots))
-        .map((s) => ({
+        .map((s: any) => ({
           id: String(s._id ?? s.id ?? ""),
           name: String(s.name ?? "Unknown"),
           testType: String(s.testType ?? ""),
@@ -68,7 +68,7 @@ function AvailableSchedulesBDMPage() {
             slot: t?.slot != null ? Number(t.slot) : undefined,
           })),
         }))
-        .filter((s) => s.id && s.startDate); // final guard
+        .filter((s: Schedule) => s.id && s.startDate); // final guard
 
       setSchedules(normalized);
     } catch (error) {
