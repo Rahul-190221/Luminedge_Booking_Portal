@@ -308,6 +308,7 @@ function TrfAvailableSchedulesBDMPage() {
         <h3 className="font-semibold">Filter by</h3>
         <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
           <select
+            aria-label="Course filter"
             value={testTypeFilter}
             onChange={(e) => setTestTypeFilter(e.target.value)}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -341,6 +342,7 @@ function TrfAvailableSchedulesBDMPage() {
           </select>
 
           <select
+            aria-label="Date filter"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as "all" | "past" | "upcoming")}
             className="px-2 py-1 border rounded w-full sm:w-auto"
