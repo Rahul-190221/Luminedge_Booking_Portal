@@ -53,7 +53,7 @@ function AvailableSchedulesBDMPage() {
 
       // keep ONLY real schedules; normalize fields
       const normalized: Schedule[] = raw
-        .filter((it) => it && typeof it === "object" && typeof it.startDate === "string" && Array.isArray(it.timeSlots))
+        .filter((it: unknown) => it && typeof it === "object" && typeof (it as any).startDate === "string" && Array.isArray((it as any).timeSlots))
         .map((s) => ({
           id: String(s._id ?? s.id ?? ""),
           name: String(s.name ?? "Unknown"),
