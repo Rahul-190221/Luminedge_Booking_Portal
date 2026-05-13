@@ -1,10 +1,11 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { API_BASE } from "@/lib/config";
 import { useSearchParams } from "next/navigation";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import toast from "react-hot-toast";
 import { Bar } from "react-chartjs-2";
 import type { Options as H2COptions } from "html2canvas";
 
@@ -79,11 +80,6 @@ const toYMDLoose = (v: any): string => {
   return toYMD(v);
 };
 
-const API_BASE = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_BASE ||
-  "https://luminedge-server.vercel.app"
-).replace(/\/$/, "");
 
 type SegmentKey = "listening" | "reading" | "writing" | "speaking";
 
@@ -172,6 +168,7 @@ const FinalTRFPage = () => {
   const [loading, setLoading] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [bookingDateYMD, setBookingDateYMD] = useState<string>("");
+  const [emailStatus, setEmailStatus] = useState<{ sent: boolean; lastSentAt?: string } | null>(null);
 
   const [lockedSegments, setLockedSegments] = useState<Record<SegmentKey, boolean>>({
     reading: false,
@@ -244,17 +241,17 @@ const FinalTRFPage = () => {
   }) => (
     <div
       className={
-        "border border-black bg-gray-50 text-red-600 text-sm px-2 py-1 min-h-[24px] flex items-center whitespace-pre-wrap " +
+        "border border-black bg-gray-50 text-red-600 pdf-data-value text-sm px-3 py-1 h-[28px] flex items-center justify-start text-left whitespace-pre-wrap " +
         className
       }
     >
-      {children ?? "—"}
+      {children ?? "\u00A0"}
     </div>
   );
 
   const StaticCell: React.FC<{ children?: any }> = ({ children }) => (
-    <div className="w-full text-center bg-gray-50 text-red-600 p-1 min-h-[24px] flex items-center justify-center">
-      {children ?? "—"}
+    <div className="w-full text-left bg-gray-50 text-red-600 pdf-data-value p-1 h-[28px] flex items-center justify-start">
+      {children ?? "\u00A0"}
     </div>
   );
 
@@ -269,10 +266,26 @@ const FinalTRFPage = () => {
       setLoading(true);
       try {
         const [feedbackRes, adminRes, bookingsRes, userRes] = await Promise.all([
-          axios.get(`${API_BASE}/api/v1/admin/feedback-status/${urlUserId}/${urlScheduleId}`),
-          axios.get(`${API_BASE}/api/v1/admin/get-admin-section/${urlUserId}/${urlScheduleId}`),
-          axios.get(`${API_BASE}/api/v1/user/bookings/${urlUserId}`),
-          axios.get(`${API_BASE}/api/v1/user/status/${urlUserId}`),
+          axios.get(`${API_BASE}/api/v1/admin/feedback-status/${urlUserId}/${urlScheduleId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }),
+          axios.get(`${API_BASE}/api/v1/admin/get-admin-section/${urlUserId}/${urlScheduleId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }),
+          axios.get(`${API_BASE}/api/v1/user/bookings/${urlUserId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }),
+          axios.get(`${API_BASE}/api/v1/user/status/${urlUserId}`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }),
         ]);
 
         if (!feedbackRes.data || !feedbackRes.data.status) {
@@ -414,6 +427,16 @@ const FinalTRFPage = () => {
   }, [urlUserId, urlScheduleId]);
 
   useEffect(() => {
+    if (!urlUserId || !urlScheduleId) return;
+    axios
+      .get(`${API_BASE}/api/v1/admin/trf-email-status/${urlUserId}/${urlScheduleId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      })
+      .then((r) => setEmailStatus(r.data))
+      .catch(() => {});
+  }, [urlUserId, urlScheduleId]);
+
+  useEffect(() => {
     if (!isPrint) return;
     const root = trfRootRef.current;
     if (!root) return;
@@ -509,12 +532,32 @@ const FinalTRFPage = () => {
       *, *::before, *::after {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
-        color: #000 !important;
         text-shadow: none !important;
         box-shadow: none !important;
       }
+
+      /* Default label/heading text: black */
+      * { color: #000; }
+
+      /* Data values: red for visibility — higher specificity to survive */
+      .text-red-600,
+      .pdf-data-value,
+      .pdf-field.text-red-600,
+      [data-trf-page] .text-red-600,
+      [data-trf-page] .pdf-data-value {
+        color: #dc0000 !important;
+      }
+
+      /* Centering for data boxes - restricted to divs to avoid breaking tables */
+      div.bg-gray-50,
+      div.pdf-data-value,
+      .pdf-field {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+      }
+
       .pdf-mt-2 { margin-top: 0.5rem !important; }
-      /* PDF-only spacing helpers */
       .pdf-mb-1 { margin-bottom: 0.5rem !important; }
 
       *:not(.keep-bg):not(.keep-bg-diag) { background-image: none !important; }
@@ -536,8 +579,9 @@ const FinalTRFPage = () => {
       th, td { border: 1px solid #000 !important; padding: 4px; }
       hr { border: 0; border-top: 1px solid #000 !important; margin: 0; }
 
-      .bg-gray-50 { background: #fff !important; align-items: flex-start !important; }
-      .text-red-600 { color: #ff0000 !important; }
+      .bg-gray-50 { 
+        background: #fff !important; 
+      }
 
       .keep-bg, .keep-bg-diag {
         background-repeat: repeat !important;
@@ -666,21 +710,23 @@ const FinalTRFPage = () => {
             }
 
             const box = doc.createElement("div");
-            box.className = "pdf-field bg-gray-50 text-red-600 text-sm";
+            box.className = "pdf-field bg-gray-50 text-red-600 pdf-data-value text-sm";
             box.textContent = text || "—";
 
             const cs = (doc.defaultView || window).getComputedStyle(el);
 
-            // Copy full box model + text metrics to preserve layout exactly
-            box.style.boxSizing = cs.boxSizing;
-            box.style.display = cs.display;
+            // Force flexbox so text is always vertically centered (equal gap top/bottom)
+            box.style.boxSizing = "border-box";
+            box.style.display = "flex";
+            box.style.alignItems = "center";
             box.style.width = cs.width;
             box.style.height = cs.height;
             box.style.minHeight = cs.height;
-            box.style.paddingTop = cs.paddingTop;
+            // Keep left/right padding only — vertical centering handled by flexbox
+            box.style.paddingTop = "0";
+            box.style.paddingBottom = "0";
             box.style.paddingRight = cs.paddingRight;
-            box.style.paddingBottom = cs.paddingBottom;
-            box.style.paddingLeft = cs.paddingLeft;
+            box.style.paddingLeft = cs.paddingLeft || "8px";
             box.style.marginTop = cs.marginTop;
             box.style.marginRight = cs.marginRight;
             box.style.marginBottom = cs.marginBottom;
@@ -689,10 +735,12 @@ const FinalTRFPage = () => {
             box.style.borderRight = cs.borderRight;
             box.style.borderBottom = cs.borderBottom;
             box.style.borderLeft = cs.borderLeft;
-            box.style.textAlign = cs.textAlign;
-            box.style.lineHeight = cs.lineHeight;
+            box.style.textAlign = "left";
+            box.style.lineHeight = "normal";
+            box.style.overflow = "hidden";
 
             if (el.classList.contains("text-center")) {
+              box.style.justifyContent = "center";
               box.style.textAlign = "center";
             }
 
@@ -832,16 +880,18 @@ const FinalTRFPage = () => {
       const form = new FormData();
       form.append("file", file);
 
-      // Let the browser set the correct multipart boundary
+      // Don't set Content-Type — let axios set multipart/form-data with boundary automatically
       const res = await axios.post(
         `${API_BASE}/api/v1/admin/send-trf-email/${urlUserId}/${urlScheduleId}`,
-        form
+        form,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
       );
 
-      const { success, message, to, userEmail, email, user } = (res?.data || {}) as any;
+      const { success, message, to, userEmail, email, user, lastSentAt } = (res?.data || {}) as any;
       if (success) {
         const who = to || userEmail || email || user?.email || extractEmail(message);
         toast.success(who ? `Email sent successfully to ${who}.` : "Email sent successfully.");
+        setEmailStatus({ sent: true, lastSentAt: lastSentAt || new Date().toISOString() });
       } else {
         throw new Error(message || "Failed to send email.");
       }
@@ -930,22 +980,22 @@ const FinalTRFPage = () => {
           </div>
         </div>
 
-        {/* Centre/Test Date row — ROOMY */}
+        {/* Centre/Test Date row */}
         <div className="grid grid-cols-[160px_1fr_120px_1fr] items-center gap-x-0 mt-2 mb-0 leading-tight">
           <label className="col-start-1 col-end-2 tracking-wide text-base pt-1 ml-8">
             Centre Name
           </label>
 
-          <StaticBox className="text-base !min-h-[24px] px-6">{formData.centreName}</StaticBox>
+          <StaticBox className="text-base h-[30px]">{formData.centreName}</StaticBox>
 
           <label className="col-start-3 col-end-4 tracking-wide text-base pt-1 text-right">
             Test Date
           </label>
 
           <div className="col-start-4 ml-4">
-            <div className="border border-black px-4 py-[2px] text-red-600 text-base h-[28px] w-[75%] flex items-center tabular-nums whitespace-nowrap pdf-field">
+            <StaticBox className="text-base h-[30px] w-[75%] tabular-nums">
               {renderISO(bookingDateYMD || formData.testDate)}
-            </div>
+            </StaticBox>
           </div>
         </div>
 
@@ -961,7 +1011,7 @@ const FinalTRFPage = () => {
                   Family Name
                 </label>
                 <div className="flex-1">
-                  <StaticBox className="w-[60%]">{formData.lastName}</StaticBox>
+                  <StaticBox className="w-[60%] h-[30px]">{formData.lastName}</StaticBox>
                 </div>
               </div>
               <div className="flex items-center gap-2 mb-3">
@@ -969,7 +1019,7 @@ const FinalTRFPage = () => {
                   First Name
                 </label>
                 <div className="flex-1">
-                  <StaticBox className="w-[60%]">{formData.firstName}</StaticBox>
+                  <StaticBox className="w-[60%] h-[30px]">{formData.firstName}</StaticBox>
                 </div>
               </div>
             </div>
@@ -981,7 +1031,7 @@ const FinalTRFPage = () => {
             <div className="flex items-center gap-2">
               <label className="whitespace-nowrap ml-3 mr-2 w-20">Date of Birth</label>
               <div className="flex-1 w-[70%]">
-                <StaticBox className="tabular-nums whitespace-nowrap">
+                <StaticBox className="h-[30px] tabular-nums whitespace-nowrap">
                   {renderISO(formData.dateOfBirth)}
                 </StaticBox>
               </div>
@@ -990,14 +1040,14 @@ const FinalTRFPage = () => {
             <div className="flex items-center gap-2">
               <label className="whitespace-nowrap ml-10 w-24">Sex (M/F)</label>
               <div className="flex-1 w-[50%]">
-                <StaticBox>{formData.sex}</StaticBox>
+                <StaticBox className="h-[30px]">{formData.sex}</StaticBox>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               <label className="whitespace-nowrap ml-4 w-24">Scheme Code</label>
               <div className="flex-1 w-[60%]">
-                <StaticBox>{formData.schemeCode}</StaticBox>
+                <StaticBox className="h-[30px]">{formData.schemeCode}</StaticBox>
               </div>
             </div>
           </div>
@@ -1013,7 +1063,7 @@ const FinalTRFPage = () => {
               <span className="text-xs font-semibold whitespace-nowrap">
                 English Proficiency Level
               </span>
-              <StaticBox className="w-20">{formData.proficiency || "—"}</StaticBox>
+              <StaticBox className="w-20 h-[28px]">{formData.proficiency || "\u00A0"}</StaticBox>
             </div>
           </div>
 
@@ -1028,7 +1078,7 @@ const FinalTRFPage = () => {
                 <span className="whitespace-nowrap ml-2 w-14 text-xs font-semibold">
                   {item.label}
                 </span>
-                <StaticBox className="w-[50%] tabular-nums">{item.value || "—"}</StaticBox>
+                <StaticBox className="w-[50%] h-[28px] tabular-nums">{item.value || "\u00A0"}</StaticBox>
               </div>
             ))}
 
@@ -1037,7 +1087,7 @@ const FinalTRFPage = () => {
               <span className="whitespace-nowrap ml-4 w-20 text-xs font-semibold leading-tight">
                 Overall <br /> Band <br /> Score
               </span>
-              <StaticBox className="w-[65%] px-3 tabular-nums">{overallDisplay}</StaticBox>
+              <StaticBox className="w-[65%] h-[28px] tabular-nums">{overallDisplay}</StaticBox>
             </div>
           </div>
 
@@ -1048,7 +1098,7 @@ const FinalTRFPage = () => {
         <div className="grid grid-cols-10 gap-4 mt-0 mr-4 items-start">
           <div className="col-span-7 flex flex-col">
             <span className="text-sm font-semibold mb-1 ml-1">Administrator Comments</span>
-            <div className="border border-black p-2 text-red-600 text-sm bg-gray-50 h-36 w-full overflow-auto whitespace-pre-wrap flex items-start">
+            <div className="border border-black p-2 text-red-600 pdf-data-value text-sm bg-gray-50 h-36 w-full overflow-auto whitespace-pre-wrap flex items-start">
               {formData.comments || "—"}
             </div>
           </div>
@@ -1074,14 +1124,14 @@ const FinalTRFPage = () => {
             <span className="whitespace-nowrap text-[13px] font-semibold w-48">
               Writing Examiner&apos;s <br /> Signature
             </span>
-            <StaticBox className="w-[220px]">{formData.writingSign || "—"}</StaticBox>
+            <StaticBox className="w-[220px] h-[30px]">{formData.writingSign || "\u00A0"}</StaticBox>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="whitespace-nowrap text-[13px] font-semibold w-48">
               Administrator&apos;s <br /> Signature
             </span>
-            <StaticBox className="w-[220px]">{formData.adminSignature || "—"}</StaticBox>
+            <StaticBox className="w-[220px] h-[30px]">{formData.adminSignature || "\u00A0"}</StaticBox>
           </div>
         </div>
 
@@ -1090,14 +1140,14 @@ const FinalTRFPage = () => {
             <span className="whitespace-nowrap text-[13px] font-semibold w-48">
               Speaking Examiner&apos;s <br /> Signature
             </span>
-            <StaticBox className="w-[220px]">{formData.speakingSign || "—"}</StaticBox>
+            <StaticBox className="w-[220px] h-[30px]">{formData.speakingSign || "\u00A0"}</StaticBox>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="whitespace-nowrap text-[13px] font-semibold w-48">
               Result Publishing Date
             </span>
-            <StaticBox className="w-[220px] tabular-nums whitespace-nowrap">
+            <StaticBox className="w-[220px] h-[30px] tabular-nums whitespace-nowrap">
               {renderISO(formData.resultDate)}
             </StaticBox>
           </div>
@@ -1111,7 +1161,7 @@ const FinalTRFPage = () => {
               src="/assets/logo1.png"
               alt="Luminedge"
               crossOrigin="anonymous"
-              style={{ maxHeight: "100%", width: "auto", objectFit: "contain", display: "block" }}
+              className="logo-img-fit"
             />
           </div>
           <img src="/assets/cambridge.png" alt="Cambridge Assessment" className="h-14 object-contain" />
@@ -1133,8 +1183,7 @@ const FinalTRFPage = () => {
       >
         <div className="relative w-full mb-6">
           <div
-            className="w-full h-6 keep-bg"
-            style={{ backgroundImage: "repeating-linear-gradient(-135deg, #000 0 2px, #fff 2px 8px)" }}
+            className="w-full h-6 keep-bg diagonal-stripe"
           />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-fit h-6 bg-white px-4 z-10 flex items-center justify-center">
             <h2 className="text-xl font-bold text-[#00000f]">Examiner&apos;s Detailed Feedback</h2>
@@ -1147,15 +1196,15 @@ const FinalTRFPage = () => {
             {/* Listening */}
             <div>
               <h3 className="font-bold mb-1 pdf-mb-1">Listening</h3>
-              <div className="border border-[#00000f] p-2 text-red-600">
+              <div className="border border-[#00000f] p-2 text-red-600 pdf-data-value">
                 {isPrint ? (
-                  <div className="w-full bg-gray-50 text-red-600 text-sm p-1 min-h-[72px] whitespace-pre-wrap">
+                  <div className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1 min-h-[72px] whitespace-pre-wrap">
                     {formData.listeningFeedback || "—"}
                   </div>
                 ) : (
                   <textarea
                     rows={3}
-                    className="w-full bg-gray-50 text-red-600 text-sm p-1"
+                    className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1"
                     name="listeningFeedback"
                     value={formData.listeningFeedback}
                     onChange={handleChange}
@@ -1169,15 +1218,15 @@ const FinalTRFPage = () => {
             {/* Reading */}
             <div>
               <h3 className="font-bold mb-1 pdf-mb-1">Reading</h3>
-              <div className="border border-[#00000f] p-2 text-red-600">
+              <div className="border border-[#00000f] p-2 text-red-600 pdf-data-value">
                 {isPrint ? (
-                  <div className="w-full bg-gray-50 text-red-600 text-sm p-1 min-h-[72px] whitespace-pre-wrap">
+                  <div className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1 min-h-[72px] whitespace-pre-wrap">
                     {formData.readingFeedback || "—"}
                   </div>
                 ) : (
                   <textarea
                     rows={3}
-                    className="W-full bg-gray-50 text-red-600 text-sm p-1"
+                    className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1"
                     name="readingFeedback"
                     value={formData.readingFeedback}
                     onChange={handleChange}
@@ -1201,7 +1250,7 @@ const FinalTRFPage = () => {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="text-red-600">
+                <tbody className="text-red-600 pdf-data-value">
                   <tr>
                     {["FC", "LR", "GRA", "PRO", "Total"].map((field) => (
                       <td key={field} className="border border-black p-1">
@@ -1215,6 +1264,7 @@ const FinalTRFPage = () => {
                           </StaticCell>
                         ) : (
                           <input
+                            aria-label={`Speaking score ${field}`}
                             type="text"
                             name={`feedback.speakingScores.${field}`}
                             value={
@@ -1223,7 +1273,7 @@ const FinalTRFPage = () => {
                               ]
                             }
                             onChange={handleChange}
-                            className="w-full bg-gray-50 text-red-600 text-sm p-1 text-center"
+                            className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1 text-center"
                             disabled={lockedSegments.speaking}
                           />
                         )}
@@ -1233,13 +1283,13 @@ const FinalTRFPage = () => {
                   <tr>
                     <td colSpan={5} className="border border-black p-2 text-left">
                       {isPrint ? (
-                        <div className="w-full bg-gray-50 text-red-600 text-sm p-1 min-h-[96px] whitespace-pre-wrap">
+                        <div className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1 min-h-[96px] whitespace-pre-wrap">
                           {formData.feedback.speakingNotes || "—"}
                         </div>
                       ) : (
                         <textarea
                           rows={4}
-                          className="w-full bg-gray-50 text-red-600 text-sm p-1"
+                          className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1"
                           name="feedback.speakingNotes"
                           value={formData.feedback.speakingNotes}
                           onChange={handleChange}
@@ -1268,7 +1318,7 @@ const FinalTRFPage = () => {
                     <th className="border border-black p-1">GRA</th>
                   </tr>
                 </thead>
-                <tbody className="text-red-600">
+                <tbody className="text-red-600 pdf-data-value">
                   <tr className="h-8">
                     {["task1_overall", "task1_TA", "task1_CC", "task1_LR", "task1_GRA"].map((key) => (
                       <td key={key} className="border border-black p-1">
@@ -1278,11 +1328,12 @@ const FinalTRFPage = () => {
                           </StaticCell>
                         ) : (
                           <input
+                            aria-label={`Writing Task 1 score ${key}`}
                             type="text"
                             name={`feedback.writingScores.${key}`}
                             value={formData.feedback.writingScores[key as keyof WritingScores]}
                             onChange={handleChange}
-                            className="w-full text-center bg-gray-50 text-red-600"
+                            className="w-full text-center bg-gray-50 text-red-600 pdf-data-value"
                             disabled={lockedSegments.writing}
                           />
                         )}
@@ -1311,13 +1362,13 @@ const FinalTRFPage = () => {
                   <tr className="h-8">
                     <td colSpan={5} className="border border-black p-2 text-left">
                       {isPrint ? (
-                        <div className="w-full bg-gray-50 text-red-600 text-sm p-1 min-h-[72px] whitespace-pre-wrap">
+                        <div className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1 min-h-[72px] whitespace-pre-wrap">
                           {formData.writingTask1Feedback || "—"}
                         </div>
                       ) : (
                         <textarea
                           rows={3}
-                          className="w-full bg-gray-50 text-red-600 text-sm p-1"
+                          className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1"
                           name="writingTask1Feedback"
                           value={formData.writingTask1Feedback}
                           onChange={handleChange}
@@ -1345,11 +1396,12 @@ const FinalTRFPage = () => {
                           </StaticCell>
                         ) : (
                           <input
+                            aria-label={`Writing Task 2 score ${key}`}
                             type="text"
                             name={`feedback.writingScores.${key}`}
                             value={formData.feedback.writingScores[key as keyof WritingScores]}
                             onChange={handleChange}
-                            className="w-full text-center bg-gray-50 text-red-600"
+                            className="w-full text-center bg-gray-50 text-red-600 pdf-data-value"
                             disabled={lockedSegments.writing}
                           />
                         )}
@@ -1378,13 +1430,13 @@ const FinalTRFPage = () => {
                   <tr>
                     <td colSpan={5} className="border border-black p-2 text-left">
                       {isPrint ? (
-                        <div className="w-full bg-gray-50 text-red-600 text-sm p-1 min-h-[72px] whitespace-pre-wrap">
+                        <div className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1 min-h-[72px] whitespace-pre-wrap">
                           {formData.writingTask2Feedback || "—"}
                         </div>
                       ) : (
                         <textarea
                           rows={3}
-                          className="w-full bg-gray-50 text-red-600 text-sm p-1"
+                          className="w-full bg-gray-50 text-red-600 pdf-data-value text-sm p-1"
                           name="writingTask2Feedback"
                           value={formData.writingTask2Feedback}
                           onChange={handleChange}
@@ -1403,10 +1455,7 @@ const FinalTRFPage = () => {
         {/* Services stripe + title */}
         <div className="relative w-full mb-6 mt-6">
           <div
-            className="w-full h-6 keep-bg"
-            style={{
-              backgroundImage: "repeating-linear-gradient(-135deg, #000 0 2px, #fff 2px 8px)",
-            }}
+            className="w-full h-6 keep-bg diagonal-stripe"
           />
           <div className="absolute top-0 left-0 w-full h-6 flex items-center justify-center z-10">
             <div className="bg-white px-4 flex items-center justify-center">
@@ -1458,8 +1507,7 @@ const FinalTRFPage = () => {
         {/* Bottom band + logo + note */}
         <div className="w-full grid grid-cols-[72px_108px_1fr] items-center gap-3 mt-2">
           <div
-            className="h-8 keep-bg"
-            style={{ backgroundImage: "repeating-linear-gradient(-135deg, #000 0 2px, #fff 2px 8px)" }}
+            className="h-8 keep-bg diagonal-stripe"
             aria-hidden="true"
           />
           <div className="h-[110px] bg-white flex items-center justify-center px-2">
@@ -1492,16 +1540,31 @@ const FinalTRFPage = () => {
         </button>
       </div>
 
-      <button
-        onClick={handleEmailTRF}
-        disabled={sendingEmail || loading}
-        className={`mt-6 px-6 py-2 rounded font-semibold text-white ${
-          sendingEmail || loading ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"
-        }`}
-        title={urlUserId && urlScheduleId ? "" : "Missing userId or scheduleId"}
-      >
-        {sendingEmail ? "Sending…" : "Email TRF to User"}
-      </button>
+      <div className="flex flex-col items-center gap-2">
+        <button
+          onClick={handleEmailTRF}
+          disabled={sendingEmail || loading}
+          className={`mt-6 px-6 py-2 rounded font-semibold text-white ${
+            sendingEmail || loading ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"
+          }`}
+          title={urlUserId && urlScheduleId ? "" : "Missing userId or scheduleId"}
+        >
+          {sendingEmail ? "Sending…" : "Email TRF to User"}
+        </button>
+
+        {emailStatus?.sent && (
+          <p className="text-xs text-emerald-700 font-medium">
+            ✅ TRF already sent
+            {emailStatus.lastSentAt
+              ? ` on ${new Intl.DateTimeFormat("en-GB", {
+                  timeZone: "Asia/Dhaka",
+                  year: "numeric", month: "short", day: "2-digit",
+                  hour: "2-digit", minute: "2-digit", hour12: true,
+                }).format(new Date(emailStatus.lastSentAt))} (Dhaka)`
+              : ""}
+          </p>
+        )}
+      </div>
 
       {/* Chart (screen-only) */}
       {!isPrint && (
@@ -1520,16 +1583,6 @@ const FinalTRFPage = () => {
       )}
 
       {/* Toasts */}
-      <ToastContainer
-        position="top-center"
-        autoClose={2500}
-        newestOnTop
-        closeOnClick
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
     </div>
   );
 };

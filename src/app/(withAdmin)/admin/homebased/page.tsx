@@ -7,7 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { motion } from "framer-motion";
 
-const API = "https://luminedge-server.vercel.app";
+import { API_BASE as API } from "@/lib/config";
 
 // Booking Type Definition
 type Booking = {
@@ -64,7 +64,12 @@ export default function HomeBasedPage() {
 
     try {
       const response = await axios.get(
-        `${API}/api/v1/admin/bookings/home-with-users`
+        `${API}/api/v1/admin/bookings/home-with-users`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
       const homeBookings: Booking[] = response.data.bookings;
 
@@ -93,7 +98,12 @@ export default function HomeBasedPage() {
           const { data: attRes } = await axios.post(
             `${API}/api/v1/user/attendance/bulk`,
             { userIds: uniqueUserIds },
-            { headers: { "Content-Type": "application/json" } }
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              },
+            }
           );
           const map: Record<string, number | null> = {};
           for (const uid of uniqueUserIds) {
@@ -141,6 +151,11 @@ export default function HomeBasedPage() {
           attendance: attendanceValue,
           status,
           bookingDate,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
 
@@ -158,7 +173,12 @@ export default function HomeBasedPage() {
         const { data: attRes } = await axios.post(
           `${API}/api/v1/user/attendance/bulk`,
           { userIds: [userId] },
-          { headers: { "Content-Type": "application/json" } }
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
         );
         setAttendCount((prev) => ({
           ...prev,
@@ -470,6 +490,7 @@ export default function HomeBasedPage() {
                     </td>
                     <td className="p-4">
                       <select
+                        aria-label="Attendance status"
                         className="border rounded px-2 py-1"
                         value={attendance[booking.userId] ?? booking.attendance ?? "N/A"}
                         onChange={(e) => {

@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 
 // Booking Type Definition
 type Booking = {
@@ -60,7 +61,10 @@ export default function HomeBasedPage() {
     setError(null);
   
     try {
-      const response = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/bookings/home-with-users");
+      const token = localStorage.getItem("accessToken");
+      const response = await axios.get(`${API_BASE}/api/v1/admin/bookings/home-with-users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const homeBookings = response.data.bookings;
   
       if (!homeBookings || homeBookings.length === 0) {
@@ -257,7 +261,7 @@ const filteredBookings = useMemo(() => {
       acc[dateKey].push(booking);
       return acc;
     }, {});
-}, [bookings, testTypeFilter, dateFilter, startDateFilter, nameFilter, courseNameFilter]);
+}, [bookings, users, testTypeFilter, dateFilter, startDateFilter, nameFilter, courseNameFilter]);
 
 const indexOfLastSchedule = currentPage * schedulesPerPage;
 const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;

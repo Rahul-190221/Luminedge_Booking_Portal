@@ -5,18 +5,18 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
-  RefreshCw,
-  Mail,
-  User2,
-  Phone,
-  BadgeCheck,
-  Hash,
-  FileText,
-  Copy,
-  CheckCircle2,
-  X,
-} from "lucide-react";
+  FaSearch,
+  FaSyncAlt,
+  FaEnvelope,
+  FaUser,
+  FaPhone,
+  FaCheckCircle,
+  FaHashtag,
+  FaFileAlt,
+  FaCopy,
+  FaTimes,
+} from "react-icons/fa";
+import { API_BASE } from "@/lib/config";
 
 // ---------- Types ----------
 interface User {
@@ -36,9 +36,6 @@ type Editable = Pick<
 >;
 
 // ---------- Config ----------
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 // ---------- Helpers ----------
 const cx = (...classes: (string | false | null | undefined)[]) =>
@@ -50,7 +47,7 @@ const inputCls =
 
 const badge = (text: string) => (
   <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-[11px] font-semibold text-gray-600">
-    <BadgeCheck className="size-3" /> {text}
+    <FaCheckCircle className="size-3" /> {text}
   </span>
 );
 
@@ -71,7 +68,12 @@ export default function ProfileEditApprovalPage() {
       setLoading(true);
       const { data } = await axios.get(
         `${API_BASE}/api/v1/users/with-profile-request`,
-        { timeout: 15000 }
+        {
+          timeout: 15000,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
       if (data?.success && Array.isArray(data.users)) {
         const list: User[] = data.users;
@@ -164,7 +166,12 @@ export default function ProfileEditApprovalPage() {
           passportId: payload.passportNumber?.trim() || "",
           transactionId: payload.transactionId?.trim() || "",
         },
-        { timeout: 20000 }
+        {
+          timeout: 20000,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
 
       if (data?.success) {
@@ -208,7 +215,7 @@ export default function ProfileEditApprovalPage() {
 
           <div className="flex w-full sm:w-auto items-center gap-2">
             <div className="relative flex-1 sm:w-80">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+              <FaSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
               <input
                 className={cx(inputCls, "pl-9 pr-10 bg-white/90")}
                 placeholder="Search by name, email, phone, passport, Txn ID…"
@@ -221,7 +228,7 @@ export default function ProfileEditApprovalPage() {
               onClick={fetchRequestedUsers}
               className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-indigo-100"
             >
-              <RefreshCw className="size-4" /> Refresh
+              <FaSyncAlt className="size-4" /> Refresh
             </button>
           </div>
         </div>
@@ -258,7 +265,7 @@ export default function ProfileEditApprovalPage() {
                       <td className="px-3 py-3 font-semibold text-gray-700">{idx + 1}</td>
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2">
-                          <User2 className="size-4 text-indigo-500" />
+                          <FaUser className="size-4 text-indigo-500" />
                           <span className="font-medium text-gray-900">
                             {u.name || "Unnamed User"}
                           </span>
@@ -317,7 +324,7 @@ export default function ProfileEditApprovalPage() {
                     onClick={closeEdit}
                     aria-label="Close"
                   >
-                    <X className="size-4" />
+                    <FaTimes className="size-4" />
                   </button>
                 </div>
 
@@ -326,7 +333,7 @@ export default function ProfileEditApprovalPage() {
                   {selectedUser.profileEditNote && (
                     <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-800">
                       <div className="flex items-start gap-2">
-                        <FileText className="mt-0.5 size-4 shrink-0" />
+                        <FaFileAlt className="mt-0.5 size-4 shrink-0" />
                         <div className="text-sm">
                           <p className="font-semibold">User note</p>
                           <p className="mt-0.5 whitespace-pre-wrap">
@@ -338,7 +345,7 @@ export default function ProfileEditApprovalPage() {
                   )}
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Field label="Name" icon={<User2 className="size-4 text-gray-400" />}>
+                    <Field label="Name" icon={<FaUser className="size-4 text-gray-400" />}>
                       <input
                         className={inputCls}
                         placeholder="Full name"
@@ -349,7 +356,7 @@ export default function ProfileEditApprovalPage() {
                       />
                     </Field>
 
-                    <Field label="Email" icon={<Mail className="size-4 text-gray-400" />}>
+                    <Field label="Email" icon={<FaEnvelope className="size-4 text-gray-400" />}>
                       <div className="flex items-center gap-2">
                         <input
                           type="email"
@@ -370,12 +377,12 @@ export default function ProfileEditApprovalPage() {
                           className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white p-2 text-gray-600 hover:bg-gray-50"
                           title="Copy email"
                         >
-                          <Copy className="size-4" />
+                          <FaCopy className="size-4" />
                         </button>
                       </div>
                     </Field>
 
-                    <Field label="Phone" icon={<Phone className="size-4 text-gray-400" />}>
+                    <Field label="Phone" icon={<FaPhone className="size-4 text-gray-400" />}>
                       <input
                         className={inputCls}
                         placeholder="e.g. 01xxxxxxxxx"
@@ -388,7 +395,7 @@ export default function ProfileEditApprovalPage() {
 
                     <Field
                       label="Passport Number"
-                      icon={<Hash className="size-4 text-gray-400" />}
+                      icon={<FaHashtag className="size-4 text-gray-400" />}
                     >
                       <input
                         className={inputCls}
@@ -400,7 +407,7 @@ export default function ProfileEditApprovalPage() {
                       />
                     </Field>
 
-                    <Field label="Transaction ID" icon={<Hash className="size-4 text-gray-400" />}>
+                    <Field label="Transaction ID" icon={<FaHashtag className="size-4 text-gray-400" />}>
                       <div className="flex items-center gap-2">
                         <input
                           className={cx(inputCls, "flex-1")}
@@ -421,7 +428,7 @@ export default function ProfileEditApprovalPage() {
                           className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white p-2 text-gray-600 hover:bg-gray-50"
                           title="Copy transaction ID"
                         >
-                          <Copy className="size-4" />
+                          <FaCopy className="size-4" />
                         </button>
                       </div>
                     </Field>
@@ -467,7 +474,7 @@ export default function ProfileEditApprovalPage() {
                         savingId === selectedUser._id && "cursor-not-allowed opacity-60"
                       )}
                     >
-                      <CheckCircle2 className="size-4" />
+                      <FaCheckCircle className="size-4" />
                       {savingId === selectedUser._id ? "Saving…" : "Save & Approve"}
                     </button>
                   </div>
@@ -506,7 +513,7 @@ function EmptyState() {
   return (
     <div className="mx-auto max-w-xl rounded-3xl border border-dashed border-gray-300 bg-white p-10 text-center">
       <div className="mx-auto mb-4 size-12 rounded-2xl bg-gray-50 p-3">
-        <BadgeCheck className="mx-auto size-6 text-gray-400" />
+        <FaCheckCircle className="mx-auto size-6 text-gray-400" />
       </div>
       <h3 className="text-lg font-semibold text-gray-900">No pending requests</h3>
       <p className="mt-1 text-sm text-gray-600">

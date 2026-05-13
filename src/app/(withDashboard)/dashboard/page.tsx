@@ -3,6 +3,7 @@ import { getUserIdFromToken } from "@/app/helpers/jwt";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useEffect, useState, useCallback } from "react";
+import { API_BASE } from "@/lib/config";
 import Table from "@/components/table";
 import Link from "next/link";
 
@@ -21,7 +22,12 @@ const DashboardPage = () => {
           setUserId(userId);
 
           const response = await axios.get(
-            `https://luminedge-server.vercel.app/api/v1/user/${userId}`
+            `${API_BASE}/api/v1/user/${userId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              },
+            }
           );
 
           if (response.data && response.data.user) {
@@ -40,26 +46,30 @@ const DashboardPage = () => {
   }, []);
 
 
-  // ✅ Fetch attendance only when userId is available
   const fetchAttendance = useCallback(async () => {
     if (!userId) return;
 
     try {
-      const response = await axios.post(
-        `https://luminedge-server.vercel.app/api/v1/user/attendance/bulk`,
-        { userIds: [userId] }
+      const response = await axios.get(
+        `${API_BASE}/api/v1/user/bookings/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
 
-      // ✅ Extract attendance count for the specific user
-      const attendanceCount = response.data.attendance?.[userId] || 0;
-      setUserAttendance(attendanceCount);
+      const bookings: { attendance?: string }[] = response.data.bookings ?? [];
+      const count = bookings.filter(
+        (b) => b.attendance?.toLowerCase() === "present"
+      ).length;
+      setUserAttendance(count);
     } catch (error: any) {
       console.error("❌ Error fetching attendance:", error);
-      setUserAttendance(0); // ✅ Default to 0 if API fails
+      setUserAttendance(0);
     }
   }, [userId]);
 
-  // ✅ Run the attendance fetch when userId changes
   useEffect(() => {
     fetchAttendance();
   }, [fetchAttendance]);

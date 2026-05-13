@@ -1,9 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast";
 import type { Options as H2COptions } from "html2canvas";
 
 type Html2CanvasFn = (element: HTMLElement, options?: Partial<H2COptions>) => Promise<HTMLCanvasElement>;
@@ -20,6 +21,7 @@ import {
 } from "chart.js";
 // ⬇️ use the same helper you already use elsewhere
 import { getUserIdOnlyFromToken } from "@/app/helpers/jwt";
+import { API_BASE } from "@/lib/config";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip);
 
@@ -28,9 +30,6 @@ declare global {
     __TRF_READY?: boolean;
   }
 }
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") || "https://luminedge-server.vercel.app";
 
 const segments = [
   { key: "listening", label: "Listening", color: "#2563EB" },
@@ -921,12 +920,7 @@ const renderISO = (s?: string) => {
     src="/assets/logo1.png"
     alt="Luminedge"
     crossOrigin="anonymous"
-    style={{
-      maxHeight: "100%",   // fit inside h-12
-      width: "auto",       // keep aspect ratio
-      objectFit: "contain",
-      display: "block"
-    }}
+    className="logo-img-fit"
   />
 </div>
 
@@ -949,8 +943,7 @@ const renderISO = (s?: string) => {
           >
          <div className="relative w-full mb-4">
   <div
-    className="w-full h-6 keep-bg"
-    style={{ backgroundImage: "repeating-linear-gradient(-135deg, #000 0 2px, #fff 2px 8px)" }}
+    className="w-full h-6 keep-bg diagonal-stripe"
   />
   <div className="absolute top-0 left-1/3 -translate-x-1/2 w-fit h-6 bg-white px-4 pdf-center z-8">
     <h2 className="text-xl font-bold text-[#00000f]">Examiner&apos;s Detailed Feedback</h2>
@@ -1006,6 +999,7 @@ const renderISO = (s?: string) => {
                     {["FC", "LR", "GRA", "PRO", "Total"].map((field) => (
                       <td key={field} className="border border-black p-1">
                         <input
+                          aria-label={`Speaking score ${field}`}
                           type="text"
                           name={`feedback.speakingScores.${field}`}
                           value={
@@ -1056,6 +1050,7 @@ const renderISO = (s?: string) => {
                     {["task1_overall", "task1_TA", "task1_CC", "task1_LR", "task1_GRA"].map((key) => (
                       <td key={key} className="border border-black p-1">
                         <input
+                          aria-label={`Writing Task 1 score ${key}`}
                           type="text"
                           name={`feedback.writingScores.${key}`}
                           value={formData.feedback.writingScores[key as keyof WritingScores]}
@@ -1107,6 +1102,7 @@ const renderISO = (s?: string) => {
                     {["task2_overall", "task2_TR", "task2_CC", "task2_LR", "task2_GRA"].map((key) => (
                       <td key={key} className="border border-black p-1">
                         <input
+                          aria-label={`Writing Task 2 score ${key}`}
                           type="text"
                           name={`feedback.writingScores.${key}`}
                           value={formData.feedback.writingScores[key as keyof WritingScores]}
@@ -1156,10 +1152,7 @@ const renderISO = (s?: string) => {
             <div className="relative w-full mb-4">
   {/* Stripe background */}
   <div
-    className="w-full h-6 keep-bg"
-    style={{
-      backgroundImage: "repeating-linear-gradient(-135deg, #000 0 2px, #fff 2px 8px)",
-    }}
+    className="w-full h-6 keep-bg diagonal-stripe"
   />
   {/* Centered title over the stripe */}
   <div className="absolute top-0 left-0 w-full h-6 flex items-center justify-center z-8">
@@ -1216,11 +1209,7 @@ const renderISO = (s?: string) => {
 <div className="w-full grid grid-cols-[72px_108px_1fr] items-center gap-3">
   {/* Left diagonal band with gradient stripes */}
   <div
-    className="h-8 keep-bg"
-    style={{
-      backgroundImage:
-        "repeating-linear-gradient(-135deg, #000 0 2px, #fff 2px 8px)",
-    }}
+    className="h-8 keep-bg diagonal-stripe"
     aria-hidden="true"
   />
 

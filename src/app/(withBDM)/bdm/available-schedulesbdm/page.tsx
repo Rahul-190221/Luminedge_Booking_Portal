@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 
 // ===== Types that mirror your backend =====
 type TimeSlot = {
@@ -28,8 +29,6 @@ type ScheduleDoc = {
 };
 
 // ===== Small helpers =====
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") || "https://luminedge-server.vercel.app";
 
 const isScheduleRow = (row: any): row is ScheduleDoc => {
   if (!row || typeof row !== "object") return false;
@@ -102,12 +101,16 @@ export default function AvailableSchedulesBDMPage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, { cache: "no-store" });
+        const res = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
         // Be defensive: only keep rows that look like schedules; normalize startDate to YYYY-MM-DD
-        const clean: ScheduleDoc[] = (Array.isArray(data) ? data : [])
+        const raw: any[] = Array.isArray(data) ? data : Array.isArray(data?.schedules) ? data.schedules : [];
+        const clean: ScheduleDoc[] = raw
           .filter(isScheduleRow)
           .map((s) => {
             const d = normalizeYMD(s.startDate);
@@ -186,6 +189,7 @@ export default function AvailableSchedulesBDMPage() {
         <h3><b>Filter by</b></h3>
         <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
           <select
+            aria-label="Course type filter"
             value={courseFilter}
             onChange={(e) => { setCourseFilter(e.target.value); setCurrentPage(1); }}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -197,6 +201,7 @@ export default function AvailableSchedulesBDMPage() {
           </select>
 
           <select
+            aria-label="Test type filter"
             value={modeFilter}
             onChange={(e) => { setModeFilter(e.target.value); setCurrentPage(1); }}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -207,6 +212,7 @@ export default function AvailableSchedulesBDMPage() {
           </select>
 
           <select
+            aria-label="Date sort order"
             value={dateSort}
             onChange={(e) => setDateSort(e.target.value as "ascending" | "descending")}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -216,6 +222,7 @@ export default function AvailableSchedulesBDMPage() {
           </select>
 
           <select
+            aria-label="Schedule date filter"
             value={dateFilter}
             onChange={(e) => { setDateFilter(e.target.value as "all" | "past" | "upcoming"); setCurrentPage(1); }}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -226,6 +233,7 @@ export default function AvailableSchedulesBDMPage() {
           </select>
 
           <input
+            aria-label="Start date filter"
             type="date"
             value={exactDate}
             onChange={(e) => { setExactDate(e.target.value); setCurrentPage(1); }}

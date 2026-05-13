@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useState, useEffect, useMemo } from "react";
+import { API_BASE } from "@/lib/config";
 
 interface Booking {
   _id: string;
@@ -22,9 +23,13 @@ const UserTable = ({ userId }: { userId: string }) => {
     const fetchBookings = async () => {
       try {
         const response = await axios.get(
-          `https://luminedge-server.vercel.app/api/v1/user/bookings/${userId}`
+          `${API_BASE}/api/v1/user/bookings/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
         );
-        console.log("Bookings:", response.data.bookings);
         setBookings(response.data.bookings);
       } catch (error) {
         console.error("Error fetching bookings:", error);

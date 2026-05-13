@@ -23,12 +23,11 @@ import {
 
 import { RiHomeOfficeFill } from "react-icons/ri";
 import axios from "axios";
+import { API_BASE } from "@/lib/config";
 import { MdOutlineCastForEducation } from "react-icons/md";
 
 const handleLinkClick = () => {};
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://luminedge-server.vercel.app";
 
 const SidebarAdmin = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -45,10 +44,13 @@ const SidebarAdmin = () => {
 
     const fetchPending = async () => {
       try {
+        const token = localStorage.getItem("accessToken");
         const { data } = await axios.get(
           `${API_BASE}/api/v1/users/with-profile-request`,
-          { timeout: 10000 }
-          // { withCredentials: true } // enable if your API uses cookie auth
+          {
+            timeout: 10000,
+            headers: { Authorization: `Bearer ${token}` },
+          }
         );
         if (!mounted) return;
         setPendingCount(data?.success && Array.isArray(data.users) ? data.users.length : 0);
@@ -129,7 +131,7 @@ const SidebarAdmin = () => {
               </g>
             </svg>
           </Link>
-          <button onClick={toggleSidebar} className="p-2 md:hidden">
+          <button aria-label="Close sidebar" onClick={toggleSidebar} className="p-2 md:hidden">
             <FaTimes className="h-8 w-8" />
           </button>
         </div>

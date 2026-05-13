@@ -1,13 +1,12 @@
 "use client";
 
 import CourseCard2 from "@/components/courseCard2";
-import { Course2 } from "@/components/courses2";
-import GetMe from "@/app/helpers/getme";
+import { Course2 } from "@/data/courses2";
+import GetMe from "@/hooks/useUser";
 import { motion } from "framer-motion";
 
 const Courses2Page = () => {
   const user = GetMe();
-  console.log(user);
 
   const courses2: Course2[] = [
     {

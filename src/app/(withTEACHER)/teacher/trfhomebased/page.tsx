@@ -5,6 +5,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { API_BASE } from "@/lib/config";
 
 // Booking Type Definition
 type Booking = {
@@ -57,14 +58,15 @@ export default function HomeBasedPage() {
   const [dateFilter, setDateFilter] = useState("past");
   const [startDateFilter, setStartDateFilter] = useState("");
 
-  const API_BASE = "https://luminedge-server.vercel.app";
-
   const fetchHomeBookingsAndUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await axios.get(`${API_BASE}/api/v1/admin/bookings/home-with-users`);
+      const token = localStorage.getItem("accessToken");
+      const response = await axios.get(`${API_BASE}/api/v1/admin/bookings/home-with-users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       let homeBookings = response.data.bookings;
 
       homeBookings = homeBookings.filter((booking: Booking) => booking.name === "IELTS");

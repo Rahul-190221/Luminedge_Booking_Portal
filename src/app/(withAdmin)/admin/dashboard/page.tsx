@@ -7,6 +7,7 @@ import TableAdmin, { User as AdminUser } from "@/components/tableAdmin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 
 /* =========================
    Types + helpers
@@ -16,10 +17,6 @@ import { motion } from "framer-motion";
 type UserDoc = AdminUser;
 
 const TZ = "Asia/Dhaka";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 // YYYY-MM-DD in given timezone
 const localDayKey = (d: Date) =>
@@ -79,10 +76,8 @@ const DashboardPage = () => {
   const [allUsers, setAllUsers] = useState<UserDoc[]>([]);
   const [dailyRequests, setDailyRequests] = useState<number>(0);
   const [monthlyRequests, setMonthlyRequests] = useState<number>(0);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
-  const [selectedMonthKey, setSelectedMonthKey] = useState<string>(
-    localMonthKey(new Date())
-  );
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string>("");
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -90,62 +85,6 @@ const DashboardPage = () => {
     () => buildBuckets(allUsers),
     [allUsers]
   );
-
-  // /* -------- Fetch ALL users (paginate) -------- */
-  // useEffect(() => {
-  //   const ctrl = new AbortController();
-
-  //   (async () => {
-  //     try {
-  //       setLoading(true);
-
-  //       const pageSize = 1000;
-  //       let page = 1;
-  //       let total = Infinity;
-  //       const acc: UserDoc[] = [];
-
-  //       while (acc.length < total) {
-  //         const { data } = await axios.get(
-  //           `${API_BASE}/api/v1/admin/users`,
-  //           {
-  //             params: { page, limit: pageSize },
-  //             signal: ctrl.signal,
-  //           }
-  //         );
-
-  //         const batch: UserDoc[] = (data?.users || []).filter(
-  //           (u: UserDoc) => u.role === "user"
-  //         );
-  //         acc.push(...batch);
-
-  //         total =
-  //           typeof data?.total === "number" ? data.total : acc.length;
-  //         if (!batch.length) break;
-  //         page += 1;
-  //       }
-
-  //       setAllUsers(acc);
-  //       setTotalUsers(acc.length);
-
-  //       const today = new Date();
-  //       const dayKey = localDayKey(today);
-  //       const monthKey = localMonthKey(today);
-  //       const buckets = buildBuckets(acc);
-
-  //       setDailyRequests(buckets.dayMap[dayKey] ?? 0);
-  //       setMonthlyRequests(buckets.monthMap[monthKey] ?? 0);
-  //       setSelectedMonthKey(monthKey);
-  //     } catch (err: any) {
-  //       if (err?.name !== "CanceledError") {
-  //         console.error("Failed to load users:", err?.message || err);
-  //       }
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   })();
-
-  //   return () => ctrl.abort();
-  // }, []);
 
     /* -------- Fetch ALL users (single bulk call, dedup by _id) -------- */
     useEffect(() => {
@@ -156,13 +95,15 @@ const DashboardPage = () => {
           setLoading(true);
   
           // ✅ Backend bulk mode: returns all users in one go (<= 10k)
+          const token = localStorage.getItem("accessToken");
           const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
             params: {
               page: 1,
-              limit: 1000,   // triggers bulk mode on server
-              role: "user",  // let server filter ONLY real users
+              limit: 1000,
+              role: "user",
             },
             signal: ctrl.signal,
+            headers: { Authorization: `Bearer ${token}` },
           });
   
           // Still filter by role on client for extra safety
@@ -192,6 +133,7 @@ const DashboardPage = () => {
   
           setDailyRequests(buckets.dayMap[dayKey] ?? 0);
           setMonthlyRequests(buckets.monthMap[monthKey] ?? 0);
+          setSelectedDate(today);
           setSelectedMonthKey(monthKey);
         } catch (err: any) {
           if (err?.name !== "CanceledError") {
@@ -327,6 +269,7 @@ const DashboardPage = () => {
               <DonutChart
                 completedCount={totalUsers}
                 totalCount={totalUsers || 1}
+                label="Users"
               />
             </div>
           </div>

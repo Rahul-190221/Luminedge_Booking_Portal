@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import TestReportForm from "@/components/TestReportForm";
 import axios from "axios";
+import { API_BASE } from "@/lib/config";
 
 type User = {
   _id: string;
@@ -12,9 +13,6 @@ type User = {
   [key: string]: any;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 // same key the list page uses before router.push()
 const trfUserCacheKey = (scheduleId: string, userId: string) =>
@@ -53,7 +51,11 @@ export default function TRFPage() {
         }
 
         // 2) Fallback: precise backend endpoint (no pagination issue)
-        const { data } = await axios.get(`${API_BASE}/api/v1/user/${userId}`);
+        const { data } = await axios.get(`${API_BASE}/api/v1/user/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        });
         if (!cancelled) {
           if (data?.user) {
             setUser(data.user as User);

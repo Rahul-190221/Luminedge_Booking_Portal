@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 
 type Schedule = {
   [x: string]: any;
@@ -43,11 +44,15 @@ function AvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const response = await fetch("https://luminedge-server.vercel.app/api/v1/admin/get-schedules", { cache: "no-store" });
-      const raw = await response.json();
+      const response = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
+      const json = await response.json();
+      const raw = Array.isArray(json) ? json : Array.isArray(json?.schedules) ? json.schedules : [];
 
       // keep ONLY real schedules; normalize fields
-      const normalized: Schedule[] = (Array.isArray(raw) ? raw : [])
+      const normalized: Schedule[] = raw
         .filter((it) => it && typeof it === "object" && typeof it.startDate === "string" && Array.isArray(it.timeSlots))
         .map((s) => ({
           id: String(s._id ?? s.id ?? ""),
@@ -135,7 +140,7 @@ function AvailableSchedulesBDMPage() {
       <div className="bg-gray-100 p-2 h-22 mb-0 text-[#00000f]">
         <h3><b>Filter by</b></h3>
         <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
-          <select value={testTypeFilter} onChange={(e) => setTestTypeFilter(e.target.value)} className="px-2 py-1 border rounded w-full sm:w-auto">
+          <select aria-label="Course type filter" value={testTypeFilter} onChange={(e) => setTestTypeFilter(e.target.value)} className="px-2 py-1 border rounded w-full sm:w-auto">
             <option value="">All Course Types</option>
             <option value="GRE">GRE</option>
             <option value="IELTS">IELTS</option>
@@ -143,24 +148,24 @@ function AvailableSchedulesBDMPage() {
             <option value="Pearson PTE">Pearson PTE</option>
           </select>
 
-          <select value={scheduletestType} onChange={(e) => setscheduletestType(e.target.value)} className="px-2 py-1 border rounded w-full sm:w-auto">
+          <select aria-label="Test type filter" value={scheduletestType} onChange={(e) => setscheduletestType(e.target.value)} className="px-2 py-1 border rounded w-full sm:w-auto">
             <option value="">All Test Types</option>
             <option value="Paper-Based">Paper-Based</option>
             <option value="Computer-Based">Computer-Based</option>
           </select>
 
-          <select value={dateSortOrder} onChange={(e) => setDateSortOrder(e.target.value as any)} className="px-2 py-1 border rounded w-full sm:w-auto">
+          <select aria-label="Date sort order" value={dateSortOrder} onChange={(e) => setDateSortOrder(e.target.value as any)} className="px-2 py-1 border rounded w-full sm:w-auto">
             <option value="ascending">Start Date Ascending</option>
             <option value="descending">Start Date Descending</option>
           </select>
 
-          <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value as any)} className="px-2 py-1 border rounded w-full sm:w-auto">
+          <select aria-label="Schedule date filter" value={dateFilter} onChange={(e) => setDateFilter(e.target.value as any)} className="px-2 py-1 border rounded w-full sm:w-auto">
             <option value="all">All Schedules</option>
             <option value="past">Past</option>
             <option value="upcoming">Upcoming</option>
           </select>
 
-          <input type="date" value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} className="px-2 py-1 border rounded w-full sm:w-auto" />
+          <input aria-label="Start date filter" type="date" value={startDateFilter} onChange={(e) => setStartDateFilter(e.target.value)} className="px-2 py-1 border rounded w-full sm:w-auto" />
         </div>
       </div>
 

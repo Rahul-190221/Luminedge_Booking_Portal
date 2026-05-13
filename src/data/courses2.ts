@@ -4,7 +4,7 @@ export interface Course2 {
     image: string;
     link: string;
   }
-  
+
   export const courses2List: Course2[] = [
     {
       _id: "67337c880794d577cd982b75",
@@ -31,4 +31,3 @@ export interface Course2 {
       link: "https://luminedge.com.bd/best-toefl-coaching-in-dhaka/",
     },
   ];
-  

@@ -1,5 +1,7 @@
-"use client"; // Add this line to indicate the component is client-side
+"use client";
 
+import { useEffect } from "react";
+import axios from "axios";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
@@ -8,6 +10,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  useEffect(() => {
+    const id = axios.interceptors.request.use((config) => {
+      const token = localStorage.getItem("accessToken");
+      if (token) {
+        config.headers = config.headers ?? {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+    return () => axios.interceptors.request.eject(id);
+  }, []);
+
   return (
     <html lang="en" data-theme="light">
       <head>
@@ -17,7 +31,7 @@ export default function RootLayout({
         {/* Add the favicon */}
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <div className="min-h-screen w-[100%] mx-auto">{children}</div>
         <Toaster />
       </body>

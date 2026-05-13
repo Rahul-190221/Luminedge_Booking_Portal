@@ -3,12 +3,9 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle, Loader2, Lock } from "lucide-react";
-import { ToastContainer } from "react-toastify"; // ✅ toast
-import "react-toastify/dist/ReactToastify.css"; // ✅ toast styles
+import { API_BASE } from "@/lib/config";
+import { FaCheckCircle, FaSpinner, FaLock } from "react-icons/fa";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://luminedge-server.vercel.app";
 
 const segments = [
   { key: "listening", label: "Listening", color: "#2563EB" },
@@ -16,6 +13,13 @@ const segments = [
   { key: "writing", label: "Writing", color: "#CA8A04" },
   { key: "speaking", label: "Speaking", color: "#DC2626" },
 ] as const;
+
+const segmentTailwind = {
+  listening: { bg: "bg-blue-600",   bgDim: "bg-blue-600/20",   border: "border-blue-600",   borderL: "border-l-blue-600" },
+  reading:   { bg: "bg-green-600",  bgDim: "bg-green-600/20",  border: "border-green-600",  borderL: "border-l-green-600" },
+  writing:   { bg: "bg-yellow-600", bgDim: "bg-yellow-600/20", border: "border-yellow-600", borderL: "border-l-yellow-600" },
+  speaking:  { bg: "bg-red-600",    bgDim: "bg-red-600/20",    border: "border-red-600",    borderL: "border-l-red-600" },
+} as const;
 
 type SegmentKey = (typeof segments)[number]["key"];
 
@@ -89,6 +93,21 @@ interface FormData {
   [key: string]: any;
 }
 
+// Asia/Dhaka "D.MM.YY", e.g., 1.07.25 or 30.06.25
+const todayDhakaDMY = (() => {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dhaka",
+    day: "numeric",
+    month: "2-digit",
+    year: "2-digit",
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find((p) => p.type === t)?.value || "";
+  return `${get("day")}.${get("month")}.${get("year")}`;
+})();
+
+const DEFAULT_SPEAKING_SIGN = `Neelima (${todayDhakaDMY})`;
+const DEFAULT_WRITING_SIGN  = `Prima (${todayDhakaDMY})`;
+
 const TestReportForm = () => {
   const searchParams = useSearchParams();
 
@@ -106,22 +125,7 @@ const TestReportForm = () => {
 
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
-  const [marksError, setMarksError] = useState<string | null>(null); // ⬅️ validation message
-
-  // Asia/Dhaka "D.MM.YY", e.g., 1.07.25 or 30.06.25
-  const todayDhakaDMY = (() => {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Asia/Dhaka",
-      day: "numeric",    // no leading zero
-      month: "2-digit",  // leading zero
-      year: "2-digit",
-    }).formatToParts(new Date());
-    const get = (t: string) => parts.find((p) => p.type === t)?.value || "";
-    return `${get("day")}.${get("month")}.${get("year")}`;
-  })();
-
-  const DEFAULT_SPEAKING_SIGN = `Neelima (${todayDhakaDMY})`;
-  const DEFAULT_WRITING_SIGN  = `Prima (${todayDhakaDMY})`;
+  const [marksError, setMarksError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<FormData>({
     readingFeedback: "",
@@ -342,6 +346,7 @@ useEffect(() => {
   }
 
   setMarksError(invalid ? "Invalid input for marks (use 0–9; decimals allowed)." : null);
+// eslint-disable-next-line react-hooks/exhaustive-deps
 }, [
   selectedSegment,
   formData.speakingFC,
@@ -529,11 +534,7 @@ useEffect(() => {
               return (
                 <div
                   key={seg.key}
-                  className="transition-all duration-500 ease-in-out"
-                  style={{
-                    width: `${100 / segments.length}%`,
-                    backgroundColor: isLocked ? seg.color : `${seg.color}33`,
-                  }}
+                  className={`w-1/4 transition-all duration-500 ease-in-out ${isLocked ? segmentTailwind[seg.key].bg : segmentTailwind[seg.key].bgDim}`}
                   title={`${seg.label}: ${isLocked ? "Saved ✅" : "Pending ⏳"}`}
                 />
               );
@@ -546,26 +547,21 @@ useEffect(() => {
           {segments.map((seg, index) => {
             const isLocked = lockedSegments[seg.key];
             const isActive = selectedSegment === seg.key;
-            const baseColor = seg.color;
 
             return (
               <div className="flex flex-col items-center" key={seg.key}>
                 <button
+                  type="button"
                   onClick={() => setSelectedSegment(seg.key)}
                   className={`w-12 h-12 rounded-full border-2 flex items-center justify-center font-bold text-base transition ${
                     isLocked
-                      ? "bg-green-600 border-green-700 text-white"
+                      ? "bg-green-700 border-green-700 text-white"
                       : isActive
-                      ? "bg-white text-white"
-                      : "bg-gray-100 text-gray-700"
+                      ? `${segmentTailwind[seg.key].bg} ${segmentTailwind[seg.key].border} text-white`
+                      : `${segmentTailwind[seg.key].bgDim} ${segmentTailwind[seg.key].border} text-gray-700`
                   }`}
-                  style={{
-                    borderColor: isLocked ? "#15803D" : baseColor,
-                    backgroundColor: isActive ? baseColor : isLocked ? "#15803D" : `${baseColor}20`,
-                    color: isActive ? "#fff" : undefined,
-                  }}
                 >
-                  {isLocked ? <CheckCircle size={20} /> : index + 1}
+                  {isLocked ? <FaCheckCircle size={20} /> : index + 1}
                 </button>
                 <span className="mt-2 text-sm text-gray-800 font-medium">{seg.label}</span>
               </div>
@@ -576,12 +572,7 @@ useEffect(() => {
         {/* Feedback Box (hidden when unauthorized) */}
         {authorized ? (
           <div
-            className="rounded-lg p-4 shadow-md border bg-gray-50"
-            style={{
-              borderLeft: `4px solid ${
-                segments.find((s) => s.key === selectedSegment)?.color
-              }`,
-            }}
+            className={`rounded-lg p-4 shadow-md border bg-gray-50 border-l-4 ${segmentTailwind[selectedSegment].borderL}`}
           >
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
               {segments.find((s) => s.key === selectedSegment)?.label} Feedback
@@ -613,6 +604,7 @@ useEffect(() => {
                             value={formData[`speaking${key}`] || ""}
                             onChange={handleChange}
                             disabled={lockedSegments.speaking}
+                            aria-label={`Speaking ${key}`}
                             className="w-16 px-1 py-0.5 border border-gray-300 text-sm text-center text-red-600"
                           />
                         </td>
@@ -628,6 +620,7 @@ useEffect(() => {
     value={formData.speakingTotal ?? ""}
     onChange={handleChange}
     disabled={lockedSegments.speaking}
+    aria-label="Speaking total"
     className="w-16 px-1 py-0.5 border border-gray-300 text-sm text-center text-red-600"
   />
 </td>
@@ -707,6 +700,7 @@ useEffect(() => {
                             min={0}
                             max={9}
                             disabled={lockedSegments.writing}
+                            aria-label={`Task 1 ${key}`}
                             className={`w-full h-8 text-center text-red-600 rounded border px-2 py-1 shadow-inner
                               focus:outline-none focus:ring-2 focus:ring-blue-500
                               ${lockedSegments.writing ? "bg-gray-100" : "bg-white"}`}
@@ -744,6 +738,7 @@ useEffect(() => {
                           <input
                             type="text"
                             disabled={lockedSegments.writing}
+                            aria-label={`Task 1 note ${i + 1}`}
                             className={`w-full h-8 text-black text-sm rounded border 0 px-2 py-1 shadow-inner
                               focus:outline-none focus:ring-2 focus:ring-blue-500
                               ${lockedSegments.writing ? "bg-gray-100" : "bg-white"}`}
@@ -803,6 +798,7 @@ useEffect(() => {
                             min={0}
                             max={9}
                             disabled={lockedSegments.writing}
+                            aria-label={`Task 2 ${key}`}
                             className={`w-full h-8 text-center text-red-600 rounded border px-2 py-1 shadow-inner
                               focus:outline-none focus:ring-2 focus:ring-blue-500
                               ${lockedSegments.writing ? "bg-gray-100" : "bg-white"}`}
@@ -840,6 +836,7 @@ useEffect(() => {
                           <input
                             type="text"
                             disabled={lockedSegments.writing}
+                            aria-label={`Task 2 note ${i + 1}`}
                             className={`w-full h-8 text-black text-sm rounded border px-2 py-1 shadow-inner
                               focus:outline-none focus:ring-2 focus:ring-blue-500
                               ${lockedSegments.writing ? "bg-gray-100" : "bg-white"}`}
@@ -967,6 +964,7 @@ useEffect(() => {
         {/* Save Button */}
         <div className="flex justify-end mt-4">
           <button
+            type="button"
             onClick={handleSaveFeedback}
             disabled={
               !authorized ||
@@ -991,11 +989,11 @@ useEffect(() => {
           >
             {lockedSegments[selectedSegment] ? (
               <>
-                <Lock size={16} /> Saved
+                <FaLock size={16} /> Saved
               </>
             ) : saving ? (
               <>
-                <Loader2 size={16} className="animate-spin" /> Saving...
+                <FaSpinner size={16} className="animate-spin" /> Saving...
               </>
             ) : (
               <>💾 Save Feedback</>
@@ -1017,7 +1015,6 @@ useEffect(() => {
           </p>
         )}
 
-      <ToastContainer />
     </div>
   );
 };

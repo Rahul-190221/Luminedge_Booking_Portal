@@ -4,12 +4,11 @@ import React, { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 
+import { API_BASE } from "@/lib/config";
+
 /* ===========================
    API base + bulk fetchers
    =========================== */
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 /** Fetch *all* users by paging through /api/v1/admin/users */
 async function fetchAllUsers(params?: {
@@ -26,7 +25,11 @@ async function fetchAllUsers(params?: {
   qs.set("page", "1");
   qs.set("limit", String(pageSize));
 
-  const first = await fetch(`${API_BASE}/api/v1/admin/users?${qs.toString()}`);
+  const first = await fetch(`${API_BASE}/api/v1/admin/users?${qs.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    },
+  });
   if (!first.ok) {
     if (first.status === 404) return [];
     throw new Error(`users page 1 failed: ${first.status}`);
@@ -40,7 +43,11 @@ async function fetchAllUsers(params?: {
   for (let page = 2; page <= totalPages; page++) {
     const qsp = new URLSearchParams(qs);
     qsp.set("page", String(page));
-    const res = await fetch(`${API_BASE}/api/v1/admin/users?${qsp.toString()}`);
+    const res = await fetch(`${API_BASE}/api/v1/admin/users?${qsp.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    });
     if (!res.ok) break;
     const json = await res.json();
     if (Array.isArray(json.users)) all.push(...json.users);
@@ -62,7 +69,11 @@ async function fetchAllBookings(params?: {
   baseQS.set("limit", String(pageSize));
 
   baseQS.set("page", "1");
-  const first = await fetch(`${API_BASE}/api/v1/admin/bookings?${baseQS.toString()}`);
+  const first = await fetch(`${API_BASE}/api/v1/admin/bookings?${baseQS.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    },
+  });
   if (!first.ok) {
     if (first.status === 404) return [];
     throw new Error(`bookings page 1 failed: ${first.status}`);
@@ -75,7 +86,11 @@ async function fetchAllBookings(params?: {
   while (true) {
     const qsp = new URLSearchParams(baseQS);
     qsp.set("page", String(page++));
-    const res = await fetch(`${API_BASE}/api/v1/admin/bookings?${qsp.toString()}`);
+    const res = await fetch(`${API_BASE}/api/v1/admin/bookings?${qsp.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    });
     if (!res.ok) break;
     const json = await res.json();
     const chunk: any[] = json.bookings || [];
@@ -153,7 +168,8 @@ const getStartDateYMD = (s: any): string | null =>
       s?.date ??
       s?.start?.date ??
       s?.start?.dateTime ??
-      s?.schedule?.startDate
+      s?.schedule?.startDate ??
+      s?.dateTime
   );
 
 const displayDate = (src: unknown): string => {
@@ -170,8 +186,12 @@ const displayDate = (src: unknown): string => {
 const isScheduleLike = (x: any): boolean => {
   if (!x || typeof x !== "object") return false;
   const ymd = getStartDateYMD(x);
-  const hasNameOrType = typeof x?.name === "string" || typeof x?.testType === "string";
-  return !!ymd && hasNameOrType;
+  const hasName =
+    typeof x?.name === "string" ||
+    typeof x?.courseName === "string" ||
+    typeof x?.title === "string";
+  const hasType = typeof x?.testType === "string" || typeof x?.type === "string";
+  return !!ymd && (hasName || hasType);
 };
 
 const safeRowKey = (s: Schedule, idx: number) =>
@@ -187,17 +207,26 @@ function TrfAvailableSchedulesBDMPage() {
   const [schedulesPerPage, setSchedulesPerPage] = useState<number>(20);
 
   // UI controls (some are enforced/disabled)
-  const [testTypeFilter, setTestTypeFilter] = useState<string>("IELTS"); // enforced
+  // UI controls
+  const [testTypeFilter, setTestTypeFilter] = useState<string>("IELTS");
   const [dateSortOrder, setDateSortOrder] = useState<"ascending" | "descending">("descending");
-  const [scheduletestType, setscheduletestType] = useState<string>(""); // paper/computer (optional)
-  const [dateFilter, setDateFilter] = useState<"all" | "past" | "upcoming">("past"); // enforced
+  const [scheduletestType, setscheduletestType] = useState<string>(""); 
+  const [dateFilter, setDateFilter] = useState<"all" | "past" | "upcoming">("past");
   const [startDateFilter, setStartDateFilter] = useState<string>("");
 
   const fetchSchedules = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/v1/admin/get-schedules`);
-      const raw = await response.json();
-      const cleaned = Array.isArray(raw) ? raw.filter(isScheduleLike) : [];
+      const response = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+      const data = await response.json();
+      
+      // Accept array or {schedules: [...]}
+      const raw: any[] = Array.isArray(data) ? data : Array.isArray(data?.schedules) ? data.schedules : [];
+      
+      const cleaned = raw.filter(isScheduleLike);
       setSchedules(cleaned);
     } catch (error) {
       toast.error("Error fetching schedules");
@@ -211,27 +240,33 @@ function TrfAvailableSchedulesBDMPage() {
 
   // --- Enforced filters: IELTS only + today/past (Asia/Dhaka) ---
   const filteredSchedules = useMemo(() => {
-    const today = ymdDhaka(new Date()); // Dhaka "today" as YYYY-MM-DD
+    const today = ymdDhaka(new Date()); 
     return schedules.filter((schedule) => {
       const ymd = getStartDateYMD(schedule);
       if (!ymd) return false;
 
-      // Enforce IELTS only (robust, case-insensitive, handles 'ielts mock', etc.)
-      const name = String(schedule?.name || "").toLowerCase();
-      const isIELTS = name.includes("ielts");
-      if (!isIELTS) return false;
+      // Course Filter
+      const name = String(schedule?.name || schedule?.courseName || schedule?.title || "").toLowerCase();
+      if (testTypeFilter !== "all") {
+        const wanted = testTypeFilter.toLowerCase();
+        if (!name.includes(wanted)) return false;
+      }
 
-      // Enforce past/today only
-      const isPastOrToday = ymd <= today;
-      if (!isPastOrToday) return false;
+      // Date Range Filter
+      if (dateFilter === "past") {
+        if (ymd > today) return false;
+      } else if (dateFilter === "upcoming") {
+        if (ymd < today) return false;
+      }
 
-      // Optional extra filters still apply (but only to the IELTS+past/today subset)
-      const isScheduleTypeMatch = !scheduletestType || schedule.testType === scheduletestType;
+      // Optional extra filters
+      const isScheduleTypeMatch = !scheduletestType || 
+        (schedule.testType === scheduletestType || schedule.type === scheduletestType);
       const isStartDateMatch = !startDateFilter || ymd === startDateFilter;
 
       return isScheduleTypeMatch && isStartDateMatch;
     });
-  }, [schedules, scheduletestType, startDateFilter]);
+  }, [schedules, testTypeFilter, dateFilter, scheduletestType, startDateFilter]);
 
   const sortedSchedules = useMemo(() => {
     const arr = [...filteredSchedules];
@@ -272,18 +307,20 @@ function TrfAvailableSchedulesBDMPage() {
       <div className="bg-gray-100 p-2 h-22 mb-0 text-[#00000f]">
         <h3 className="font-semibold">Filter by</h3>
         <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
-          {/* Enforced to IELTS only */}
           <select
             value={testTypeFilter}
             onChange={(e) => setTestTypeFilter(e.target.value)}
-            className="px-2 py-1 border rounded w-full sm:w-auto opacity-70 cursor-not-allowed"
-            disabled
-            title="Locked to IELTS (enforced)"
+            className="px-2 py-1 border rounded w-full sm:w-auto"
           >
-            <option value="IELTS">IELTS (enforced)</option>
+            <option value="all">All Courses</option>
+            <option value="IELTS">IELTS</option>
+            <option value="PTE">PTE</option>
+            <option value="TOEFL">TOEFL</option>
+            <option value="GRE">GRE</option>
           </select>
 
           <select
+            aria-label="Test type filter"
             value={scheduletestType}
             onChange={(e) => setscheduletestType(e.target.value)}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -294,6 +331,7 @@ function TrfAvailableSchedulesBDMPage() {
           </select>
 
           <select
+            aria-label="Date sort order"
             value={dateSortOrder}
             onChange={(e) => setDateSortOrder(e.target.value as "ascending" | "descending")}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -302,18 +340,18 @@ function TrfAvailableSchedulesBDMPage() {
             <option value="descending">Start Date Descending</option>
           </select>
 
-          {/* Enforced to past/today only */}
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as "all" | "past" | "upcoming")}
-            className="px-2 py-1 border rounded w-full sm:w-auto opacity-70 cursor-not-allowed"
-            disabled
-            title="Locked to Past/Today (enforced)"
+            className="px-2 py-1 border rounded w-full sm:w-auto"
           >
-            <option value="past">Past/Today (enforced)</option>
+            <option value="all">All Dates</option>
+            <option value="past">Past/Today</option>
+            <option value="upcoming">Upcoming</option>
           </select>
 
           <input
+            aria-label="Start date filter"
             type="date"
             value={startDateFilter}
             onChange={(e) => setStartDateFilter(e.target.value)}
@@ -369,7 +407,7 @@ function TrfAvailableSchedulesBDMPage() {
             {currentSchedules.length === 0 && (
               <tr>
                 <td colSpan={8} className="px-4 py-6 text-center text-gray-500 text-sm">
-                  No IELTS schedules for today/past.
+                  No schedules match your filters.
                 </td>
               </tr>
             )}

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import TrfForm from "@/components/trfform";
 import axios from "axios";
+import { API_BASE } from "@/lib/config";
 
 type User = {
   _id: string;
@@ -12,9 +13,6 @@ type User = {
   [key: string]: any;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 export default function TRFPage() {
   const searchParams = useSearchParams();
@@ -83,18 +81,20 @@ export default function TRFPage() {
     const fetchUserAcrossPages = async () => {
       setLoading(true);
       try {
+        const token = localStorage.getItem("accessToken");
         const requestedLimit = 500;
         const seen = new Set<string>();
-  
+
         let page = 1;
         let effectiveLimit: number | null = null;
         let totalFromServer: number | null = null;
         let found: User | null = null;
-  
+
         // eslint-disable-next-line no-constant-condition
         while (true) {
           const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
-            params: { page, limit: requestedLimit, role: "user" }, // role filter optional
+            params: { page, limit: requestedLimit, role: "user" },
+            headers: { Authorization: `Bearer ${token}` },
           });
   
           const batch: User[] = (data?.users ?? []) as User[];

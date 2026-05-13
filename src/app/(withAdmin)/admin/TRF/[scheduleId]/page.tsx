@@ -7,9 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useRouter } from "next/navigation";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
+import { API_BASE } from "@/lib/config";
 
 type Booking = {
   id?: string;
@@ -66,6 +64,9 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   // page 1 to get total + actual page size (backend may cap `limit`)
   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
     params: { page: 1, limit: requestedPageSize, role: "user" },
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    },
   });
 
   const firstPageUsers: any[] = first.data?.users || [];
@@ -97,6 +98,9 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   for (let page = 2; page <= totalPages && found.size < need.size; page++) {
     const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
       params: { page, limit: effectivePageSize, role: "user" },
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
     });
     ingest(pageRes.data?.users || []);
   }
@@ -160,7 +164,12 @@ const TrfBookingRequestsPage = ({
         userIds.map(async (uid) => {
           try {
             const { data } = await axios.get<ApiFeedbackStatusResponse>(
-              `${API_BASE}/api/v1/admin/feedback-status/${uid}/${scheduleId}`
+              `${API_BASE}/api/v1/admin/feedback-status/${uid}/${scheduleId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                },
+              }
             );
             const s = data?.status || {};
             const fs: FeedbackStatus = {
@@ -205,7 +214,12 @@ const TrfBookingRequestsPage = ({
                 sent: boolean;
                 lastSentAt?: string;
               }>(
-                `${API_BASE}/api/v1/admin/trf-email-status/${uid}/${scheduleId}`
+                `${API_BASE}/api/v1/admin/trf-email-status/${uid}/${scheduleId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                  },
+                }
               );
               return { uid, sent: !!data?.sent };
             } catch (e) {
@@ -237,7 +251,12 @@ const TrfBookingRequestsPage = ({
           userIds.map(async (uid) => {
             try {
               const { data } = await axios.get<BudgetResponse>(
-                `${API_BASE}/api/v1/admin/user-budget/${uid}/${scheduleId}`
+                `${API_BASE}/api/v1/admin/user-budget/${uid}/${scheduleId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                  },
+                }
               );
               return { uid, budget: data.budget || 0 };
             } catch (e) {
@@ -275,7 +294,13 @@ const TrfBookingRequestsPage = ({
       // 1) Fetch ONLY bookings for this schedule (server already filters)
       const { data: bookingsData } = await axios.get(
         `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
-        { params: { page: 1, limit: 500 }, signal }
+        {
+          params: { page: 1, limit: 500 },
+          signal,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
 
       const filteredBookings: Booking[] = bookingsData?.bookings || [];
@@ -306,7 +331,13 @@ const TrfBookingRequestsPage = ({
               .post(
                 `${API_BASE}/api/v1/user/attendance/bulk`,
                 { userIds },
-                { headers: { "Content-Type": "application/json" }, signal }
+                {
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+                  },
+                  signal,
+                }
               )
               .catch((err) => {
                 if (!axios.isCancel(err)) {
@@ -442,6 +473,25 @@ const TrfBookingRequestsPage = ({
       30
     );
 
+    const margin = { top: 35, left: 10, right: 10 };
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const available = pageWidth - margin.left - margin.right;
+
+    // Adjusted weights for better visibility
+    const weights = [0.03, 0.14, 0.19, 0.09, 0.15, 0.10, 0.11, 0.09, 0.05, 0.05];
+    const SAFETY = 6;
+    const target = available - SAFETY;
+    const rawSum = weights.reduce((s, w) => s + w, 0);
+    const scale = target / rawSum;
+    const mins = [7, 25, 35, 18, 28, 20, 25, 18, 12, 12];
+
+    let widths = weights.map((w) => w * scale);
+    widths = widths.map((w, i) => Math.max(mins[i], w));
+    const sumAfterMins = widths.reduce((s, w) => s + w, 0);
+    if (sumAfterMins > target) {
+      const compress = target / sumAfterMins;
+      widths = widths.map((w) => w * compress);
+    }
     autoTable(doc, {
       head: [
         [
@@ -455,7 +505,6 @@ const TrfBookingRequestsPage = ({
           "Test System",
           "Purchased",
           "Attend",
-        
         ],
       ],
       body: users.map((user: any, index: number) => {
@@ -472,24 +521,34 @@ const TrfBookingRequestsPage = ({
           related?.testSystem || "N/A",
           user?.totalMock ?? "N/A",
           userAttendance[uid] ?? "N/A",
-        
         ];
       }),
       theme: "grid",
-      styles: { fontSize: 9, cellPadding: 1.5, overflow: "linebreak", valign: "middle" },
-      headStyles: { fillColor: [250, 206, 57] },
+      styles: { 
+        fontSize: 8, 
+        cellPadding: { top: 2.5, right: 1, bottom: 2.5, left: 1 }, 
+        minCellHeight: 8,
+        overflow: "linebreak", 
+        valign: "middle",
+        textColor: [0, 0, 15] // #00000f
+      },
+      headStyles: { 
+        fillColor: [250, 206, 57], // #face39
+        textColor: [0, 0, 15], 
+        fontStyle: "bold",
+        halign: "center"
+      },
       columnStyles: {
-        0: { cellWidth: 10 },
-        1: { cellWidth: 35 },
-        2: { cellWidth: 47 },
-        3: { cellWidth: 26 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 25 },
-        6: { cellWidth: 30 },
-        7: { cellWidth: 25 },
-        8: { cellWidth: 22 },
-        9: { cellWidth: 15 },
-        
+        0: { halign: "center", cellWidth: widths[0] },
+        1: { cellWidth: widths[1] },
+        2: { cellWidth: widths[2] },
+        3: { cellWidth: widths[3] },
+        4: { cellWidth: widths[4] },
+        5: { cellWidth: widths[5] },
+        6: { cellWidth: widths[6] },
+        7: { cellWidth: widths[7] },
+        8: { halign: "center", cellWidth: widths[8] },
+        9: { halign: "center", cellWidth: widths[9] },
       },
       margin: { top: 35 },
       tableWidth: "auto",
@@ -557,7 +616,12 @@ const TrfBookingRequestsPage = ({
     try {
       const response = await axios.put(
         `${API_BASE}/api/v1/admin/users/${userId}/schedules/${scheduleId}/teacher`,
-        { skill, teacher: newTeacher, email }
+        { skill, teacher: newTeacher, email },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
 
       if (response.data?.success) {
@@ -605,6 +669,7 @@ const TrfBookingRequestsPage = ({
     return (
       <div className="relative w-full">
         <select
+          aria-label="Assign teacher"
           value={value || ""}
           onChange={(e) => onChange(userId, skill, e.target.value)}
           disabled={disabled}

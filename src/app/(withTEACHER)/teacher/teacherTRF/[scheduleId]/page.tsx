@@ -6,10 +6,7 @@ import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useRouter } from "next/navigation";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
+import { API_BASE } from "@/lib/config";
 
 type Booking = {
   id: string;
@@ -57,8 +54,10 @@ const hasUserInBooking = (b: Booking, userId: string) =>
 // ---------- fetch only the users we need (paged) ----------
 async function fetchUsersByIds(
   userIds: string[],
-  requestedPageSize = 500
+  requestedPageSize = 500,
+  token?: string | null
 ): Promise<any[]> {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const need = new Set(userIds.map(toId));
   const found = new Map<string, any>();
 
@@ -67,6 +66,7 @@ async function fetchUsersByIds(
   // page 1 to get total + actual page size (backend may cap `limit`)
   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
     params: { page: 1, limit: requestedPageSize, role: "user" },
+    headers,
   });
 
   const firstPageUsers: any[] = first.data?.users || [];
@@ -99,6 +99,7 @@ async function fetchUsersByIds(
   for (let page = 2; page <= totalPages && found.size < need.size; page++) {
     const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
       params: { page, limit: effectivePageSize, role: "user" },
+      headers,
     });
     ingest(pageRes.data?.users || []);
   }
@@ -191,6 +192,8 @@ const TrfBookingRequestsPage = ({
     const run = async () => {
       try {
         setLoading(true);
+        const token = localStorage.getItem("accessToken");
+        const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
         const scheduleKey = String(scheduleId).toLowerCase();
 
@@ -198,7 +201,7 @@ const TrfBookingRequestsPage = ({
         if (scheduleKey === "home") {
           const { data } = await axios.get(
             `${API_BASE}/api/v1/admin/bookings/home-with-users`,
-            { signal }
+            { signal, headers: authHeaders }
           );
 
           const rows: any[] = data?.bookings || [];
@@ -262,7 +265,7 @@ const TrfBookingRequestsPage = ({
                 `${API_BASE}/api/v1/user/attendance/bulk`,
                 { userIds: homeUserIds },
                 {
-                  headers: { "Content-Type": "application/json" },
+                  headers: { "Content-Type": "application/json", ...authHeaders },
                   signal,
                 }
               );
@@ -289,7 +292,7 @@ const TrfBookingRequestsPage = ({
         // 🔹 1) Non-HOME: pull only bookings for this schedule from the server
         const { data } = await axios.get(
           `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
-          { params: { page: 1, limit: 500 }, signal }
+          { params: { page: 1, limit: 500 }, signal, headers: authHeaders }
         );
         const filteredBookings: Booking[] = data?.bookings || [];
 
@@ -314,14 +317,14 @@ const TrfBookingRequestsPage = ({
 
         // 🔹 3) Fetch only the users we need AND bulk attendance in parallel
         const [matchedUsers, attendanceRes] = await Promise.all([
-          userIds.length ? fetchUsersByIds(userIds) : Promise.resolve([]),
+          userIds.length ? fetchUsersByIds(userIds, 500, token) : Promise.resolve([]),
           userIds.length
             ? axios
                 .post(
                   `${API_BASE}/api/v1/user/attendance/bulk`,
                   { userIds },
                   {
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", ...authHeaders },
                     signal,
                   }
                 )

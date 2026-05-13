@@ -4,10 +4,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
 import UserTable from "@/components/userTable";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
+import { API_BASE } from "@/lib/config";
 
 // ✅ Define User Interface
 export interface User {
@@ -97,8 +94,10 @@ const BookingsTable = () => {
           params.search = debouncedSearch;
         }
 
+        const token = localStorage.getItem("accessToken");
         const response = await axios.get(`${API_BASE}/api/v1/admin/users`, {
           params,
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const serverUsers: User[] = response.data?.users || [];

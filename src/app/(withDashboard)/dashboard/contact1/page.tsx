@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
-import GetMe from "@/app/helpers/getme"; // Adjust the path if necessary
+import { API_BASE } from "@/lib/config";
+import GetMe from "@/hooks/useUser";
 
 const CoursesPage = ({ params }: { params: { contact: string } }) => {
   const user = GetMe(); // Fetch user data using GetMe
@@ -31,7 +32,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
 
   //     // Delete the current booking
   //     await axios.delete(
-  //       `https://luminedge-server.vercel.app/api/v1/bookings/${params.contact}`
+  //       `${API_BASE}/api/v1/bookings/${params.contact}`
   //     );
 
   //     toast((t) => {
@@ -57,7 +58,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
  const deletePreviousBooking = async () => {
   try {
     await axios.delete(
-      `https://luminedge-server.vercel.app/api/v1/bookings/${params.contact}`
+      `${API_BASE}/api/v1/bookings/${params.contact}`
     );
   } catch (error) {
     console.error("Error deleting previous booking:", error);
@@ -74,7 +75,7 @@ const proceedWithNewBooking = async (newBookingDetails: any) => {
   try {
     // Assume `newBookingDetails` contains the details of the new slot selected by the user.
     await axios.post(
-      "https://luminedge-server.vercel.app/api/v1/bookings",
+      `${API_BASE}/api/v1/bookings`,
       newBookingDetails
     );
 
@@ -230,13 +231,13 @@ const handleConfirmation = async (newBookingDetails: any) => {
           <ul className="list-disc list-inside ml-4 sm:ml-6 space-y-2 sm:space-y-4">
             <li>Make sure the details you provided during booking (name, ID, etc.) match exactly with your identification documents.</li>
             <li>Arrive on time to avoid any issues. Failure to comply with the rules may result in automatic cancellation of your mock test.</li>
-            <p>We’re excited to be a part of your test preparation and are here to support you every step of the way. If you have any questions or need assistance, feel free to contact our support team or visit the Luminedge office. Good luck with your mock test! Thank you once again for choosing Luminedge to help you achieve your goals.</p>
+            <li>We&apos;re excited to be a part of your test preparation and are here to support you every step of the way. If you have any questions or need assistance, feel free to contact our support team or visit the Luminedge office. Good luck with your mock test! Thank you once again for choosing Luminedge to help you achieve your goals.</li>
           </ul>
         </div>
         <p><strong>Good luck with your mock test! Thank you once again for choosing Luminedge to help you achieve your goals.</strong></p>
         {/* Emergency Contact Information */}
         <div className="w-full max-w-5xl bg-transparent p-4 sm:p-6">
-          <h1 className="text-lg sm:text-xl font-semibold text-center" style={{ color: "#face39" }}>
+          <h1 className="text-lg sm:text-xl font-semibold text-center text-brand-yellow">
             {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
           </h1>
           <p className="text-center mt-1 mb-2 sm:mb-4">

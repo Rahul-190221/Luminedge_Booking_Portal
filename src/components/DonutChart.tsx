@@ -6,9 +6,10 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 interface DonutChartProps {
   completedCount: number | null;
   totalCount: number;
+  label?: string;
 }
 
-const DonutChart = ({ completedCount, totalCount }: DonutChartProps) => {
+const DonutChart = ({ completedCount, totalCount, label = "Requests" }: DonutChartProps) => {
   // Handle null or 0 values
   const safeCompletedCount = completedCount ?? 0; // Default to 0 if null
   const remainingCount = totalCount - safeCompletedCount;
@@ -40,24 +41,12 @@ const DonutChart = ({ completedCount, totalCount }: DonutChartProps) => {
   };
 
   return (
-    <div
-      className="flex flex-col items-center justify-center"
-      style={{
-        width: "150px",
-        height: "150px", // Ensure all divs have the same size
-      }}
-    >
-      <div style={{ width: "100px", height: "100px" }}>
+    <div className="flex flex-col items-center justify-center w-[150px] h-[150px]">
+      <div className="w-[100px] h-[100px]">
         <Doughnut data={data} options={options} />
       </div>
-      <div
-        className="text-lg font-semibold mt-2"
-        style={{
-          color: "#00000f", // Consistent text color
-          textAlign: "center", // Center align text
-        }}
-      >
-        {safeCompletedCount > 0 ? `${safeCompletedCount} Requests` : "No Data"}
+      <div className="text-lg font-semibold mt-2 text-[#00000f] text-center">
+        {safeCompletedCount > 0 ? `${safeCompletedCount} ${label}` : "No Data"}
       </div>
     </div>
   );

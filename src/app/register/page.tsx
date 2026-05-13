@@ -53,7 +53,6 @@ const RegisterPage = () => {
   } = useForm<UserData>({ defaultValues: { dateOfBirth: "" } });
 
   const password = watch("password");
-  console.log(password);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -82,12 +81,10 @@ const RegisterPage = () => {
       // Add registration logic here (e.g., API call)
       // Assuming you are using a function like `registerUser` to send the data
       const response = await registerUser(formattedData);
-      console.log(response);
 
       // Handle the response
       if (response.message === "User registered successfully") {
         toast.success("Registration successful");
-        console.log("Registration successful", response);
         router.push("/waiting");
         // After 3 seconds, redirect to the dashboard
         setTimeout(() => {
@@ -119,9 +116,9 @@ const RegisterPage = () => {
   
   return (
     // need to responsive
-    <div className="my-2 px-2 md:px-4 lg:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="hidden lg:block w-full lg:w-[80%] h-[70%] m-auto">
+    <div className="min-h-screen flex items-center py-10 px-2 md:px-6 lg:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full">
+        <div className="hidden lg:flex flex-col justify-center login-slide-left w-full lg:w-[85%] ml-auto">
         <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 609.58 304.79"
@@ -158,7 +155,7 @@ const RegisterPage = () => {
           <h1 className=" font-bold text-5xl py-3 text-[#00000f]">
             Welcome to <br /> Luminedge.
           </h1>
-        <div className="text-lg mt-2 lg:mt-2.5 text-xl lg:text-2xl text-[#00000f]">
+        <div className="mt-2 lg:mt-2.5 text-xl lg:text-2xl text-[#00000f]">
           The most premium exam venue awarded by <br /> 
           <span className="block h-2"></span> {/* Add this line to create space */}
           <Image
@@ -180,10 +177,7 @@ const RegisterPage = () => {
         </div>
 
         <div
-  className="card card-body w-full lg:w-[80%] mx-auto mt-14 px-5 py-4 rounded-xl"
-  style={{
-    boxShadow: "0px 10px 30px rgba(250, 206, 57, 0.35)" // yellow glow
-  }}
+  className="card card-body w-full lg:w-[85%] mr-auto px-5 py-4 rounded-xl login-slide-right yellow-card-shadow"
 >
           {/* Show logo on mobile */}
           <div className="lg:hidden  mb-6  px-3 ">

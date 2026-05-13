@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
 import UserTable from "@/components/userTable";
+import { API_BASE } from "@/lib/config";
 
 // ✅ Define User Interface
 export interface User {
@@ -35,20 +36,18 @@ interface ItemType {
   isEditing?: boolean;
 }
 
-// ✅ API base (prod + local)
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 // ✅ Pagination for /admin/users (fetch ALL pages)
 const toId = (v: any) => String(v ?? "").trim();
 
-async function fetchAllUsers(requestedPageSize = 500): Promise<User[]> {
+async function fetchAllUsers(requestedPageSize = 500, token?: string | null): Promise<User[]> {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const all: User[] = [];
 
   // First page – also gives us total + real page size
   const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
     params: { page: 1, limit: requestedPageSize },
+    headers,
   });
 
   const firstPageUsers: User[] = first.data?.users || [];
@@ -73,6 +72,7 @@ async function fetchAllUsers(requestedPageSize = 500): Promise<User[]> {
   for (let page = 2; page <= totalPages; page++) {
     const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
       params: { page, limit: serverLimit },
+      headers,
     });
     const usersPage: User[] = data?.users || [];
     if (!usersPage.length) break;
@@ -101,7 +101,8 @@ const BookingsTable = () => {
     const run = async () => {
       try {
         setLoading(true);
-        const allUsers = await fetchAllUsers(500); // this will walk all pages
+        const token = localStorage.getItem("accessToken");
+        const allUsers = await fetchAllUsers(500, token);
 
         const sortedUsers = allUsers.sort(
           (a: User, b: User) =>
@@ -155,7 +156,8 @@ const BookingsTable = () => {
   const fetchUserMockData = async (userId: string) => {
     try {
       const response = await axios.get(
-        `${API_BASE}/api/v1/user/${encodeURIComponent(userId)}`
+        `${API_BASE}/api/v1/user/${encodeURIComponent(userId)}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
       );
       if (response.status === 200 && response.data.success) {
         setSubmittedItems(response.data.mocks);

@@ -6,9 +6,7 @@ import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const API =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
+import { API_BASE as API } from "@/lib/config";
 
 type Booking = {
   id?: string;
@@ -55,6 +53,9 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   // First page (role=user to reduce data size)
   const first = await axios.get(`${API}/api/v1/admin/users`, {
     params: { page: 1, limit: requestedPageSize, role: "user" },
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    },
   });
 
   const firstPageUsers: any[] = first.data?.users || [];
@@ -77,6 +78,9 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   for (let page = 2; page <= totalPages && found.size < need.size; page++) {
     const pageRes = await axios.get(`${API}/api/v1/admin/users`, {
       params: { page, limit: serverLimit, role: "user" },
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
     });
     ingest(pageRes.data?.users || []);
   }
@@ -117,7 +121,13 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       // 1) Bookings for this schedule
       const { data } = await axios.get(
         `${API}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
-        { params: { page: 1, limit: 500 }, signal }
+        {
+          params: { page: 1, limit: 500 },
+          signal,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
       const filteredBookings: Booking[] = data?.bookings || [];
       setBookings(filteredBookings);
@@ -171,7 +181,13 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
         const { data: attRes } = await axios.post(
           `${API}/api/v1/user/attendance/bulk`,
           { userIds },
-          { headers: { "Content-Type": "application/json" }, signal }
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+            signal,
+          }
         );
         const attMap: Record<string, number | null> = {};
         for (const id of userIds) attMap[id] = attRes.attendance?.[id] ?? null;
@@ -214,6 +230,11 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
           userId,
           attendance: attendanceValue,
           status,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
 
@@ -335,12 +356,12 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
     const pageWidth = doc.internal.pageSize.getWidth();
     const available = pageWidth - margin.left - margin.right;
 
-    const weights = [0.05, 0.17, 0.22, 0.1, 0.12, 0.1, 0.09, 0.07, 0.04, 0.04];
+    const weights = [0.03, 0.14, 0.19, 0.09, 0.15, 0.10, 0.11, 0.09, 0.05, 0.05];
     const SAFETY = 6;
     const target = available - SAFETY;
     const rawSum = weights.reduce((s, w) => s + w, 0);
     const scale = target / rawSum;
-    const mins = [8, 20, 28, 18, 22, 20, 18, 16, 12, 12];
+    const mins = [7, 25, 35, 18, 28, 20, 25, 18, 12, 12];
 
     let widths = weights.map((w) => w * scale);
     widths = widths.map((w, i) => Math.max(mins[i], w));
@@ -386,9 +407,32 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       ],
       body,
       theme: "grid",
-      styles: { fontSize: 8, cellPadding: 1.5, overflow: "linebreak", valign: "middle" },
-      headStyles: { fillColor: [250, 206, 57] }, // #face39
-      columnStyles,
+      styles: { 
+        fontSize: 8, 
+        cellPadding: { top: 2.5, right: 1, bottom: 2.5, left: 1 }, 
+        minCellHeight: 8,
+        overflow: "linebreak", 
+        valign: "middle",
+        textColor: [0, 0, 15] // #00000f
+      },
+      headStyles: { 
+        fillColor: [250, 206, 57], // #face39
+        textColor: [0, 0, 15], 
+        fontStyle: "bold",
+        halign: "center"
+      },
+      columnStyles: {
+        0: { halign: "center", cellWidth: widths[0] },
+        1: { cellWidth: widths[1] },
+        2: { cellWidth: widths[2] },
+        3: { cellWidth: widths[3] },
+        4: { cellWidth: widths[4] },
+        5: { cellWidth: widths[5] },
+        6: { cellWidth: widths[6] },
+        7: { cellWidth: widths[7] },
+        8: { halign: "center", cellWidth: widths[8] },
+        9: { halign: "center", cellWidth: widths[9] },
+      },
       margin,
       startY: margin.top,
       tableWidth: available - SAFETY,
@@ -464,9 +508,17 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
         return;
       }
 
-      const response = await axios.post(`${API}/api/v1/send-reminder`, {
-        emails: emailData,
-      });
+      const response = await axios.post(
+        `${API}/api/v1/send-reminder`,
+        {
+          emails: emailData,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
       if (response.status === 200) {
         if (typeof window !== "undefined") {
           localStorage.setItem(`emailsSent_${scheduleId}`, "true");
@@ -616,6 +668,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
                       </td>
                       <td className="px-4 py-2">
                         <select
+                          aria-label="Attendance status"
                           className="px-2 py-1 border rounded text-sm"
                           value={attendance[uid] || "N/A"}
                           onChange={(e) => handleSubmit(uid, e.target.value)}

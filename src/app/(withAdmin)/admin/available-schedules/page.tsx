@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 
 // ---------- Types ----------
 type TimeSlot = {
@@ -103,8 +104,11 @@ function AvailableSchedulesPage() {
   // Fetch + normalize
   const fetchSchedules = async () => {
     try {
-      const res = await fetch("https://luminedge-server.vercel.app/api/v1/admin/get-schedules", {
+      const res = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
         cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -192,8 +196,14 @@ function AvailableSchedulesPage() {
   const deleteSchedule = async (id: string) => {
     try {
       const res = await fetch(
-        `https://luminedge-server.vercel.app/api/v1/admin/delete-schedule/${id}`,
-        { method: "DELETE", headers: { "Content-Type": "application/json" } }
+        `${API_BASE}/api/v1/admin/delete-schedule/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
       const result = await res.json();
       if (!res.ok || !result?.success) {
@@ -223,6 +233,7 @@ function AvailableSchedulesPage() {
         <h3><b>Filter by</b></h3>
         <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
           <select
+            aria-label="Course type filter"
             value={testTypeFilter}
             onChange={(e) => setTestTypeFilter(e.target.value)}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -235,6 +246,7 @@ function AvailableSchedulesPage() {
           </select>
 
           <select
+            aria-label="Test type filter"
             value={scheduletestType}
             onChange={(e) => setscheduletestType(e.target.value)}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -245,6 +257,7 @@ function AvailableSchedulesPage() {
           </select>
 
           <select
+            aria-label="Date sort order"
             value={dateSortOrder}
             onChange={(e) => setDateSortOrder(e.target.value)}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -254,6 +267,7 @@ function AvailableSchedulesPage() {
           </select>
 
           <select
+            aria-label="Schedule date filter"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -264,6 +278,7 @@ function AvailableSchedulesPage() {
           </select>
 
           <input
+            aria-label="Start date filter"
             type="date"
             value={startDateFilter}
             onChange={(e) => setStartDateFilter(e.target.value)}

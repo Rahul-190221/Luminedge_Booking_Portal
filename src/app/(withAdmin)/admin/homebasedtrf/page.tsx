@@ -5,6 +5,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { API_BASE } from "@/lib/config";
 
 // -------- Shared constants (no hook warnings) --------
 const TEACHER_EMAIL_MAP: Record<string, string> = {
@@ -106,7 +107,7 @@ export default function HomeBasedPage() {
   const [schedulesPerPage, setSchedulesPerPage] = useState<number>(20);
   const [nameFilter, setNameFilter] = useState("");
   const [courseNameFilter, setCourseNameFilter] = useState("");
-  const [testTypeFilter, setTestTypeFilter] = useState("IELTS");
+  const [testTypeFilter, setTestTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("past"); // 'all' | 'past' | 'upcoming'
   const [startDateFilter, setStartDateFilter] = useState("");
 
@@ -119,9 +120,6 @@ export default function HomeBasedPage() {
   const fetchedTeachersRef = React.useRef<Set<string>>(new Set()); // `${uid}:${sid}` set
   const fetchedEmailRef = React.useRef<Set<string>>(new Set()); // scheduleId set for TRF email status
 
-  const API_BASE = (
-    process.env.NEXT_PUBLIC_API_BASE_URL || "https://luminedge-server.vercel.app"
-  ).replace(/\/$/, "");
 
   // -------- fetch bookings with embedded users --------
   const fetchHomeBookingsAndUsers = useCallback(async () => {
@@ -132,8 +130,7 @@ export default function HomeBasedPage() {
       });
 
       let homeBookings: Booking[] = data.bookings || [];
-      // Enforce IELTS only (UI enforces it too)
-      homeBookings = homeBookings.filter((b) => (b.name || "").toUpperCase().includes("IELTS"));
+      // No longer enforcing IELTS at fetch level if we want flexibility
 
       if (!homeBookings.length) {
         setBookings([]);
@@ -183,7 +180,7 @@ export default function HomeBasedPage() {
     } finally {
       setLoading(false);
     }
-  }, [API_BASE]);
+  }, []);
 
   useEffect(() => {
     fetchHomeBookingsAndUsers();
@@ -214,6 +211,10 @@ export default function HomeBasedPage() {
         skill,
         teacher: newTeacher,
         email,
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
       });
 
       if (res.data?.success) {
@@ -342,8 +343,11 @@ export default function HomeBasedPage() {
         )
           return false;
 
-        // enforced IELTS type already via fetch filter; keep testTypeFilter hook for UI parity
-        if (testTypeFilter && !booking.name?.toUpperCase().includes(testTypeFilter)) return false;
+        // testTypeFilter
+        if (testTypeFilter !== "all") {
+          const wanted = testTypeFilter.toUpperCase();
+          if (!booking.name?.toUpperCase().includes(wanted)) return false;
+        }
 
         return true;
       })
@@ -407,7 +411,7 @@ export default function HomeBasedPage() {
           )
       );
     })();
-  }, [API_BASE, debouncedSchedules]);
+  }, [debouncedSchedules]);
 
   // ---------- hydrate TRF email "sent" status for visible rows ----------
   useEffect(() => {
@@ -438,7 +442,7 @@ export default function HomeBasedPage() {
         )
       );
     })();
-  }, [API_BASE, debouncedSchedules]);
+  }, [debouncedSchedules]);
 
   // ---------- hydrate assigned teachers when booking has none (GET endpoint, cached & debounced) ----------
   useEffect(() => {
@@ -500,7 +504,7 @@ export default function HomeBasedPage() {
         )
       );
     })();
-  }, [API_BASE, debouncedSchedules, emailToTeacher]);
+  }, [debouncedSchedules, emailToTeacher]);
 
   // ---------- render ----------
   return (
@@ -526,7 +530,11 @@ export default function HomeBasedPage() {
               onChange={(e) => setTestTypeFilter(e.target.value)}
               className="px-2 py-1 border rounded w-full sm:w-auto text-[#00000f]"
             >
-              <option value="IELTS">IELTS (enforced)</option>
+              <option value="all">All Courses</option>
+              <option value="IELTS">IELTS</option>
+              <option value="PTE">PTE</option>
+              <option value="TOEFL">TOEFL</option>
+              <option value="GRE">GRE</option>
             </select>
           </label>
 
@@ -812,6 +820,7 @@ function TeacherSelect({
   return (
     <div className="relative w-full">
       <select
+        aria-label="Assign teacher"
         value={value || ""}
         onChange={(e) => onChange(bookingId, skill, e.target.value)}
         disabled={disabled}
@@ -895,7 +904,11 @@ async function cachedGet(url: string, opts?: { ttl?: number }): Promise<any> {
   if (pending) return pending;
 
   const p = axios
-    .get(url)
+    .get(url, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    })
     .then((res) => {
       __dataCache.set(url, { ts: Date.now(), data: res.data });
       return res.data;

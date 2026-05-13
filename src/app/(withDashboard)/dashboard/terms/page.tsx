@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import GetMe from "@/app/helpers/getme"; // Adjust the path if necessary
+import GetMe from "@/hooks/useUser";
 import { motion } from "framer-motion";
 
 const TermsPage = () => {
@@ -28,11 +28,7 @@ const TermsPage = () => {
             {/* Terms and Conditions Section */}
             <div className="w-full max-w-5xl bg-transparent  p-2">
             <motion.h1
-  className="text-3xl font-semibold mb-2 text-center"
-  style={{
-    color: "#face39",
-    fontSize: isMobile ? "1.5rem" : "2rem",
-  }}
+  className="text-[1.5rem] md:text-[2rem] font-semibold mb-2 text-center text-[#face39]"
   initial={{ opacity: 0, y: 30 }}
   animate={{ opacity: 1, y: 0 }}
   transition={{ duration: 0.7, ease: "easeOut" }}
@@ -153,7 +149,7 @@ const TermsPage = () => {
             </div>
                {/* Emergency Contact Information */}         
          <div className="w-full max-w-5xl bg-transparent  p-0">
-        <h1 className="text-xl font-semibold text-center" style={{ color: "#face39" }}>
+        <h1 className="text-xl font-semibold text-center text-[#face39]">
           {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
         </h1>
         <p className="text-center mt-0 mb-1">

@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 
 // ---------- Types ----------
 type TimeSlot = {
@@ -105,9 +106,13 @@ function TrfAvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const response = await fetch("https://luminedge-server.vercel.app/api/v1/admin/get-schedules");
-      const raw = await response.json();
-      const cleaned = Array.isArray(raw) ? raw.filter(isScheduleLike) : [];
+      const token = localStorage.getItem("accessToken");
+      const response = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await response.json();
+      const raw = Array.isArray(json) ? json : Array.isArray(json?.schedules) ? json.schedules : [];
+      const cleaned = raw.filter(isScheduleLike);
       setSchedules(cleaned);
     } catch (error) {
       toast.error("Error fetching schedules");
@@ -193,6 +198,7 @@ function TrfAvailableSchedulesBDMPage() {
           </select>
 
           <select
+            aria-label="Test type filter"
             value={scheduletestType}
             onChange={(e) => setscheduletestType(e.target.value)}
             className="px-2 py-1 border rounded w-full sm:w-auto"
@@ -203,6 +209,7 @@ function TrfAvailableSchedulesBDMPage() {
           </select>
 
           <select
+            aria-label="Date sort order"
             value={dateSortOrder}
             onChange={(e) =>
               setDateSortOrder(e.target.value as "ascending" | "descending")
@@ -225,6 +232,7 @@ function TrfAvailableSchedulesBDMPage() {
           </select>
 
           <input
+            aria-label="Start date filter"
             type="date"
             value={startDateFilter}
             onChange={(e) => setStartDateFilter(e.target.value)}

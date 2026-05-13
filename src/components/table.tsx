@@ -2,11 +2,11 @@
 
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import { API_BASE } from "@/lib/config";
 import { useState, useEffect } from "react";
 import { AiOutlineEllipsis } from "react-icons/ai";
 import React from "react";
 import toast from "react-hot-toast";
-import Head from "next/head"; // ✅ Fix preload warning
 
 interface Booking {
   _id: string;
@@ -21,6 +21,39 @@ interface Booking {
   location?: string;
 }
 
+// ---------- DATE-ONLY SORT HELPERS ----------
+const monthIndex: Record<string, number> = {
+  jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+  may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8,
+  september: 8, oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+};
+
+const parseDayMs = (s: string): number => {
+  if (!s) return Number.POSITIVE_INFINITY;
+  const m1 = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (m1) {
+    const dt = new Date(+m1[1], +m1[2] - 1, +m1[3], 0, 0, 0, 0);
+    return isNaN(dt.getTime()) ? Number.POSITIVE_INFINITY : dt.getTime();
+  }
+  const m2 = s.match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})$/);
+  if (m2) {
+    const mon = monthIndex[m2[2].toLowerCase()];
+    if (Number.isInteger(mon)) {
+      const dt = new Date(+m2[3], mon, +m2[1], 0, 0, 0, 0);
+      return isNaN(dt.getTime()) ? Number.POSITIVE_INFINITY : dt.getTime();
+    }
+  }
+  const dt = new Date(s);
+  if (!isNaN(dt.getTime())) { dt.setHours(0, 0, 0, 0); return dt.getTime(); }
+  return Number.POSITIVE_INFINITY;
+};
+
+const minutesWithinDay = (b: Booking) => {
+  const t = b.location === "Home" ? b.testTime : b.startTime;
+  const m = t?.match(/^(\d{1,2}):(\d{2})$/);
+  return m ? (+m[1]) * 60 + (+m[2]) : 0;
+};
+
 const Table = ({ userId }: { userId: string }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [showResultModal, setShowResultModal] = useState(false);
@@ -31,7 +64,9 @@ const Table = ({ userId }: { userId: string }) => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const response = await axios.get(`https://luminedge-server.vercel.app/api/v1/user/bookings/${userId}`);
+        const response = await axios.get(`${API_BASE}/api/v1/user/bookings/${userId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+        });
         setBookings(response.data.bookings);
       } catch (error) {
         console.error("Error fetching bookings:", error);
@@ -40,51 +75,6 @@ const Table = ({ userId }: { userId: string }) => {
 
     fetchBookings();
   }, [userId]);
-
-  // ---------- DATE-ONLY SORT HELPERS (minimal change) ----------
-  const monthIndex: Record<string, number> = {
-    jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
-    may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8,
-    september: 8, oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
-  };
-
-  const parseDayMs = (s: string): number => {
-    if (!s) return Number.POSITIVE_INFINITY;
-
-    // 1) YYYY-MM-DD or YYYY/MM/DD
-    const m1 = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-    if (m1) {
-      const y = +m1[1], m = +m1[2], d = +m1[3];
-      const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
-      return isNaN(dt.getTime()) ? Number.POSITIVE_INFINITY : dt.getTime();
-    }
-
-    // 2) "DD Month, YYYY" or "DD Month YYYY"
-    const m2 = s.match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})$/);
-    if (m2) {
-      const d = +m2[1];
-      const mon = monthIndex[m2[2].toLowerCase()];
-      const y = +m2[3];
-      if (Number.isInteger(mon)) {
-        const dt = new Date(y, mon as number, d, 0, 0, 0, 0);
-        return isNaN(dt.getTime()) ? Number.POSITIVE_INFINITY : dt.getTime();
-      }
-    }
-
-    // 3) Fallback
-    const dt = new Date(s);
-    if (!isNaN(dt.getTime())) {
-      dt.setHours(0, 0, 0, 0);
-      return dt.getTime();
-    }
-    return Number.POSITIVE_INFINITY;
-  };
-
-  const minutesWithinDay = (b: Booking) => {
-    const t = b.location === "Home" ? b.testTime : b.startTime;
-    const m = t?.match(/^(\d{1,2}):(\d{2})$/);
-    return m ? (+m[1]) * 60 + (+m[2]) : 0;
-  };
 
   const sortedBookings = React.useMemo(() => {
     return [...bookings].sort((a, b) => {
@@ -124,7 +114,9 @@ const Table = ({ userId }: { userId: string }) => {
 
   const handleViewResult = async (bookingId: string, bookingName: string) => {
     try {
-      const response = await axios.get(`https://luminedge-server.vercel.app/api/v1/user/bookings/result/${bookingId}`);
+      const response = await axios.get(`${API_BASE}/api/v1/user/bookings/result/${bookingId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
+      });
       const result = response.data?.result;
 
       if (result && Object.keys(result).length > 0) {
@@ -142,11 +134,6 @@ const Table = ({ userId }: { userId: string }) => {
 
   return (
     <>
-      <Head>
-        <link rel="preload" href="/_next/static/css/app/layout.css" as="style" />
-        <link rel="stylesheet" href="/_next/static/css/app/layout.css" />
-      </Head>
-
       <table className="table">
         <thead>
           <tr className="text-[#00000f] bg-[#face39] font-bold">
@@ -178,6 +165,7 @@ const Table = ({ userId }: { userId: string }) => {
               <td>{booking.status}</td>
               <td>
                 <button
+                  aria-label="View booking details"
                   onClick={() => {
                     const timeToCompare = booking.location === "Home" ? booking.testTime : booking.startTime;
                     if (booking.status === "pending" && timeToCompare && isPast24Hours(booking.bookingDate, timeToCompare)) {

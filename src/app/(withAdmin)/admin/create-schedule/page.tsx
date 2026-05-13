@@ -133,7 +133,8 @@ export default function CreateSchedulePage() {
 
     try {
       setIsSubmitting(true);
-      const res = await createSchedules(payload as any);
+      const token = localStorage.getItem("accessToken");
+      const res = await createSchedules(payload as any, token);
       if (res?.success) {
         toast.success(res?.message || "Schedules created.");
         router.push("/admin/available-schedules");
@@ -148,9 +149,6 @@ export default function CreateSchedulePage() {
     }
   };
 
-  useEffect(() => {
-    console.log(pathname);
-  }, [pathname]);
 
   return (
     <div className="p-1 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">
@@ -166,9 +164,10 @@ export default function CreateSchedulePage() {
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Course */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold uppercase tracking-wide text-black/70">Select Course</label>
+          <label htmlFor="select-course" className="text-sm font-semibold uppercase tracking-wide text-black/70">Select Course</label>
           <div className="relative">
             <select
+              id="select-course"
               value={formData.courseId}
               onChange={(e) => setFormData({ ...formData, courseId: e.target.value })}
               className="w-full appearance-none bg-white/90 backdrop-blur-sm border border-black/10 rounded-2xl px-4 py-3 text-base shadow-inner focus:outline-none focus:ring-2 focus:ring-[#FACE39] focus:border-transparent transition"
@@ -219,10 +218,11 @@ export default function CreateSchedulePage() {
                 >
                   <div className="grid sm:grid-cols-4 gap-4 items-end">
                     <div>
-                      <label className="block mb-1 text-xs font-semibold uppercase tracking-wide text-black/60">
+                      <label htmlFor={`start-${dateKey}-${index}`} className="block mb-1 text-xs font-semibold uppercase tracking-wide text-black/60">
                         Start Time
                       </label>
                       <input
+                        id={`start-${dateKey}-${index}`}
                         type="time"
                         className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm shadow-inner focus:outline-none focus:ring-2 focus:ring-[#FACE39] bg-white"
                         value={slot.startTime}
@@ -232,10 +232,11 @@ export default function CreateSchedulePage() {
                     </div>
 
                     <div>
-                      <label className="block mb-1 text-xs font-semibold uppercase tracking-wide text-black/60">
+                      <label htmlFor={`end-${dateKey}-${index}`} className="block mb-1 text-xs font-semibold uppercase tracking-wide text-black/60">
                         End Time
                       </label>
                       <input
+                        id={`end-${dateKey}-${index}`}
                         type="time"
                         className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm shadow-inner focus:outline-none focus:ring-2 focus:ring-[#FACE39] bg-white"
                         value={slot.endTime}
@@ -245,10 +246,11 @@ export default function CreateSchedulePage() {
                     </div>
 
                     <div>
-                      <label className="block mb-1 text-xs font-semibold uppercase tracking-wide text-black/60">
+                      <label htmlFor={`slot-${dateKey}-${index}`} className="block mb-1 text-xs font-semibold uppercase tracking-wide text-black/60">
                         Slot
                       </label>
                       <input
+                        id={`slot-${dateKey}-${index}`}
                         type="number"
                         min={0}
                         className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm shadow-inner focus:outline-none focus:ring-2 focus:ring-[#FACE39] bg-white"
@@ -259,10 +261,11 @@ export default function CreateSchedulePage() {
                     </div>
 
                     <div>
-                      <label className="block mb-1 text-xs font-semibold uppercase tracking-wide text-black/60">
+                      <label htmlFor={`totalSlot-${dateKey}-${index}`} className="block mb-1 text-xs font-semibold uppercase tracking-wide text-black/60">
                         Total Slot
                       </label>
                       <input
+                        id={`totalSlot-${dateKey}-${index}`}
                         type="number"
                         min={0}
                         className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm shadow-inner focus:outline-none focus:ring-2 focus:ring-[#FACE39] bg-white"
@@ -291,7 +294,6 @@ export default function CreateSchedulePage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            aria-busy={isSubmitting}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold shadow-md bg-[#00000f] text-white hover:bg-[#FACE39] hover:text-[#00000f] active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Creating..." : "➕ Create Schedule"}

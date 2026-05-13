@@ -7,6 +7,7 @@ import TableBDM, { User as BDMUser } from "@/components/tableBDM";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 
 /* =========================
    Types + helpers
@@ -16,10 +17,6 @@ import { motion } from "framer-motion";
 type UserDoc = BDMUser;
 
 const TZ = "Asia/Dhaka";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 // YYYY-MM-DD in given timezone
 const localDayKey = (d: Date) =>
@@ -107,6 +104,7 @@ const BDMDashboardPage = () => {
         let effectiveLimit: number | null = null;
         let totalFromServer: number | null = null;
 
+        const token = localStorage.getItem("accessToken");
         // eslint-disable-next-line no-constant-condition
         while (true) {
           const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
@@ -116,6 +114,7 @@ const BDMDashboardPage = () => {
               role: "user", // students only
             },
             signal: ctrl.signal,
+            headers: { Authorization: `Bearer ${token}` },
           });
 
           const batch: UserDoc[] = (data?.users ?? []) as UserDoc[];

@@ -3,6 +3,7 @@
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
+import { API_BASE as _API_BASE } from "@/lib/config";
 import "react-datepicker/dist/react-datepicker.css";
 import {
   PieChart,
@@ -17,10 +18,7 @@ import {
   Bar,
 } from "recharts";
 
-// Prefer env in production, fallback to localhost in dev
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app/api/v1";
+const API_BASE = `${_API_BASE}/api/v1`;
 
 // ---- BD-local date helpers (avoid UTC shifts visually) ----
 const BD_TZ = "Asia/Dhaka";
@@ -155,15 +153,24 @@ const AnalysisPage = () => {
         ] = await Promise.all([
           axios.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
             params: { role: "user" },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }),
           axios.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
             params: { role: "user", from: todayStr, to: todayStr },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }),
           axios.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
             params: {
               role: "user",
               from: monthRange.from,
               to: monthRange.to,
+            },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }),
           axios.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
@@ -172,11 +179,21 @@ const AnalysisPage = () => {
               from: yearRange.from,
               to: yearRange.to,
             },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }),
           axios.get(`${API_BASE}/admin/stats/users/mock-types/monthly`, {
             params: { role: "user" },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }),
-          axios.get(`${API_BASE}/admin/stats/bookings/attendance`),
+          axios.get(`${API_BASE}/admin/stats/bookings/attendance`, {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }),
         ]);
 
         // ---- User / mockType stats ----
@@ -295,6 +312,9 @@ const AnalysisPage = () => {
         `${API_BASE}/admin/stats/users/mock-types/range`,
         {
           params: { role: "user", from, to },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
       const map = buildMockTypeMap(data?.byMockType || []);
@@ -315,6 +335,9 @@ const AnalysisPage = () => {
         `${API_BASE}/admin/stats/users/mock-types/range`,
         {
           params: { role: "user", from: day, to: day },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
       const map = buildMockTypeMap(data?.byMockType || []);
@@ -339,6 +362,9 @@ const AnalysisPage = () => {
             from: range.from,
             to: range.to,
           },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
         }
       );
       const map = buildMockTypeMap(data?.byMockType || []);
@@ -359,6 +385,9 @@ const AnalysisPage = () => {
             role: "user",
             from: range.from,
             to: range.to,
+          },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );

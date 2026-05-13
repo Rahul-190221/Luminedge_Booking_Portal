@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
 import UserTable from "@/components/userTable";
+import { API_BASE } from "@/lib/config";
 
 // ✅ Define User Interface
 export interface User {
@@ -36,10 +37,6 @@ interface ItemType {
 }
 
 type ApiUsersResp = { users?: User[]; total?: number };
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 // ---- helpers -------------------------------------------------------
 const tryParseDate = (v: any): Date | null => {
@@ -84,6 +81,9 @@ const fetchAllCompletedUsers = async (): Promise<User[]> => {
   while (all.length < total) {
     const { data } = await axios.get<ApiUsersResp>(`${API_BASE}/api/v1/admin/users`, {
       params: { status: "completed", page, limit },
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
     });
 
     const batch = Array.isArray(data?.users) ? data!.users! : [];
@@ -166,7 +166,11 @@ const BookingsTable = () => {
   // ✅ Fetch mocks (work with either of your backend shapes)
   const fetchUserMockData = async (userId: string) => {
     try {
-      const { data } = await axios.get(`${API_BASE}/api/v1/user/${userId}`);
+      const { data } = await axios.get(`${API_BASE}/api/v1/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
       if (data?.success || data?.mocks || data?.lastMock) {
         setSubmittedItems(data.mocks || []);
         setLastMock(data.lastMock || null);

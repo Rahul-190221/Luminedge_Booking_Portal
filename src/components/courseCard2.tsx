@@ -42,7 +42,6 @@ const CourseCard2 = ({
     <div
       role="button"
       tabIndex={isRegistered ? 0 : -1}
-      aria-disabled={!isRegistered ? "true" : undefined}
       onClick={isRegistered ? onClick : undefined}
       onKeyDown={handleKey}
       title={isRegistered ? `Open ${course.name}` : "Register to access"}

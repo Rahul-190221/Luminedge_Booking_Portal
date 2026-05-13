@@ -1,6 +1,7 @@
 "use client";
 import axios from "axios";
 import { useState, useEffect, useMemo } from "react";
+import { API_BASE } from "@/lib/config";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
 
@@ -37,9 +38,6 @@ interface TableBDMProps {
   rows?: User[];
 }
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 const TableBDM: React.FC<TableBDMProps> = ({ rows }) => {
   const [users, setUsers] = useState<User[]>(rows || []);
@@ -84,6 +82,9 @@ const TableBDM: React.FC<TableBDMProps> = ({ rows }) => {
         while (true) {
           const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
             params: { page, limit: requestedLimit, role: "user" },
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           });
 
           const batch: User[] = (data?.users ?? []) as User[];
@@ -171,7 +172,12 @@ const TableBDM: React.FC<TableBDMProps> = ({ rows }) => {
   const fetchUserMockData = async (userId: string) => {
     try {
       const { data, status } = await axios.get(
-        `${API_BASE}/api/v1/user/${userId}`
+        `${API_BASE}/api/v1/user/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
       );
       if (status === 200 && data?.success) {
         setSubmittedItems(data.mocks || []);

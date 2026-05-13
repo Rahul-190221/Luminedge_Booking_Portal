@@ -1,6 +1,7 @@
 // hooks/useUser.ts
 import axios from "axios";
-import { getUserIdFromToken } from "../helpers/jwt";
+import { getUserIdFromToken } from "@/app/helpers/jwt";
+import { API_BASE } from "@/lib/config";
 import { useEffect, useState } from "react";
 
 // Optional: Define a type for each mock
@@ -30,7 +31,12 @@ const useUser = (): {
 
         if (userIdFromToken?.userId) {
           const response = await axios.get(
-            `https://luminedge-server.vercel.app/api/v1/user/${userIdFromToken.userId}`
+            `${API_BASE}/api/v1/user/${userIdFromToken.userId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+              },
+            }
           );
 
           const fetchedMocks: Mock[] = response.data?.mocks || [];

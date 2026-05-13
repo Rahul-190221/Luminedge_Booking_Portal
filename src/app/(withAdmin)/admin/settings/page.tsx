@@ -43,7 +43,6 @@ const ProfileSettings = () => {
   };
 
   const handleSave = () => {
-    console.log("Profile saved:", profile);
     alert("Profile data saved!");
   };
 
@@ -57,6 +56,7 @@ const ProfileSettings = () => {
         <div className="flex items-center flex-col mb-6">
           <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
             {profile.profileImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={typeof profile.profileImage === "string" ? profile.profileImage : undefined}
                 alt="Profile"

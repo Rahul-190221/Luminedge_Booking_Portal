@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle, Loader2, Lock } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { API_BASE } from "@/lib/config";
+import { FaCheckCircle, FaSpinner, FaLock } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 // ---------------- Module-scope helpers ----------------
 const todayDhakaYMD = () =>
@@ -23,9 +23,6 @@ const bandOrNull = (v: any): number | null => {
   return n > 0 ? n : null; // 0 blocks overall
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 const segments = [
   { key: "listening", label: "Listening", color: "#2563EB" },
@@ -33,6 +30,13 @@ const segments = [
   { key: "writing", label: "Writing", color: "#CA8A04" },
   { key: "speaking", label: "Speaking", color: "#DC2626" },
 ] as const;
+
+const segmentTailwind = {
+  listening: { bg: "bg-blue-600",   bgDim: "bg-blue-600/20",   border: "border-blue-600",   borderL: "border-l-blue-600" },
+  reading:   { bg: "bg-green-600",  bgDim: "bg-green-600/20",  border: "border-green-600",  borderL: "border-l-green-600" },
+  writing:   { bg: "bg-yellow-600", bgDim: "bg-yellow-600/20", border: "border-yellow-600", borderL: "border-l-yellow-600" },
+  speaking:  { bg: "bg-red-600",    bgDim: "bg-red-600/20",    border: "border-red-600",    borderL: "border-l-red-600" },
+} as const;
 
 type SegmentKey = (typeof segments)[number]["key"];
 
@@ -240,7 +244,12 @@ const TestReportForm = () => {
       if (!userId || !scheduleId) return;
       try {
         const res = await axios.get(
-          `${API_BASE}/api/v1/admin/feedback-status/${userId}/${scheduleId}`
+          `${API_BASE}/api/v1/admin/feedback-status/${userId}/${scheduleId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
         );
         const status = res.data?.status || {};
         if (!mounted) return;
@@ -391,58 +400,6 @@ useEffect(() => {
   formData.speakingMarks,
   formData.speakingTotal,
 ]);
-  // auto calc overall & proficiency from 4 bands (only when all valid and > 0)
-  // useEffect(() => {
-  //   const listening = bandOrNull(formData.listeningMarks);
-  //   const reading = bandOrNull(formData.readingMarks);
-  //   const writing = bandOrNull(formData.writingMarks);
-  //   // prefer speakingTotal (UI field), fallback to legacy speakingMarks
-  //   const speaking = bandOrNull(formData.speakingTotal ?? formData.speakingMarks);
-
-  //   const scores = [listening, reading, writing, speaking];
-  //   const isComplete = scores.every((s) => s !== null);
-
-  //   if (isComplete) {
-  //     const average = (scores as number[]).reduce((a, b) => a + b, 0) / 4;
-
-  //     // IELTS-specific rounding (nearest 0.5 with 0.25/0.75 thresholds)
-  //     const roundIELTS = (avg: number): number => {
-  //       const floor = Math.floor(avg);
-  //       const decimal = avg - floor;
-  //       if (decimal < 0.25) return floor;
-  //       if (decimal < 0.75) return floor + 0.5;
-  //       return floor + 1;
-  //       };
-  //     const overall = roundIELTS(average);
-
-  //     const getCEFR = (score: number): string => {
-  //       if (score >= 8.5) return "C2";
-  //       if (score >= 6.5) return "C1"; // Luminedge policy mapping
-  //       if (score >= 5.5) return "B2";
-  //       if (score >= 4.0) return "B1";
-  //       return "A2";
-  //     };
-
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       overall: overall.toFixed(1),
-  //       proficiency: getCEFR(overall),
-  //     }));
-  //   } else {
-  //     setFormData((prev) => ({
-  //       ...prev,
-  //       overall: "",
-  //       proficiency: "",
-  //     }));
-  //   }
-  // }, [
-  //   formData.listeningMarks,
-  //   formData.readingMarks,
-  //   formData.writingMarks,
-  //   formData.speakingMarks,
-  //   formData.speakingTotal,
-  // ]);
-
   // auto calc writing band (task2 double weight)
   useEffect(() => {
     const { feedback } = formData;
@@ -476,16 +433,8 @@ useEffect(() => {
         writingMarks: rounded.toFixed(1),
       }));
     }
-  }, [
-    formData.feedback.writingScores.task1_TA,
-    formData.feedback.writingScores.task1_CC,
-    formData.feedback.writingScores.task1_LR,
-    formData.feedback.writingScores.task1_GRA,
-    formData.feedback.writingScores.task2_TR,
-    formData.feedback.writingScores.task2_CC,
-    formData.feedback.writingScores.task2_LR,
-    formData.feedback.writingScores.task2_GRA,
-  ]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.feedback.writingScores]);
 
   const handleSaveFeedback = async () => {
     const admin = localStorage.getItem("adminName") || "Unknown";
@@ -587,7 +536,11 @@ useEffect(() => {
         payload.marks = marksValue;
       }
 
-      const res = await axios.post(`${API_BASE}/api/v1/admin/save-feedback`, payload);
+      const res = await axios.post(`${API_BASE}/api/v1/admin/save-feedback`, payload, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
 
       if (res.data.success) {
         setLockedSegments((prev) => ({ ...prev, [selectedSegment]: true }));
@@ -629,9 +582,6 @@ useEffect(() => {
     const centreName = "LUMINEDGE BD";
     const testDate = today;
 
-    // fallback signature if empty
-    theSignature: {
-    }
     const signatureToSave =
       (adminSignature && adminSignature.trim()) || "Md. Arifur Rahman";
 
@@ -654,6 +604,10 @@ useEffect(() => {
         adminSignature: signatureToSave,
         centreName,
         testDate,
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
       });
 
       if (response?.data?.success) {
@@ -668,7 +622,7 @@ useEffect(() => {
         toast.success("✅ Admin section saved successfully.");
       } else {
         const msg = response?.data?.message || "Unknown error.";
-        toast.warn("⚠️ " + msg);
+        toast("⚠️ " + msg, { icon: "⚠️" });
       }
     } catch (err: any) {
       const msg =
@@ -691,7 +645,12 @@ useEffect(() => {
       if (!userId || !scheduleId) return;
       try {
         const res = await axios.get(
-          `${API_BASE}/api/v1/admin/get-admin-section/${userId}/${scheduleId}`
+          `${API_BASE}/api/v1/admin/get-admin-section/${userId}/${scheduleId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
         );
         const data = res.data || {};
 
@@ -724,8 +683,7 @@ useEffect(() => {
     <div className="space-y-8">
       {/* Admin Section */}
       <div
-        className="p-6 max-w-4xl mx-auto bg-gradient-to-br from-white via-gray-50 to-white border-2  rounded-2xl shadow-xl"
-        style={{ fontFamily: "Montserrat", color: "#00000f" }}
+        className="p-6 max-w-4xl mx-auto bg-gradient-to-br from-white via-gray-50 to-white border-2  rounded-2xl shadow-xl text-brand-dark"
       >
         <h2 className="text-xl font-bold mb-4 border-b pb-2 border-gray-400">
           📝 Additional Fields
@@ -774,6 +732,7 @@ useEffect(() => {
                 Result Publishing Date
               </label>
               <input
+                aria-label="Result publishing date"
                 type="date"
                 name="resultDate"
                 value={formData.resultDate || ""}
@@ -827,6 +786,7 @@ useEffect(() => {
               Centre Stamp
             </label>
             <div className="w-[160px] h-[140px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/assets/centre-stamp.png"
                 alt="Centre Stamp"
@@ -865,16 +825,6 @@ useEffect(() => {
           </button>
 
           {/* Toasts */}
-          <ToastContainer
-            position="top-center"
-            autoClose={2500}
-            newestOnTop
-            closeOnClick
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="colored"
-          />
 
           <button
             onClick={() =>
@@ -903,11 +853,7 @@ useEffect(() => {
               return (
                 <div
                   key={seg.key}
-                  className="transition-all duration-500 ease-in-out"
-                  style={{
-                    width: `${100 / segments.length}%`,
-                    backgroundColor: isLocked ? seg.color : `${seg.color}33`,
-                  }}
+                  className={`w-1/4 transition-all duration-500 ease-in-out ${isLocked ? segmentTailwind[seg.key].bg : segmentTailwind[seg.key].bgDim}`}
                   title={`${seg.label}: ${isLocked ? "Saved ✅" : "Pending ⏳"}`}
                 />
               );
@@ -920,26 +866,21 @@ useEffect(() => {
           {segments.map((seg, index) => {
             const isLocked = lockedSegments[seg.key];
             const isActive = selectedSegment === seg.key;
-            const baseColor = seg.color;
 
             return (
               <div className="flex flex-col items-center" key={seg.key}>
                 <button
+                  type="button"
                   onClick={() => setSelectedSegment(seg.key)}
                   className={`w-12 h-12 rounded-full border-2 flex items-center justify-center font-bold text-base transition ${
                     isLocked
-                      ? "bg-green-600 border-green-700 text-white"
+                      ? "bg-green-700 border-green-700 text-white"
                       : isActive
-                      ? "bg-white text-white"
-                      : "bg-gray-100 text-gray-700"
+                      ? `${segmentTailwind[seg.key].bg} ${segmentTailwind[seg.key].border} text-white`
+                      : `${segmentTailwind[seg.key].bgDim} ${segmentTailwind[seg.key].border} text-gray-700`
                   }`}
-                  style={{
-                    borderColor: isLocked ? "#15803D" : baseColor,
-                    backgroundColor: isActive ? baseColor : isLocked ? "#15803D" : `${baseColor}20`,
-                    color: isActive ? "#fff" : undefined,
-                  }}
                 >
-                  {isLocked ? <CheckCircle size={20} /> : index + 1}
+                  {isLocked ? <FaCheckCircle size={20} /> : index + 1}
                 </button>
                 <span className="mt-2 text-sm text-gray-800 font-medium">{seg.label}</span>
               </div>
@@ -949,10 +890,7 @@ useEffect(() => {
 
         {/* Feedback box */}
         <div
-          className="rounded-lg p-4 shadow-md border bg-gray-50"
-          style={{
-            borderLeft: `4px solid ${segments.find((s) => s.key === selectedSegment)?.color}`,
-          }}
+          className={`rounded-lg p-4 shadow-md border bg-gray-50 border-l-4 ${segmentTailwind[selectedSegment].borderL}`}
         >
           <h3 className="text-lg font-semibold text-gray-800 mb-2">
             {segments.find((s) => s.key === selectedSegment)?.label} Feedback
@@ -976,6 +914,7 @@ useEffect(() => {
                     {["FC", "LR", "GRA", "PRO", "Total"].map((key) => (
                       <td key={key} className="border px-2 py-1">
                         <input
+                          aria-label={`Speaking score ${key}`}
                           type="number"
                           name={`speaking${key}`}
                           value={(formData as any)[`speaking${key}`] || ""}
@@ -1042,6 +981,7 @@ useEffect(() => {
                       (key) => (
                         <td key={key} className="border border-black p-1">
                           <input
+                            aria-label={`Writing Task 1 score ${key}`}
                             disabled={lockedSegments.writing}
                             className="w-full text-center bg-gray-50 text-red-600 outline-none border-none"
                             value={
@@ -1082,6 +1022,7 @@ useEffect(() => {
                     {[...Array(5)].map((_, i) => (
                       <td key={i} className="border border-black p-1">
                         <input
+                          aria-label={`Writing Task 1 note ${i + 1}`}
                           type="text"
                           disabled={lockedSegments.writing}
                           className="w-full bg-gray-50 text-black text-sm outline-none border-none"
@@ -1105,6 +1046,7 @@ useEffect(() => {
                   <tr>
                     <td colSpan={5} className="border border-black p-2 text-left">
                       <textarea
+                        aria-label="Writing Task 1 feedback"
                         rows={3}
                         disabled={lockedSegments.writing}
                         className="w-full bg-gray-50 text-red-600 text-sm p-1 outline-none border-none"
@@ -1135,6 +1077,7 @@ useEffect(() => {
                       (key) => (
                         <td key={key} className="border border-black p-1">
                           <input
+                            aria-label={`Writing Task 2 score ${key}`}
                             disabled={lockedSegments.writing}
                             className="w-full text-center bg-gray-50 text-red-600 outline-none border-none"
                             value={
@@ -1175,6 +1118,7 @@ useEffect(() => {
                     {[...Array(5)].map((_, i) => (
                       <td key={i} className="border border-black p-1">
                         <input
+                          aria-label={`Writing Task 2 note ${i + 1}`}
                           type="text"
                           disabled={lockedSegments.writing}
                           className="w-full bg-gray-50 text-black text-sm outline-none border-none"
@@ -1198,6 +1142,7 @@ useEffect(() => {
                   <tr>
                     <td colSpan={5} className="border border-black p-2 text-left">
                       <textarea
+                        aria-label="Writing Task 2 feedback"
                         rows={3}
                         disabled={lockedSegments.writing}
                         className="w-full bg-gray-50 text-red-600 text-sm p-1 outline-none border-none"
@@ -1287,11 +1232,11 @@ useEffect(() => {
             >
               {lockedSegments[selectedSegment] ? (
                 <>
-                  <Lock size={16} /> Saved
+                  <FaLock size={16} /> Saved
                 </>
               ) : saving ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" /> Saving...
+                  <FaSpinner size={16} className="animate-spin" /> Saving...
                 </>
               ) : (
                 <>💾 Save Feedback</>

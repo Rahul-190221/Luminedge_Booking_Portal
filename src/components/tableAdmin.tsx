@@ -1,6 +1,7 @@
 "use client";
 import { updateMockNumber } from "@/app/utils/actions/mockUpdate";
 import axios from "axios";
+import { API_BASE } from "@/lib/config";
 import { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
@@ -38,10 +39,6 @@ interface ItemType {
   isEditing?: boolean;
 }
 
-// ✅ API base (shared with Dashboard)
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "https://luminedge-server.vercel.app";
 
 // ✅ Props: parent can pass rows + external loading state
 interface TableAdminProps {
@@ -51,7 +48,7 @@ interface TableAdminProps {
 
 const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
   const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  // filteredUsers is now a useMemo
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -184,7 +181,6 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
   
       if (!cancelled) {
         setUsers(unique);
-        setFilteredUsers(unique);
         setIsLoading(false);
       }
       return () => {
@@ -197,7 +193,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
   
 
   // 🔎 Compute filtered list (status, blocked/unblocked, search)
-  useEffect(() => {
+  const filteredUsers = useMemo(() => {
     let filtered = users;
 
     if (statusFilter !== "all") {
@@ -226,9 +222,13 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
       });
     }
 
-    setFilteredUsers(filtered);
-    setCurrentPage(1); // reset to first page on filter/search change
+    return filtered;
   }, [statusFilter, actionFilter, searchTerm, users]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, actionFilter, searchTerm]);
 
   // 📄 Pagination
   const indexOfLastUser = currentPage * usersPerPage;
@@ -248,7 +248,11 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
 
   const fetchUserMockData = async (userId: string) => {
     try {
-      const response = await axios.get(`${API_BASE}/api/v1/user/${userId}`);
+      const response = await axios.get(`${API_BASE}/api/v1/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
       if (response.status === 200 && response.data.success) {
         setSubmittedItems(response.data.mocks || []);
         setLastMock(response.data.lastMock || null);
@@ -319,6 +323,10 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
     try {
       await axios.put(`${API_BASE}/api/v1/user/block/${userId}`, {
         isDeleted: !user.isDeleted,
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
       });
       setUsers((prevUsers) =>
         prevUsers.map((u) =>
@@ -336,6 +344,10 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
     try {
       const response = await axios.put(`${API_BASE}/api/v1/user/status/${_id}`, {
         status: value,
+      }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
       });
 
       if (response.status === 200) {
@@ -405,6 +417,11 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
               mrValidationExpiry: getFutureISODate(item.mrValidation),
               mrValidation: item.mrValidation,
             })),
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
           }
         );
         if (response.data.success) {
@@ -448,7 +465,12 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
 
         const res = await axios.put(
           `${API_BASE}/api/v1/user/update-one/${selectedUser._id}`,
-          payload
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+            },
+          }
         );
 
         if (res.data.success) {
@@ -569,6 +591,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                 </td>
                 <td className="px-4 py-3 break-words">
                   <select
+                    aria-label="User status"
                     value={user.status}
                     onChange={(e) => onChangeStatus(user._id, e.target.value)}
                     className={`px-2 py-1 border rounded w-full sm:w-auto text-xs sm:text-sm md:text-base font-semibold shadow-sm transition-all duration-300 ease-in-out
@@ -806,6 +829,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                           <>
                             <td className="p-1 border border-gray-300">
                               <select
+                                aria-label="Mock type"
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.mockType || ""}
                                 onChange={(e) =>
@@ -827,6 +851,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                             </td>
                             <td className="p-1 border border-gray-300">
                               <select
+                                aria-label="Test type"
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.testType || ""}
                                 onChange={(e) =>
@@ -857,6 +882,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                             </td>
                             <td className="p-1 border border-gray-300">
                               <select
+                                aria-label="Test system"
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.testSystem || ""}
                                 onChange={(e) =>
@@ -880,6 +906,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                             </td>
                             <td className="p-1 border border-gray-300">
                               <input
+                                aria-label="Mock name"
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.mock}
                                 onChange={(e) =>
@@ -893,6 +920,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                             </td>
                             <td className="p-1 border border-gray-300">
                               <input
+                                aria-label="Transaction ID"
                                 className="w-full px-1 py-1 border rounded bg-gray-100"
                                 value={item.transactionId}
                                 disabled
@@ -900,6 +928,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                             </td>
                             <td className="p-1 border border-gray-300">
                               <select
+                                aria-label="MR validation duration"
                                 className="w-full px-1 py-1 border rounded"
                                 value={item.mrValidation || ""}
                                 onChange={(e) =>
@@ -991,6 +1020,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                       <tr key={`new-${index}`} className="hover:bg-gray-50">
                         <td className="p-1 border border-gray-300">
                           <select
+                            aria-label="Mock type"
                             value={item.mockType}
                             onChange={(e) =>
                               updateItem(index, "mockType", e.target.value)
@@ -1007,6 +1037,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                         </td>
                         <td className="p-1 border border-gray-300">
                           <select
+                            aria-label="Test type"
                             value={item.testType}
                             onChange={(e) =>
                               updateItem(index, "testType", e.target.value)
@@ -1034,6 +1065,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                         </td>
                         <td className="p-1 border border-gray-300">
                           <select
+                            aria-label="Test system"
                             value={item.testSystem}
                             onChange={(e) =>
                               updateItem(index, "testSystem", e.target.value)
@@ -1054,6 +1086,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                         </td>
                         <td className="p-1 border border-gray-300">
                           <input
+                            aria-label="Mock name"
                             type="text"
                             value={item.mock}
                             onChange={(e) =>
@@ -1065,6 +1098,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                         </td>
                         <td className="p-1 border border-gray-300">
                           <input
+                            aria-label="Transaction ID"
                             type="text"
                             value={item.transactionId}
                             onChange={(e) =>
@@ -1080,6 +1114,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
                         </td>
                         <td className="p-1 border border-gray-300">
                           <select
+                            aria-label="MR validation duration"
                             value={item.mrValidation}
                             onChange={(e) =>
                               updateItem(

@@ -2,7 +2,7 @@
 
 import CourseCard from "@/components/courseCard";
 import { Course } from "@/app/types";
-import useUser from "@/app/helpers/getme";
+import useUser from "@/hooks/useUser";
 import { motion } from "framer-motion";
 
 type Mock = {

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import GetMe from "@/app/helpers/getme"; // Adjust if necessary
+import GetMe from "@/hooks/useUser";
 
 const CoursesPage = ({ params }: { params: { contact: string } }) => {
   const user = GetMe();
@@ -138,13 +138,13 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
           <ul className="list-disc list-inside ml-3 sm:ml-3 space-y-2 sm:space-y-2">
             <li>Make sure the details you provided during booking (name, ID, etc.) match exactly with your identification documents.</li>
             <li>Arrive on time to avoid any issues. Failure to comply with the rules may result in automatic cancellation of your mock test.</li>
-            <p>We’re excited to be a part of your test preparation and are here to support you every step of the way. If you have any questions or need assistance, feel free to contact our support team or visit the Luminedge office. Good luck with your mock test! Thank you once again for choosing Luminedge to help you achieve your goals.</p>
           </ul>
+          <p className="mt-2">We&apos;re excited to be a part of your test preparation and are here to support you every step of the way. If you have any questions or need assistance, feel free to contact our support team or visit the Luminedge office.</p>
         </div>
         <p><strong>Good luck with your mock test! Thank you once again for choosing Luminedge to help you achieve your goals.</strong></p>
                    {/* Emergency Contact Information */}         
                    <div className="w-full max-w-5xl bg-transparent  p-2">
-        <h1 className="text-xl font-semibold text-center" style={{ color: "#face39" }}>
+        <h1 className="text-xl font-semibold text-center text-[#face39]">
           {isMobile ? "Emergency Contact Info" : "Emergency Contact Information:"}
         </h1>
         <p className="text-center mt-o mb-2">

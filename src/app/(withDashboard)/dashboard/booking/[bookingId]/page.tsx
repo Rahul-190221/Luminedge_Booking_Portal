@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import "./calendarStyles.css";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 
 // --- Types ---
 type ValuePiece = Date | null;
@@ -40,6 +41,10 @@ type Booking = {
   scheduleId?: string;
   bookingDate: string;
 };
+
+const authHeader = () => ({
+  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+});
 
 // --- Component ---
 const BookingId = ({ params }: { params: { bookingId: string } }) => {
@@ -101,48 +106,10 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     return false;
   }, [isHome, isCenter, isPaper, selectedSlotId, scheduleId, value]);
 
-  // ---- Available dates for the visible month (skip Home mode entirely)
-  const fetchAvailableDatesForMonth = async (year: number, month: number) => {
-    if (isHome) {
-      setAvailableDates([]);
-      return;
-    }
-    try {
-      const { data: allSchedules } = await axios.get(
-        "https://luminedge-server.vercel.app/api/v1/admin/get-schedules"
-      );
-      const today = new Date();
-
-      const filtered = (allSchedules || []).filter((schedule: any) => {
-        const date = new Date(schedule.startDate);
-
-        if (
-          schedule.courseId !== params.bookingId ||
-          schedule.status !== "Scheduled" ||
-          date.getFullYear() !== year ||
-          date.getMonth() !== month ||
-          date < today
-        )
-          return false;
-
-        if (courseName === "IELTS") {
-          return userTestType === schedule.testType;
-        }
-        // Non-IELTS: Only computer-based at Test Center uses Computer-Based schedules
-        return (
-          userTestType === "Computer-Based" &&
-          selectedLocation === "Test Center" &&
-          schedule.testType === "Computer-Based"
-        );
-      });
-
-      const dates = filtered.map((s: any) =>
-        new Date(s.startDate).toDateString()
-      );
-      setAvailableDates(dates);
-    } catch (error) {
-      console.error("Error fetching available dates", error);
-    }
+  // Available date highlighting requires an admin endpoint not accessible to regular users.
+  // Per-date slot fetching still works when a date is selected.
+  const fetchAvailableDatesForMonth = (_year: number, _month: number) => {
+    setAvailableDates([]);
   };
 
   // ---- Load user (matches backend: GET /api/v1/user/:userId ; there is NO GET /user/status/:id)
@@ -153,7 +120,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       setUserId(id);
 
       try {
-        const res = await axios.get(`https://luminedge-server.vercel.app/api/v1/user/${id}`);
+        const res = await axios.get(`${API_BASE}/api/v1/user/${id}`, { headers: authHeader() });
         const data = res.data;
 
         const mocks = data?.mocks || [];
@@ -182,7 +149,8 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
         // user bookings (matches backend: GET /api/v1/user/bookings/:userId)
         const bookingsRes = await axios.get(
-          `https://luminedge-server.vercel.app/api/v1/user/bookings/${id}`
+          `${API_BASE}/api/v1/user/bookings/${id}`,
+          { headers: authHeader() }
         );
         setExistingBookings(bookingsRes.data.bookings || []);
       } catch (error: any) {
@@ -221,7 +189,8 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         const formattedDate = selectedDate.toLocaleDateString("en-CA");
 
         const response = await axios.get(
-          `https://luminedge-server.vercel.app/api/v1/schedule/${formattedDate}/${params.bookingId}`
+          `${API_BASE}/api/v1/schedule/${formattedDate}/${params.bookingId}`,
+          { headers: authHeader() }
         );
 
         setScheduleData(response?.data?.schedules || []);
@@ -314,14 +283,15 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       }
 
       try {
-        await axios.post(`https://luminedge-server.vercel.app/api/v1/user/book-slot`, {
+        await axios.post(`${API_BASE}/api/v1/user/book-slot`, {
           ...bookingPayload,
           testTime: selectedSlotId,
-        });
+        }, { headers: authHeader() });
 
         if (oldBookingId) {
           await axios.delete(
-            `https://luminedge-server.vercel.app/api/v1/bookings/${oldBookingId}`
+            `${API_BASE}/api/v1/bookings/${oldBookingId}`,
+            { headers: authHeader() }
           );
           toast.success("Rescheduled successfully! 🎯");
         } else {
@@ -341,12 +311,13 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         ) {
           try {
             await axios.delete(
-              `https://luminedge-server.vercel.app/api/v1/bookings/${oldBookingId}`
+              `${API_BASE}/api/v1/bookings/${oldBookingId}`,
+              { headers: authHeader() }
             );
-            await axios.post(`https://luminedge-server.vercel.app/api/v1/user/book-slot`, {
+            await axios.post(`${API_BASE}/api/v1/user/book-slot`, {
               ...bookingPayload,
               testTime: selectedSlotId,
-            });
+            }, { headers: authHeader() });
 
             toast.success("Rescheduled successfully after adjusting mocks! 🎯");
             await new Promise((r) => setTimeout(r, 1200));
@@ -392,14 +363,14 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       }
 
       // Backend requires testSystem if the selection was shown (IELTS branch handled above)
-      await axios.post(`https://luminedge-server.vercel.app/api/v1/user/book-slot`, {
+      await axios.post(`${API_BASE}/api/v1/user/book-slot`, {
         ...bookingPayload,
         scheduleId,
         slotId: selectedSlotId,
-      });
+      }, { headers: authHeader() });
 
       if (oldBookingId) {
-        await axios.delete(`https://luminedge-server.vercel.app/api/v1/bookings/${oldBookingId}`);
+        await axios.delete(`${API_BASE}/api/v1/bookings/${oldBookingId}`, { headers: authHeader() });
         toast.success("Rescheduled successfully! 🎯");
       } else {
         toast.success("Test Center booking successful! 🏢");
@@ -418,13 +389,14 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       ) {
         try {
           await axios.delete(
-            `https://luminedge-server.vercel.app/api/v1/bookings/${oldBookingId}`
+            `${API_BASE}/api/v1/bookings/${oldBookingId}`,
+            { headers: authHeader() }
           );
-          await axios.post(`https://luminedge-server.vercel.app/api/v1/user/book-slot`, {
+          await axios.post(`${API_BASE}/api/v1/user/book-slot`, {
             ...bookingPayload,
             scheduleId,
             slotId: selectedSlotId,
-          });
+          }, { headers: authHeader() });
 
           toast.success("Rescheduled successfully after adjusting mocks! 🎯");
           await new Promise((r) => setTimeout(r, 1200));
@@ -492,6 +464,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
                       className="select select-bordered bg-[#FACE39] text-[#00000f] w-full"
                       value={userTestType || ""}
                       onChange={(e) => setUserTestType(e.target.value)}
+                      aria-label="Test type"
                     >
                       <option value="">Select Test Type</option>
                       {uniqueTestTypes.map((type) => (
@@ -508,6 +481,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
                       className="select select-bordered bg-[#FACE39] text-[#00000f] w-full appearance-none pointer-events-none"
                       defaultValue={userTestType || ""}
                       aria-readonly="true"
+                      aria-label="Test type"
                     >
                       <option value={userTestType || ""}>
                         {userTestType || "N/A"}
@@ -522,6 +496,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
                 className="select select-bordered bg-[#FACE39] text-[#00000f] w-full appearance-none pointer-events-none"
                 defaultValue={userTestType || ""}
                 aria-readonly="true"
+                aria-label="Test type"
               >
                 <option value={userTestType || ""}>{userTestType || "N/A"}</option>
               </select>

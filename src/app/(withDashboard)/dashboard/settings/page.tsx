@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE } from "@/lib/config";
 import { jwtDecode } from "jwt-decode";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
@@ -63,8 +64,10 @@ const SettingsPage = () => {
     try {
       setLoading(true);
       const userId = getUserIdFromToken();
-      const profileRes = await axios.get(`https://luminedge-server.vercel.app/api/v1/profile/${userId}`);
-      const mockRes = await axios.get(`https://luminedge-server.vercel.app/api/v1/user/${userId}`);
+      const token = localStorage.getItem("accessToken");
+      const headers = { Authorization: `Bearer ${token}` };
+      const profileRes = await axios.get(`${API_BASE}/api/v1/profile/${userId}`, { headers });
+      const mockRes = await axios.get(`${API_BASE}/api/v1/user/${userId}`, { headers });
 
       const user = {
         ...mockRes.data.user,
@@ -104,10 +107,10 @@ const SettingsPage = () => {
         return;
       }
 
-      const res = await axios.post("https://luminedge-server.vercel.app/api/v1/user/request-profile-edit", {
-        userId,
-        note: requestNote,
-      });
+      const res = await axios.post(`${API_BASE}/api/v1/user/request-profile-edit`,
+        { userId, note: requestNote },
+        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
+      );
 
       if (res.data.success) {
         toast.success("Edit request sent");
@@ -135,7 +138,7 @@ const SettingsPage = () => {
         <form onSubmit={(e) => e.preventDefault()} className="space-y-2">
           {["name", "email", "phone", "passportId", "transactionId"].map((field) => (
             <div key={field}>
-              <label htmlFor={field} className="block text-sm font-medium" style={{ color: "#00000f" }}>
+              <label htmlFor={field} className="block text-sm font-medium text-brand-dark">
               {field.charAt(0).toUpperCase() + field.slice(1)}
               </label>
               <input
@@ -151,7 +154,7 @@ const SettingsPage = () => {
 
 {!editRequested ? (
   <>
-    <label htmlFor="requestNote" className="block text-sm font-medium" style={{ color: "#00000f" }}>
+    <label htmlFor="requestNote" className="block text-sm font-medium text-brand-dark">
       Reason for Profile Change:
     </label>
     <textarea

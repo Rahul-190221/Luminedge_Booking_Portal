@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE } from "@/lib/config";
 
 const CashMemoPage = () => {
   const [memoData, setMemoData] = useState({
@@ -21,7 +22,11 @@ const CashMemoPage = () => {
     const generateMemoNumber = async () => {
       const year = new Date().getFullYear();
       try {
-        const { data } = await axios.get("https://luminedge-server.vercel.app/api/v1/admin/cash-memos/count");
+        const { data } = await axios.get(`${API_BASE}/api/v1/admin/cash-memos/count`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        });
         const count = data.count || 0;
         const next = (count + 1).toString().padStart(4, "0");
         setMemoData((prev) => ({ ...prev, memoNumber: `CM-${year}-${next}` }));
@@ -49,13 +54,13 @@ const CashMemoPage = () => {
     }
   
     try {
-      const res = await axios.post("https://luminedge-server.vercel.app/api/v1/admin/save-cash-memo", memoData, {
+      const res = await axios.post(`${API_BASE}/api/v1/admin/save-cash-memo`, memoData, {
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         }
       });
       alert("✅ Memo saved & emailed successfully");
-      console.log("Response:", res.data);
     } catch (err: any) {
       console.error("❌ Failed to save memo:", err.response?.data || err.message);
       alert("❌ Failed to save memo. Check input and try again.");
@@ -71,6 +76,7 @@ const CashMemoPage = () => {
           <div>
             <label className="block font-medium text-gray-700">Memo Number</label>
             <input
+              aria-label="Memo number"
               name="memoNumber"
               value={memoData.memoNumber}
               disabled
@@ -81,6 +87,7 @@ const CashMemoPage = () => {
           <div>
             <label className="block font-medium text-gray-700">Date</label>
             <input
+              aria-label="Date"
               type="date"
               name="date"
               value={memoData.date}
@@ -93,6 +100,7 @@ const CashMemoPage = () => {
           <div className="col-span-2">
             <label className="block font-medium text-gray-700">Candidate Name</label>
             <input
+              aria-label="Candidate name"
               name="candidateName"
               value={memoData.candidateName}
               onChange={handleChange}
@@ -104,6 +112,7 @@ const CashMemoPage = () => {
           <div className="col-span-2">
             <label className="block font-medium text-gray-700">Candidate Email</label>
             <input
+              aria-label="Candidate email"
               name="candidateEmail"
               value={memoData.candidateEmail}
               onChange={handleChange}
@@ -127,6 +136,7 @@ const CashMemoPage = () => {
           <div>
             <label className="block font-medium text-gray-700">Amount Paid (₹)</label>
             <input
+              aria-label="Amount paid"
               type="number"
               name="amountPaid"
               value={memoData.amountPaid}
@@ -139,6 +149,7 @@ const CashMemoPage = () => {
           <div>
             <label className="block font-medium text-gray-700">Payment Mode</label>
             <select
+              aria-label="Payment mode"
               name="paymentMode"
               value={memoData.paymentMode}
               onChange={handleChange}
@@ -156,6 +167,7 @@ const CashMemoPage = () => {
           <div>
             <label className="block font-medium text-gray-700">Issued By</label>
             <input
+              aria-label="Issued by"
               name="issuedBy"
               value={memoData.issuedBy}
               onChange={handleChange}
@@ -166,6 +178,7 @@ const CashMemoPage = () => {
           <div className="col-span-2">
             <label className="block font-medium text-gray-700">Remarks</label>
             <input
+              aria-label="Remarks"
               name="remarks"
               value={memoData.remarks}
               onChange={handleChange}
@@ -189,7 +202,7 @@ const CashMemoPage = () => {
       <span className="text-gray-600">Memo: {memoData.memoNumber}</span>
 
       <a
-        href={`https://luminedge-server.vercel.app/api/v1/admin/cash-memo/${memoData.memoNumber}/pdf`}
+        href={`${API_BASE}/api/v1/admin/cash-memo/${memoData.memoNumber}/pdf`}
         download={`${memoData.memoNumber}.pdf`}
         target="_blank"
         rel="noopener noreferrer"
@@ -201,7 +214,7 @@ const CashMemoPage = () => {
 
     <iframe
       title="Memo PDF Preview"
-      src={`https://luminedge-server.vercel.app/api/v1/admin/cash-memo/${memoData.memoNumber}/pdf`}
+      src={`${API_BASE}/api/v1/admin/cash-memo/${memoData.memoNumber}/pdf`}
       className="w-full h-[500px] border"
     ></iframe>
   </div>
