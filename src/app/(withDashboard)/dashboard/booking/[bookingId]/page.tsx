@@ -64,6 +64,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     { mockType: string; mock: number; testType?: string; testSystem?: string }[]
   >([]);
   const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -106,10 +107,36 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     return false;
   }, [isHome, isCenter, isPaper, selectedSlotId, scheduleId, value]);
 
-  // Available date highlighting requires an admin endpoint not accessible to regular users.
-  // Per-date slot fetching still works when a date is selected.
-  const fetchAvailableDatesForMonth = (_year: number, _month: number) => {
-    setAvailableDates([]);
+  useEffect(() => { setMounted(true); }, []);
+
+  const fetchAvailableDatesForMonth = async (year: number, month: number) => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/v1/admin/get-schedules`, {
+        headers: authHeader(),
+      });
+      const raw: any[] = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data?.schedules)
+        ? res.data.schedules
+        : [];
+
+      const dates = raw
+        .filter((s: any) => {
+          if (!s?.startDate) return false;
+          const matchesCourse =
+            s.courseId === params.bookingId ||
+            s.name === courseName ||
+            s.courseName === courseName;
+          if (!matchesCourse) return false;
+          const d = new Date(s.startDate);
+          return d.getFullYear() === year && d.getMonth() === month;
+        })
+        .map((s: any) => new Date(s.startDate).toDateString());
+
+      setAvailableDates(Array.from(new Set(dates)));
+    } catch {
+      setAvailableDates([]);
+    }
   };
 
   // ---- Load user (matches backend: GET /api/v1/user/:userId ; there is NO GET /user/status/:id)
@@ -168,21 +195,25 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     fetchUser();
   }, [courseName]);
 
-  // initial available dates for current month (skip Home)
+  // initial available dates for current month
   useEffect(() => {
+    if (isHome) { setAvailableDates([]); return; }
     const now = new Date();
-    fetchAvailableDatesForMonth(now.getFullYear(), now.getMonth());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.bookingId, selectedLocation, userTestType]);
+    void fetchAvailableDatesForMonth(now.getFullYear(), now.getMonth());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.bookingId, isHome]);
 
   // fetch per-day schedules (NOT for Home; backend has no /schedule/Home/:courseId)
   useEffect(() => {
     if (!(value instanceof Date)) return;
-
+    if (!userTestType || userTestType === "N/A") return; // wait for user data
     if (isHome) {
-      setScheduleData([]); // Home never uses schedules
+      setScheduleData([]);
       return;
     }
+    if (isComputer && !selectedLocation) return; // wait for location selection
+
+    const controller = new AbortController();
 
     const fetchScheduleData = async (selectedDate: Date) => {
       try {
@@ -190,18 +221,21 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
         const response = await axios.get(
           `${API_BASE}/api/v1/schedule/${formattedDate}/${params.bookingId}`,
-          { headers: authHeader() }
+          { headers: authHeader(), signal: controller.signal }
         );
 
         setScheduleData(response?.data?.schedules || []);
-      } catch (error) {
-        console.error("Error fetching schedule data:", error);
-        setScheduleData([]);
+      } catch (error: any) {
+        if (!axios.isCancel(error)) {
+          console.error("Error fetching schedule data:", error);
+          setScheduleData([]);
+        }
       }
     };
 
     fetchScheduleData(value);
-  }, [value, isHome, params.bookingId]);
+    return () => controller.abort();
+  }, [value, isHome, isComputer, selectedLocation, userTestType, params.bookingId]);
 
   const handleSlotSelect = (slotId: string, scheduleId: string, testType: string) => {
     setSelectedSlotId(slotId);
@@ -605,28 +639,30 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 mt-2 gap-14 mx-auto">
             {/* Calendar */}
             <div className="w-full max-w-md mx-auto rounded-lg shadow border border-gray-200 p-8 pb-0 bg-white ">
-              <Calendar
-                onChange={onChange}
-                value={value}
-                minDate={new Date()}
-                onActiveStartDateChange={({ activeStartDate }) => {
-                  if (!activeStartDate) return;
-                  if (isHome) return; // no month fetch for Home mode
-                  const d = activeStartDate as Date;
-                  fetchAvailableDatesForMonth(d.getFullYear(), d.getMonth());
-                }}
-                tileClassName={({ date, view }) => {
-                  if (view !== "month") return null;
+              {mounted && (
+                <Calendar
+                  onChange={onChange}
+                  value={value}
+                  minDate={new Date()}
+                  onActiveStartDateChange={({ activeStartDate }) => {
+                    if (!activeStartDate) return;
+                    if (isHome) { setAvailableDates([]); return; }
+                    const d = activeStartDate as Date;
+                    void fetchAvailableDatesForMonth(d.getFullYear(), d.getMonth());
+                  }}
+                  tileClassName={({ date, view }) => {
+                    if (view !== "month") return null;
 
-                  const dateStr = date.toDateString();
-                  const selectedStr =
-                    value instanceof Date ? value.toDateString() : "";
+                    const dateStr = date.toDateString();
+                    const selectedStr =
+                      value instanceof Date ? value.toDateString() : "";
 
-                  if (dateStr === selectedStr) return "selected-date";
-                  if (availableDates.includes(dateStr)) return "available-date";
-                  return null;
-                }}
-              />
+                    if (dateStr === selectedStr) return "selected-date";
+                    if (availableDates.includes(dateStr)) return "available-date";
+                    return null;
+                  }}
+                />
+              )}
 
               {/* Legend for Test Center / Paper */}
               {(userTestType === "Paper-Based" ||
@@ -741,6 +777,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         {/* Proceed Button */}
         <div className="w-full flex justify-end mt-6 mb-4">
           <button
+            type="button"
             disabled={!canProceed}
             onClick={handleProceed}
             className={`

@@ -40,8 +40,10 @@ const LoginPage = () => {
         toast.success("Successfully logged in");
         localStorage.setItem("accessToken", response.accessToken);
 
-        const userData = getUserIdFromToken(); // Get user details from token
-        setUser(userData); // Store the user details in the state
+        const userData = getUserIdFromToken();
+        setUser(userData);
+      } else if (response.error) {
+        toast.error(response.error);
       } else {
         toast.error("Invalid email or password");
       }
