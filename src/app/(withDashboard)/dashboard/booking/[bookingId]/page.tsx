@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import "./calendarStyles.css";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
+import { homeBasedCourses } from "@/lib/courseConfig";
 
 // --- Types ---
 type ValuePiece = Date | null;
@@ -88,6 +89,8 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
   // --- helpers ---
   const isComputer = userTestType === "Computer-Based";
+  // Home is a course-level policy (see homeBasedCourses); GRE/TOEFL are excluded.
+  const isHomeEligibleCourse = homeBasedCourses[courseName] === true;
   const isHome = isComputer && selectedLocation === "Home";
   const isCenter = isComputer && selectedLocation === "Test Center";
   const isPaper = userTestType !== "Computer-Based";
@@ -105,6 +108,15 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   }, [isHome, isCenter, isPaper, selectedSlotId, scheduleId, value]);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // For a Computer-Based course that isn't Home-eligible, Test Center is the only
+  // real choice — auto-select it so the calendar appears without a one-option
+  // dropdown, and so the "Home" branch can never be reached for these courses.
+  useEffect(() => {
+    if (isComputer && !isHomeEligibleCourse && selectedLocation !== "Test Center") {
+      setSelectedLocation("Test Center");
+    }
+  }, [isComputer, isHomeEligibleCourse, selectedLocation]);
 
   // Highlight which days of the visible month have schedules for this course.
   // Uses the PUBLIC course-schedules endpoint (same auth as the per-day route,
@@ -255,6 +267,13 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
     if (userTestType === "Computer-Based" && !selectedLocation) {
       toast.error("Please select a location (Home or Test Center).");
+      return;
+    }
+
+    // Course-level guard: block a stale/forced Home selection for courses that
+    // are not Home-eligible (defense-in-depth; the UI already hides the option).
+    if (selectedLocation === "Home" && !(isComputer && isHomeEligibleCourse)) {
+      toast.error("Home-Based testing is not available for this course.");
       return;
     }
 
@@ -607,7 +626,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
                 <option value="" disabled>
                   Select Location
                 </option>
-                <option value="Home">Home</option>
+                {isHomeEligibleCourse && <option value="Home">Home</option>}
                 <option value="Test Center">Test Center</option>
               </select>
             </div>
