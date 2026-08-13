@@ -12,3 +12,13 @@ export const courseDescriptions: Record<string, string> = {
   GRE: "Book Your GRE General Mock Test – Ace Your Preparation!",
   TOEFL: "Book Your TOEFL iBT Mock Test – Get Ready to Succeed!",
 };
+
+// Courses that may be booked as a Home-Based test. Combined with the user's
+// Computer-Based mock check at booking time (both must hold): Home is allowed
+// iff the mock is Computer-Based AND the course is flagged true here.
+export const homeBasedCourses: Record<string, boolean> = {
+  IELTS: true,
+  "Pearson PTE": true,
+  GRE: false,
+  TOEFL: false,
+};
