@@ -1,6 +1,7 @@
 "use client";
 
 import axios from "axios";
+import http from "@/lib/http";
 import { useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import { API_BASE as _API_BASE } from "@/lib/config";
@@ -151,48 +152,30 @@ const AnalysisPage = () => {
           monthlyRes,
           bookingsRes,
         ] = await Promise.all([
-          axios.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
+          http.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
             params: { role: "user" },
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
           }),
-          axios.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
+          http.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
             params: { role: "user", from: todayStr, to: todayStr },
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
           }),
-          axios.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
+          http.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
             params: {
               role: "user",
               from: monthRange.from,
               to: monthRange.to,
             },
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
           }),
-          axios.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
+          http.get(`${API_BASE}/admin/stats/users/mock-types/range`, {
             params: {
               role: "user",
               from: yearRange.from,
               to: yearRange.to,
             },
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
           }),
-          axios.get(`${API_BASE}/admin/stats/users/mock-types/monthly`, {
+          http.get(`${API_BASE}/admin/stats/users/mock-types/monthly`, {
             params: { role: "user" },
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
           }),
-          axios.get(`${API_BASE}/admin/stats/bookings/attendance`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
+          http.get(`${API_BASE}/admin/stats/bookings/attendance`, {
           }),
         ]);
 
@@ -308,13 +291,10 @@ const AnalysisPage = () => {
     try {
       const from = bdYMD(startDate);
       const to = bdYMD(endDate);
-      const { data } = await axios.get(
+      const { data } = await http.get(
         `${API_BASE}/admin/stats/users/mock-types/range`,
         {
           params: { role: "user", from, to },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
       const map = buildMockTypeMap(data?.byMockType || []);
@@ -331,13 +311,10 @@ const AnalysisPage = () => {
     if (!todayStatDate) return;
     try {
       const day = bdYMD(todayStatDate);
-      const { data } = await axios.get(
+      const { data } = await http.get(
         `${API_BASE}/admin/stats/users/mock-types/range`,
         {
           params: { role: "user", from: day, to: day },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
       const map = buildMockTypeMap(data?.byMockType || []);
@@ -354,16 +331,13 @@ const AnalysisPage = () => {
     if (!searchMonthDate) return;
     try {
       const range = getMonthRangeYMD(searchMonthDate);
-      const { data } = await axios.get(
+      const { data } = await http.get(
         `${API_BASE}/admin/stats/users/mock-types/range`,
         {
           params: {
             role: "user",
             from: range.from,
             to: range.to,
-          },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );
@@ -378,16 +352,13 @@ const AnalysisPage = () => {
     if (!searchYearDate) return;
     try {
       const range = getYearRangeYMD(searchYearDate);
-      const { data } = await axios.get(
+      const { data } = await http.get(
         `${API_BASE}/admin/stats/users/mock-types/range`,
         {
           params: {
             role: "user",
             from: range.from,
             to: range.to,
-          },
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );

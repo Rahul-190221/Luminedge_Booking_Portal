@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import http from "@/lib/http";
 import { API_BASE } from "@/lib/config";
 
 const CashMemoPage = () => {
@@ -22,10 +22,7 @@ const CashMemoPage = () => {
     const generateMemoNumber = async () => {
       const year = new Date().getFullYear();
       try {
-        const { data } = await axios.get(`${API_BASE}/api/v1/admin/cash-memos/count`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
+        const { data } = await http.get(`${API_BASE}/api/v1/admin/cash-memos/count`, {
         });
         const count = data.count || 0;
         const next = (count + 1).toString().padStart(4, "0");
@@ -54,10 +51,9 @@ const CashMemoPage = () => {
     }
   
     try {
-      const res = await axios.post(`${API_BASE}/api/v1/admin/save-cash-memo`, memoData, {
+      const res = await http.post(`${API_BASE}/api/v1/admin/save-cash-memo`, memoData, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
         }
       });
       alert("✅ Memo saved & emailed successfully");

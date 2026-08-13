@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
+import { authFetch } from "@/lib/http";
 
 // ---------- Types ----------
 type TimeSlot = {
@@ -106,10 +107,7 @@ function TrfAvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const token = localStorage.getItem("accessToken");
-      const response = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await authFetch(`${API_BASE}/api/v1/admin/get-schedules`);
       const json = await response.json();
       const raw = Array.isArray(json) ? json : Array.isArray(json?.schedules) ? json.schedules : [];
       const cleaned = raw.filter(isScheduleLike);

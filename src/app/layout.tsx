@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import axios from "axios";
+import Cookies from "js-cookie";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
@@ -11,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   useEffect(() => {
-    const id = axios.interceptors.request.use((config) => {
+    const reqId = axios.interceptors.request.use((config) => {
       const token = localStorage.getItem("accessToken");
       if (token) {
         config.headers = config.headers ?? {};
@@ -19,7 +20,28 @@ export default function RootLayout({
       }
       return config;
     });
-    return () => axios.interceptors.request.eject(id);
+
+    // Catch expired/invalid sessions mid-flight: clear creds and bounce to login.
+    const resId = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (
+          error?.response?.status === 401 &&
+          typeof window !== "undefined" &&
+          window.location.pathname !== "/login"
+        ) {
+          localStorage.removeItem("accessToken");
+          Cookies.remove("accessToken");
+          window.location.href = "/login";
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.request.eject(reqId);
+      axios.interceptors.response.eject(resId);
+    };
   }, []);
 
   return (

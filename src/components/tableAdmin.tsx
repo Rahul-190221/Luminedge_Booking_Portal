@@ -1,6 +1,5 @@
 "use client";
-import { updateMockNumber } from "@/app/utils/actions/mockUpdate";
-import axios from "axios";
+import http from "@/lib/http";
 import { API_BASE } from "@/lib/config";
 import { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
@@ -248,11 +247,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
 
   const fetchUserMockData = async (userId: string) => {
     try {
-      const response = await axios.get(`${API_BASE}/api/v1/user/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+      const response = await http.get(`${API_BASE}/api/v1/user/${userId}`);
       if (response.status === 200 && response.data.success) {
         setSubmittedItems(response.data.mocks || []);
         setLastMock(response.data.lastMock || null);
@@ -321,12 +316,8 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
 
     const newStatus = user.isDeleted ? "active" : "blocked";
     try {
-      await axios.put(`${API_BASE}/api/v1/user/block/${userId}`, {
+      await http.put(`${API_BASE}/api/v1/user/block/${userId}`, {
         isDeleted: !user.isDeleted,
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
       });
       setUsers((prevUsers) =>
         prevUsers.map((u) =>
@@ -342,12 +333,8 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
 
   const onChangeStatus = async (_id: string, value: string) => {
     try {
-      const response = await axios.put(`${API_BASE}/api/v1/user/status/${_id}`, {
+      const response = await http.put(`${API_BASE}/api/v1/user/status/${_id}`, {
         status: value,
-      }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
       });
 
       if (response.status === 200) {
@@ -409,7 +396,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
 
     if (newItems.length > 0) {
       try {
-        const response = await axios.put(
+        const response = await http.put(
           `${API_BASE}/api/v1/user/update-multiple/${selectedUser._id}`,
           {
             mocks: newItems.map((item) => ({
@@ -417,11 +404,6 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
               mrValidationExpiry: getFutureISODate(item.mrValidation),
               mrValidation: item.mrValidation,
             })),
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
           }
         );
         if (response.data.success) {
@@ -463,14 +445,9 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
           transactionId: edited.transactionId.trim(),
         };
 
-        const res = await axios.put(
+        const res = await http.put(
           `${API_BASE}/api/v1/user/update-one/${selectedUser._id}`,
-          payload,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
+          payload
         );
 
         if (res.data.success) {

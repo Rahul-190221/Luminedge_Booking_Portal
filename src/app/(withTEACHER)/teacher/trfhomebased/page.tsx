@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import axios from "axios";
+import http from "@/lib/http";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -63,10 +63,7 @@ export default function HomeBasedPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem("accessToken");
-      const response = await axios.get(`${API_BASE}/api/v1/admin/bookings/home-with-users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await http.get(`${API_BASE}/api/v1/admin/bookings/home-with-users`);
       let homeBookings = response.data.bookings;
 
       homeBookings = homeBookings.filter((booking: Booking) => booking.name === "IELTS");

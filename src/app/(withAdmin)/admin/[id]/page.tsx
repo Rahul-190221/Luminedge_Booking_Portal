@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import http from "@/lib/http";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -51,11 +52,8 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   if (need.size === 0) return [];
 
   // First page (role=user to reduce data size)
-  const first = await axios.get(`${API}/api/v1/admin/users`, {
+  const first = await http.get(`${API}/api/v1/admin/users`, {
     params: { page: 1, limit: requestedPageSize, role: "user" },
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-    },
   });
 
   const firstPageUsers: any[] = first.data?.users || [];
@@ -76,11 +74,8 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   const totalPages = Math.max(1, Math.ceil(total / serverLimit));
 
   for (let page = 2; page <= totalPages && found.size < need.size; page++) {
-    const pageRes = await axios.get(`${API}/api/v1/admin/users`, {
+    const pageRes = await http.get(`${API}/api/v1/admin/users`, {
       params: { page, limit: serverLimit, role: "user" },
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
     });
     ingest(pageRes.data?.users || []);
   }
@@ -119,14 +114,11 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       setLoading(true);
 
       // 1) Bookings for this schedule
-      const { data } = await axios.get(
+      const { data } = await http.get(
         `${API}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
         {
           params: { page: 1, limit: 500 },
           signal,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
       const filteredBookings: Booking[] = data?.bookings || [];
@@ -178,13 +170,12 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
       // Bulk attendance summary
       try {
-        const { data: attRes } = await axios.post(
+        const { data: attRes } = await http.post(
           `${API}/api/v1/user/attendance/bulk`,
           { userIds },
           {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
             signal,
           }
@@ -224,7 +215,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       }
 
       const status = attendanceValue === "present" ? "Present" : "Absent";
-      const response = await axios.put(
+      const response = await http.put(
         `${API}/api/v1/user/bookings/${scheduleId}`,
         {
           userId,
@@ -232,9 +223,6 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
           status,
         },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
 
@@ -508,15 +496,12 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
         return;
       }
 
-      const response = await axios.post(
+      const response = await http.post(
         `${API}/api/v1/send-reminder`,
         {
           emails: emailData,
         },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
       if (response.status === 200) {

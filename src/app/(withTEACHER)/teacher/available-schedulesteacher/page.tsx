@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
+import { authFetch } from "@/lib/http";
 
 type Schedule = {
   [x: string]: any;
@@ -44,9 +45,8 @@ function AvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
+      const response = await authFetch(`${API_BASE}/api/v1/admin/get-schedules`, {
         cache: "no-store",
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
       });
       const json = await response.json();
       const raw = Array.isArray(json) ? json : Array.isArray(json?.schedules) ? json.schedules : [];

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
+import http from "@/lib/http";
 import { API_BASE } from "@/lib/config";
 import { jwtDecode } from "jwt-decode";
 import toast from "react-hot-toast";
@@ -64,10 +64,8 @@ const SettingsPage = () => {
     try {
       setLoading(true);
       const userId = getUserIdFromToken();
-      const token = localStorage.getItem("accessToken");
-      const headers = { Authorization: `Bearer ${token}` };
-      const profileRes = await axios.get(`${API_BASE}/api/v1/profile/${userId}`, { headers });
-      const mockRes = await axios.get(`${API_BASE}/api/v1/user/${userId}`, { headers });
+      const profileRes = await http.get(`${API_BASE}/api/v1/profile/${userId}`);
+      const mockRes = await http.get(`${API_BASE}/api/v1/user/${userId}`);
 
       const user = {
         ...mockRes.data.user,
@@ -107,9 +105,9 @@ const SettingsPage = () => {
         return;
       }
 
-      const res = await axios.post(`${API_BASE}/api/v1/user/request-profile-edit`,
+      const res = await http.post(`${API_BASE}/api/v1/user/request-profile-edit`,
         { userId, note: requestNote },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
+        { }
       );
 
       if (res.data.success) {

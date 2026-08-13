@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import axios from "axios";
+import http from "@/lib/http";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -207,14 +207,11 @@ export default function HomeBasedPage() {
     }
 
     try {
-      const res = await axios.put(`${API_BASE}/api/v1/admin/bookings/${bookingId}/teacher`, {
+      const res = await http.put(`${API_BASE}/api/v1/admin/bookings/${bookingId}/teacher`, {
         skill,
         teacher: newTeacher,
         email,
       }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
       });
 
       if (res.data?.success) {
@@ -903,12 +900,8 @@ async function cachedGet(url: string, opts?: { ttl?: number }): Promise<any> {
   const pending = __inflight.get(url);
   if (pending) return pending;
 
-  const p = axios
-    .get(url, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
-    })
+  const p = http
+    .get(url)
     .then((res) => {
       __dataCache.set(url, { ts: Date.now(), data: res.data });
       return res.data;

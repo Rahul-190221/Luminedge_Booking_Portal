@@ -2,6 +2,7 @@
 :root {
   --brand: #00000f;
   --accent: #FACE39;
+  --accent-tint: #FEF6D9; /* pale accent for available-date fill */
   --muted: #f3f4f6;  /* slate-100 */
   --muted-2: #e5e7eb; /* slate-200 */
   --text: #00000f;
@@ -22,7 +23,8 @@
 .react-calendar__navigation {
   margin-bottom: 0.75rem;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  /* prev2 + prev + label(span 3) + next + next2 = 7 column-units */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: .5rem;
 }
 .react-calendar__navigation__label {
@@ -103,7 +105,8 @@
 
 /* Available day (your custom class from tileClassName) */
 .available-date {
-  border: 1px solid var(--accent) !important;
+  border: 2px solid var(--accent) !important;
+  background: var(--accent-tint) !important;
   color: var(--brand) !important;
 }
 

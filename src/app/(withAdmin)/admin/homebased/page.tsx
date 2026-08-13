@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import axios from "axios";
+import http from "@/lib/http";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -63,12 +63,9 @@ export default function HomeBasedPage() {
     setError(null);
 
     try {
-      const response = await axios.get(
+      const response = await http.get(
         `${API}/api/v1/admin/bookings/home-with-users`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
       const homeBookings: Booking[] = response.data.bookings;
@@ -95,13 +92,12 @@ export default function HomeBasedPage() {
       const uniqueUserIds = Array.from(new Set(homeBookings.map(b => String(b.userId))));
       if (uniqueUserIds.length) {
         try {
-          const { data: attRes } = await axios.post(
+          const { data: attRes } = await http.post(
             `${API}/api/v1/user/attendance/bulk`,
             { userIds: uniqueUserIds },
             {
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
               },
             }
           );
@@ -144,7 +140,7 @@ export default function HomeBasedPage() {
 
       const status = attendanceValue === "present" ? "Present" : "Absent";
 
-      const response = await axios.put(
+      const response = await http.put(
         `${API}/api/v1/user/bookings/home`,
         {
           userId,
@@ -153,9 +149,6 @@ export default function HomeBasedPage() {
           bookingDate,
         },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
 
@@ -170,13 +163,12 @@ export default function HomeBasedPage() {
 
       // Optionally refresh Attend count for this user (keep UI in-sync)
       try {
-        const { data: attRes } = await axios.post(
+        const { data: attRes } = await http.post(
           `${API}/api/v1/user/attendance/bulk`,
           { userIds: [userId] },
           {
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
             },
           }
         );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import axios from "axios";
+import http from "@/lib/http";
 import { useSearchParams, useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/config";
 import { FaCheckCircle, FaSpinner, FaLock } from "react-icons/fa";
@@ -243,12 +243,9 @@ const TestReportForm = () => {
     const fetchStatus = async () => {
       if (!userId || !scheduleId) return;
       try {
-        const res = await axios.get(
+        const res = await http.get(
           `${API_BASE}/api/v1/admin/feedback-status/${userId}/${scheduleId}`,
           {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
           }
         );
         const status = res.data?.status || {};
@@ -536,10 +533,7 @@ useEffect(() => {
         payload.marks = marksValue;
       }
 
-      const res = await axios.post(`${API_BASE}/api/v1/admin/save-feedback`, payload, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
+      const res = await http.post(`${API_BASE}/api/v1/admin/save-feedback`, payload, {
       });
 
       if (res.data.success) {
@@ -593,7 +587,7 @@ useEffect(() => {
     try {
       setSaving(true);
 
-      const response = await axios.put(`${API_BASE}/api/v1/admin/save-admin-section`, {
+      const response = await http.put(`${API_BASE}/api/v1/admin/save-admin-section`, {
         userId,
         scheduleId,
         overall,
@@ -605,9 +599,6 @@ useEffect(() => {
         centreName,
         testDate,
       }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
       });
 
       if (response?.data?.success) {
@@ -644,12 +635,9 @@ useEffect(() => {
     const fetchAdminSection = async () => {
       if (!userId || !scheduleId) return;
       try {
-        const res = await axios.get(
+        const res = await http.get(
           `${API_BASE}/api/v1/admin/get-admin-section/${userId}/${scheduleId}`,
           {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
           }
         );
         const data = res.data || {};

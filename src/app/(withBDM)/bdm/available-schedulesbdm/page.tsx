@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
+import { authFetch } from "@/lib/http";
 
 // ===== Types that mirror your backend =====
 type TimeSlot = {
@@ -101,9 +102,8 @@ export default function AvailableSchedulesBDMPage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
+        const res = await authFetch(`${API_BASE}/api/v1/admin/get-schedules`, {
           cache: "no-store",
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();

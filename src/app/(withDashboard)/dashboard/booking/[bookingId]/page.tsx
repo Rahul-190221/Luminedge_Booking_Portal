@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import axios from "axios";
+import http from "@/lib/http";
 import { MdOutlinePersonOutline } from "react-icons/md";
 import { getUserIdOnlyFromToken } from "@/app/helpers/jwt";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -41,10 +42,6 @@ type Booking = {
   scheduleId?: string;
   bookingDate: string;
 };
-
-const authHeader = () => ({
-  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-});
 
 // --- Component ---
 const BookingId = ({ params }: { params: { bookingId: string } }) => {
@@ -109,11 +106,17 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Highlight which days of the visible month have schedules for this course.
+  // Uses the PUBLIC course-schedules endpoint (same auth as the per-day route,
+  // NOT the admin get-schedules route). Fails silently: until that backend
+  // route exists it just highlights nothing — no console noise.
   const fetchAvailableDatesForMonth = async (year: number, month: number) => {
     try {
-      const res = await axios.get(`${API_BASE}/api/v1/admin/get-schedules`, {
-        headers: authHeader(),
-      });
+      const monthParam = `${year}-${String(month + 1).padStart(2, "0")}`;
+      const res = await http.get(
+        `${API_BASE}/api/v1/schedule/course/${params.bookingId}`,
+        { params: { month: monthParam } }
+      );
       const raw: any[] = Array.isArray(res.data)
         ? res.data
         : Array.isArray(res.data?.schedules)
@@ -123,18 +126,19 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       const dates = raw
         .filter((s: any) => {
           if (!s?.startDate) return false;
-          const matchesCourse =
-            s.courseId === params.bookingId ||
-            s.name === courseName ||
-            s.courseName === courseName;
-          if (!matchesCourse) return false;
           const d = new Date(s.startDate);
           return d.getFullYear() === year && d.getMonth() === month;
         })
         .map((s: any) => new Date(s.startDate).toDateString());
 
       setAvailableDates(Array.from(new Set(dates)));
-    } catch {
+    } catch (error: any) {
+      // A 404 means the backend route isn't deployed yet → expected, stay quiet.
+      // Any other error is a real failure worth surfacing so a broken endpoint
+      // doesn't silently stop highlighting dates (matches fetchUser above).
+      if (!axios.isCancel(error) && error?.response?.status !== 404) {
+        console.error("Error fetching available dates for month:", error);
+      }
       setAvailableDates([]);
     }
   };
@@ -147,7 +151,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       setUserId(id);
 
       try {
-        const res = await axios.get(`${API_BASE}/api/v1/user/${id}`, { headers: authHeader() });
+        const res = await http.get(`${API_BASE}/api/v1/user/${id}`);
         const data = res.data;
 
         const mocks = data?.mocks || [];
@@ -175,9 +179,8 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         setUserStatus(data?.user?.status || null);
 
         // user bookings (matches backend: GET /api/v1/user/bookings/:userId)
-        const bookingsRes = await axios.get(
-          `${API_BASE}/api/v1/user/bookings/${id}`,
-          { headers: authHeader() }
+        const bookingsRes = await http.get(
+          `${API_BASE}/api/v1/user/bookings/${id}`
         );
         setExistingBookings(bookingsRes.data.bookings || []);
       } catch (error: any) {
@@ -195,7 +198,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     fetchUser();
   }, [courseName]);
 
-  // initial available dates for current month
+  // initial available dates for the current month (skip for Home bookings)
   useEffect(() => {
     if (isHome) { setAvailableDates([]); return; }
     const now = new Date();
@@ -219,9 +222,9 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       try {
         const formattedDate = selectedDate.toLocaleDateString("en-CA");
 
-        const response = await axios.get(
+        const response = await http.get(
           `${API_BASE}/api/v1/schedule/${formattedDate}/${params.bookingId}`,
-          { headers: authHeader(), signal: controller.signal }
+          { signal: controller.signal }
         );
 
         setScheduleData(response?.data?.schedules || []);
@@ -317,15 +320,14 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       }
 
       try {
-        await axios.post(`${API_BASE}/api/v1/user/book-slot`, {
+        await http.post(`${API_BASE}/api/v1/user/book-slot`, {
           ...bookingPayload,
           testTime: selectedSlotId,
-        }, { headers: authHeader() });
+        });
 
         if (oldBookingId) {
-          await axios.delete(
-            `${API_BASE}/api/v1/bookings/${oldBookingId}`,
-            { headers: authHeader() }
+          await http.delete(
+            `${API_BASE}/api/v1/bookings/${oldBookingId}`
           );
           toast.success("Rescheduled successfully! 🎯");
         } else {
@@ -344,14 +346,13 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
             errorMessage.includes("Insufficient mock"))
         ) {
           try {
-            await axios.delete(
-              `${API_BASE}/api/v1/bookings/${oldBookingId}`,
-              { headers: authHeader() }
+            await http.delete(
+              `${API_BASE}/api/v1/bookings/${oldBookingId}`
             );
-            await axios.post(`${API_BASE}/api/v1/user/book-slot`, {
+            await http.post(`${API_BASE}/api/v1/user/book-slot`, {
               ...bookingPayload,
               testTime: selectedSlotId,
-            }, { headers: authHeader() });
+            });
 
             toast.success("Rescheduled successfully after adjusting mocks! 🎯");
             await new Promise((r) => setTimeout(r, 1200));
@@ -397,14 +398,14 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       }
 
       // Backend requires testSystem if the selection was shown (IELTS branch handled above)
-      await axios.post(`${API_BASE}/api/v1/user/book-slot`, {
+      await http.post(`${API_BASE}/api/v1/user/book-slot`, {
         ...bookingPayload,
         scheduleId,
         slotId: selectedSlotId,
-      }, { headers: authHeader() });
+      });
 
       if (oldBookingId) {
-        await axios.delete(`${API_BASE}/api/v1/bookings/${oldBookingId}`, { headers: authHeader() });
+        await http.delete(`${API_BASE}/api/v1/bookings/${oldBookingId}`);
         toast.success("Rescheduled successfully! 🎯");
       } else {
         toast.success("Test Center booking successful! 🏢");
@@ -422,15 +423,14 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
           errorMessage.includes("Insufficient mock"))
       ) {
         try {
-          await axios.delete(
-            `${API_BASE}/api/v1/bookings/${oldBookingId}`,
-            { headers: authHeader() }
+          await http.delete(
+            `${API_BASE}/api/v1/bookings/${oldBookingId}`
           );
-          await axios.post(`${API_BASE}/api/v1/user/book-slot`, {
+          await http.post(`${API_BASE}/api/v1/user/book-slot`, {
             ...bookingPayload,
             scheduleId,
             slotId: selectedSlotId,
-          }, { headers: authHeader() });
+          });
 
           toast.success("Rescheduled successfully after adjusting mocks! 🎯");
           await new Promise((r) => setTimeout(r, 1200));
@@ -670,7 +670,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
                   selectedLocation === "Test Center")) && (
                 <div className="flex gap-6 mt-2 text-sm">
                   <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 border-2 border-[#FACE39]"></div>
+                    <div className="w-4 h-4 border-2 border-[#FACE39] bg-[#FEF6D9]"></div>
                     <span>Available dates</span>
                   </div>
                   <div className="flex items-center gap-1">

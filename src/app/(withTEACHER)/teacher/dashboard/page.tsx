@@ -1,6 +1,6 @@
 "use client";
 
-import axios from "axios";
+import http from "@/lib/http";
 import { useEffect, useMemo, useState } from "react";
 import DonutChart from "@/components/DonutChart";
 import TableBDM, { User as BDMUser } from "@/components/tableBDM";
@@ -105,17 +105,15 @@ const BDMDashboardPage = () => {
         let effectiveLimit: number | null = null;
         let totalFromServer: number | null = null;
 
-        const token = localStorage.getItem("accessToken");
         // eslint-disable-next-line no-constant-condition
         while (true) {
-          const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+          const { data } = await http.get(`${API_BASE}/api/v1/admin/users`, {
             params: {
               page,
               limit: requestedLimit,
               role: "user", // students only
             },
             signal: ctrl.signal,
-            headers: { Authorization: `Bearer ${token}` },
           });
 
           const batch: UserDoc[] = (data?.users ?? []) as UserDoc[];

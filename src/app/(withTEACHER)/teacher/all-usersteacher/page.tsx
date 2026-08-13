@@ -1,5 +1,5 @@
 "use client";
-import axios from "axios";
+import http from "@/lib/http";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
@@ -94,10 +94,8 @@ const BookingsTable = () => {
           params.search = debouncedSearch;
         }
 
-        const token = localStorage.getItem("accessToken");
-        const response = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+        const response = await http.get(`${API_BASE}/api/v1/admin/users`, {
           params,
-          headers: { Authorization: `Bearer ${token}` },
         });
 
         const serverUsers: User[] = response.data?.users || [];
@@ -138,7 +136,7 @@ const BookingsTable = () => {
   // ✅ Fetch mocks when opening modal (unchanged logic, just using API_BASE)
   const fetchUserMockData = async (userId: string) => {
     try {
-      const response = await axios.get(
+      const response = await http.get(
         `${API_BASE}/api/v1/user/${userId}`
       );
       if (response.status === 200 && response.data.success) {

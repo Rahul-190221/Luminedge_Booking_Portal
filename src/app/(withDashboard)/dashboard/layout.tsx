@@ -1,7 +1,6 @@
-import { getUserIdFromToken } from "@/app/helpers/jwt";
+import AuthGuard from "@/components/AuthGuard";
 import Sidebar from "@/components/shared/Sidebar";
 import type { Metadata } from "next";
-import { useRouter } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Luminedge Booking Portal",
@@ -16,17 +15,19 @@ export default function DashboardLayout({
 }>) {
   return (
     // Add the sidebar component to the layout
-    <div className="min-h-screen w-full flex flex-col md:flex-row ">
-      {/* Sidebar */}
-      <div className="w-full md:w-1/5 bg-[#ffffff] text-[#00000f] shadow-1xl rounded-1xl md:rounded-2xl border md:border-1 md:min-h-screen p-4 relative">
-      <Sidebar />
-      <div className="hidden md:block absolute right-0 top-0 bottom-0 w-px bg-gray-200"></div>
-      </div>
+    <AuthGuard>
+      <div className="min-h-screen w-full flex flex-col md:flex-row ">
+        {/* Sidebar */}
+        <div className="w-full md:w-1/5 bg-[#ffffff] text-[#00000f] shadow-1xl rounded-1xl md:rounded-2xl border md:border-1 md:min-h-screen p-4 relative">
+          <Sidebar />
+          <div className="hidden md:block absolute right-0 top-0 bottom-0 w-px bg-gray-200"></div>
+        </div>
 
-      {/* Main Content */}
-      <div className="flex-1 w-full md:w-4/5 p-0">
-        <div className="p-1 md:p-0">{children}</div>
+        {/* Main Content */}
+        <div className="flex-1 w-full md:w-4/5 p-0">
+          <div className="p-1 md:p-0">{children}</div>
+        </div>
       </div>
-    </div>
+    </AuthGuard>
   );
 }

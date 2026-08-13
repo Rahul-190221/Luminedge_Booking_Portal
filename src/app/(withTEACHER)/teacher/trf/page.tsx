@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import TrfForm from "@/components/trfform";
-import axios from "axios";
+import http from "@/lib/http";
 import { API_BASE } from "@/lib/config";
 
 type User = {
@@ -31,7 +31,7 @@ export default function TRFPage() {
   //     try {
   //       const limit = 500; // backend default cap is fine
   //       // page 1: get users + total
-  //       const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+  //       const first = await http.get(`${API_BASE}/api/v1/admin/users`, {
   //         params: { page: 1, limit }
   //       });
 
@@ -47,7 +47,7 @@ export default function TRFPage() {
 
   //       // if not found and more pages, scan subsequent pages
   //       for (let page = 2; !found && page <= totalPages; page++) {
-  //         const res = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+  //         const res = await http.get(`${API_BASE}/api/v1/admin/users`, {
   //           params: { page, limit }
   //         });
   //         const hit =
@@ -81,7 +81,6 @@ export default function TRFPage() {
     const fetchUserAcrossPages = async () => {
       setLoading(true);
       try {
-        const token = localStorage.getItem("accessToken");
         const requestedLimit = 500;
         const seen = new Set<string>();
 
@@ -92,9 +91,8 @@ export default function TRFPage() {
 
         // eslint-disable-next-line no-constant-condition
         while (true) {
-          const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+          const { data } = await http.get(`${API_BASE}/api/v1/admin/users`, {
             params: { page, limit: requestedLimit, role: "user" },
-            headers: { Authorization: `Bearer ${token}` },
           });
   
           const batch: User[] = (data?.users ?? []) as User[];

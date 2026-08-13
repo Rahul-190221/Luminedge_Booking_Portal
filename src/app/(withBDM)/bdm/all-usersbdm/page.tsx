@@ -1,5 +1,5 @@
 "use client";
-import axios from "axios";
+import http from "@/lib/http";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
@@ -40,14 +40,12 @@ interface ItemType {
 // ✅ Pagination for /admin/users (fetch ALL pages)
 const toId = (v: any) => String(v ?? "").trim();
 
-async function fetchAllUsers(requestedPageSize = 500, token?: string | null): Promise<User[]> {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+async function fetchAllUsers(requestedPageSize = 500): Promise<User[]> {
   const all: User[] = [];
 
   // First page – also gives us total + real page size
-  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+  const first = await http.get(`${API_BASE}/api/v1/admin/users`, {
     params: { page: 1, limit: requestedPageSize },
-    headers,
   });
 
   const firstPageUsers: User[] = first.data?.users || [];
@@ -70,9 +68,8 @@ async function fetchAllUsers(requestedPageSize = 500, token?: string | null): Pr
   );
 
   for (let page = 2; page <= totalPages; page++) {
-    const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    const { data } = await http.get(`${API_BASE}/api/v1/admin/users`, {
       params: { page, limit: serverLimit },
-      headers,
     });
     const usersPage: User[] = data?.users || [];
     if (!usersPage.length) break;
@@ -101,8 +98,7 @@ const BookingsTable = () => {
     const run = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem("accessToken");
-        const allUsers = await fetchAllUsers(500, token);
+        const allUsers = await fetchAllUsers(500);
 
         const sortedUsers = allUsers.sort(
           (a: User, b: User) =>
@@ -155,9 +151,9 @@ const BookingsTable = () => {
   // ✅ Fetch mocks
   const fetchUserMockData = async (userId: string) => {
     try {
-      const response = await axios.get(
+      const response = await http.get(
         `${API_BASE}/api/v1/user/${encodeURIComponent(userId)}`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
+        { }
       );
       if (response.status === 200 && response.data.success) {
         setSubmittedItems(response.data.mocks);

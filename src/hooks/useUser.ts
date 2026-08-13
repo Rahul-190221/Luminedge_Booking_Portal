@@ -1,5 +1,5 @@
 // hooks/useUser.ts
-import axios from "axios";
+import http from "@/lib/http";
 import { getUserIdFromToken } from "@/app/helpers/jwt";
 import { API_BASE } from "@/lib/config";
 import { useEffect, useState } from "react";
@@ -30,13 +30,8 @@ const useUser = (): {
         const userIdFromToken = await getUserIdFromToken();
 
         if (userIdFromToken?.userId) {
-          const response = await axios.get(
-            `${API_BASE}/api/v1/user/${userIdFromToken.userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              },
-            }
+          const response = await http.get(
+            `${API_BASE}/api/v1/user/${userIdFromToken.userId}`
           );
 
           const fetchedMocks: Mock[] = response.data?.mocks || [];

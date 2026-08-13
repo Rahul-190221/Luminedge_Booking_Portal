@@ -1,6 +1,6 @@
 "use client";
 import { getUserIdFromToken } from "@/app/helpers/jwt";
-import axios from "axios";
+import http from "@/lib/http";
 import { motion } from "framer-motion";
 import { useEffect, useState, useCallback } from "react";
 import { API_BASE } from "@/lib/config";
@@ -21,13 +21,8 @@ const DashboardPage = () => {
           const userId = userIdFromToken.userId;
           setUserId(userId);
 
-          const response = await axios.get(
-            `${API_BASE}/api/v1/user/${userId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-              },
-            }
+          const response = await http.get(
+            `${API_BASE}/api/v1/user/${userId}`
           );
 
           if (response.data && response.data.user) {
@@ -50,13 +45,8 @@ const DashboardPage = () => {
     if (!userId) return;
 
     try {
-      const response = await axios.get(
-        `${API_BASE}/api/v1/user/bookings/${userId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
+      const response = await http.get(
+        `${API_BASE}/api/v1/user/bookings/${userId}`
       );
 
       const bookings: { attendance?: string }[] = response.data.bookings ?? [];

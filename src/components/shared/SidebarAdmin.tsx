@@ -22,8 +22,8 @@ import {
 } from "react-icons/io5";
 
 import { RiHomeOfficeFill } from "react-icons/ri";
-import axios from "axios";
-import { API_BASE } from "@/lib/config";
+import http from "@/lib/http";
+import { getValidToken } from "@/app/helpers/jwt";
 import { MdOutlineCastForEducation } from "react-icons/md";
 
 const handleLinkClick = () => {};
@@ -43,14 +43,14 @@ const SidebarAdmin = () => {
     let mounted = true;
 
     const fetchPending = async () => {
+      // Don't poll with a missing/expired token — that is exactly what produced
+      // the `Bearer null` / 401 noise in the logs. The central client also
+      // redirects to /login on a real 401.
+      if (!getValidToken()) return;
       try {
-        const token = localStorage.getItem("accessToken");
-        const { data } = await axios.get(
-          `${API_BASE}/api/v1/users/with-profile-request`,
-          {
-            timeout: 10000,
-            headers: { Authorization: `Bearer ${token}` },
-          }
+        const { data } = await http.get(
+          `/api/v1/users/with-profile-request`,
+          { timeout: 10000 }
         );
         if (!mounted) return;
         setPendingCount(data?.success && Array.isArray(data.users) ? data.users.length : 0);

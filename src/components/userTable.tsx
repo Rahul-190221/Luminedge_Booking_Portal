@@ -1,4 +1,4 @@
-import axios from "axios";
+import http from "@/lib/http";
 import { useState, useEffect, useMemo } from "react";
 import { API_BASE } from "@/lib/config";
 
@@ -22,13 +22,8 @@ const UserTable = ({ userId }: { userId: string }) => {
     // Fetch bookings when the component mounts
     const fetchBookings = async () => {
       try {
-        const response = await axios.get(
-          `${API_BASE}/api/v1/user/bookings/${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
+        const response = await http.get(
+          `${API_BASE}/api/v1/user/bookings/${userId}`
         );
         setBookings(response.data.bookings);
       } catch (error) {

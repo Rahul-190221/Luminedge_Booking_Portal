@@ -1,6 +1,6 @@
 "use client";
 
-import axios from "axios";
+import http from "@/lib/http";
 import { useEffect, useMemo, useState } from "react";
 import DonutChart from "@/components/DonutChart";
 import TableAdmin, { User as AdminUser } from "@/components/tableAdmin";
@@ -95,15 +95,13 @@ const DashboardPage = () => {
           setLoading(true);
   
           // ✅ Backend bulk mode: returns all users in one go (<= 10k)
-          const token = localStorage.getItem("accessToken");
-          const { data } = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+          const { data } = await http.get(`${API_BASE}/api/v1/admin/users`, {
             params: {
               page: 1,
               limit: 1000,
               role: "user",
             },
             signal: ctrl.signal,
-            headers: { Authorization: `Bearer ${token}` },
           });
   
           // Still filter by role on client for extra safety

@@ -1,6 +1,6 @@
 "use client";
 
-import axios from "axios";
+import http from "@/lib/http";
 import { useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/config";
 import { useState, useEffect } from "react";
@@ -64,9 +64,7 @@ const Table = ({ userId }: { userId: string }) => {
   useEffect(() => {
     const fetchBookings = async () => {
       try {
-        const response = await axios.get(`${API_BASE}/api/v1/user/bookings/${userId}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-        });
+        const response = await http.get(`${API_BASE}/api/v1/user/bookings/${userId}`);
         setBookings(response.data.bookings);
       } catch (error) {
         console.error("Error fetching bookings:", error);
@@ -114,9 +112,7 @@ const Table = ({ userId }: { userId: string }) => {
 
   const handleViewResult = async (bookingId: string, bookingName: string) => {
     try {
-      const response = await axios.get(`${API_BASE}/api/v1/user/bookings/result/${bookingId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-      });
+      const response = await http.get(`${API_BASE}/api/v1/user/bookings/result/${bookingId}`);
       const result = response.data?.result;
 
       if (result && Object.keys(result).length > 0) {

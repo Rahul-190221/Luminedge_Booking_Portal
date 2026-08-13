@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import http from "@/lib/http";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -54,19 +55,16 @@ const hasUserInBooking = (b: Booking, userId: string) =>
 // ---------- fetch only the users we need (paged) ----------
 async function fetchUsersByIds(
   userIds: string[],
-  requestedPageSize = 500,
-  token?: string | null
+  requestedPageSize = 500
 ): Promise<any[]> {
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const need = new Set(userIds.map(toId));
   const found = new Map<string, any>();
 
   if (!need.size) return [];
 
   // page 1 to get total + actual page size (backend may cap `limit`)
-  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+  const first = await http.get(`${API_BASE}/api/v1/admin/users`, {
     params: { page: 1, limit: requestedPageSize, role: "user" },
-    headers,
   });
 
   const firstPageUsers: any[] = first.data?.users || [];
@@ -97,9 +95,8 @@ async function fetchUsersByIds(
 
   // fetch remaining pages until we've found everyone or hit last page
   for (let page = 2; page <= totalPages && found.size < need.size; page++) {
-    const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    const pageRes = await http.get(`${API_BASE}/api/v1/admin/users`, {
       params: { page, limit: effectivePageSize, role: "user" },
-      headers,
     });
     ingest(pageRes.data?.users || []);
   }
@@ -192,16 +189,13 @@ const TrfBookingRequestsPage = ({
     const run = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem("accessToken");
-        const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
-
         const scheduleKey = String(scheduleId).toLowerCase();
 
         // 🔹 0) HOME fast path: backend already joins bookings + user
         if (scheduleKey === "home") {
-          const { data } = await axios.get(
+          const { data } = await http.get(
             `${API_BASE}/api/v1/admin/bookings/home-with-users`,
-            { signal, headers: authHeaders }
+            { signal }
           );
 
           const rows: any[] = data?.bookings || [];
@@ -261,11 +255,11 @@ const TrfBookingRequestsPage = ({
           const homeUserIds = userList.map((u: any) => toId(u._id));
           if (homeUserIds.length) {
             try {
-              const { data: att } = await axios.post(
+              const { data: att } = await http.post(
                 `${API_BASE}/api/v1/user/attendance/bulk`,
                 { userIds: homeUserIds },
                 {
-                  headers: { "Content-Type": "application/json", ...authHeaders },
+                  headers: { "Content-Type": "application/json" },
                   signal,
                 }
               );
@@ -290,9 +284,9 @@ const TrfBookingRequestsPage = ({
         }
 
         // 🔹 1) Non-HOME: pull only bookings for this schedule from the server
-        const { data } = await axios.get(
+        const { data } = await http.get(
           `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
-          { params: { page: 1, limit: 500 }, signal, headers: authHeaders }
+          { params: { page: 1, limit: 500 }, signal }
         );
         const filteredBookings: Booking[] = data?.bookings || [];
 
@@ -317,14 +311,14 @@ const TrfBookingRequestsPage = ({
 
         // 🔹 3) Fetch only the users we need AND bulk attendance in parallel
         const [matchedUsers, attendanceRes] = await Promise.all([
-          userIds.length ? fetchUsersByIds(userIds, 500, token) : Promise.resolve([]),
+          userIds.length ? fetchUsersByIds(userIds, 500) : Promise.resolve([]),
           userIds.length
-            ? axios
+            ? http
                 .post(
                   `${API_BASE}/api/v1/user/attendance/bulk`,
                   { userIds },
                   {
-                    headers: { "Content-Type": "application/json", ...authHeaders },
+                    headers: { "Content-Type": "application/json" },
                     signal,
                   }
                 )

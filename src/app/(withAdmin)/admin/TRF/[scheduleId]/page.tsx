@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
+import http from "@/lib/http";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -62,11 +63,8 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   if (!need.size) return [];
 
   // page 1 to get total + actual page size (backend may cap `limit`)
-  const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+  const first = await http.get(`${API_BASE}/api/v1/admin/users`, {
     params: { page: 1, limit: requestedPageSize, role: "user" },
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-    },
   });
 
   const firstPageUsers: any[] = first.data?.users || [];
@@ -96,11 +94,8 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
 
   // fetch remaining pages until we've found everyone or hit last page
   for (let page = 2; page <= totalPages && found.size < need.size; page++) {
-    const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    const pageRes = await http.get(`${API_BASE}/api/v1/admin/users`, {
       params: { page, limit: effectivePageSize, role: "user" },
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
     });
     ingest(pageRes.data?.users || []);
   }
@@ -166,9 +161,6 @@ const TrfBookingRequestsPage = ({
             const { data } = await axios.get<ApiFeedbackStatusResponse>(
               `${API_BASE}/api/v1/admin/feedback-status/${uid}/${scheduleId}`,
               {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                },
               }
             );
             const s = data?.status || {};
@@ -216,9 +208,6 @@ const TrfBookingRequestsPage = ({
               }>(
                 `${API_BASE}/api/v1/admin/trf-email-status/${uid}/${scheduleId}`,
                 {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                  },
                 }
               );
               return { uid, sent: !!data?.sent };
@@ -253,9 +242,6 @@ const TrfBookingRequestsPage = ({
               const { data } = await axios.get<BudgetResponse>(
                 `${API_BASE}/api/v1/admin/user-budget/${uid}/${scheduleId}`,
                 {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-                  },
                 }
               );
               return { uid, budget: data.budget || 0 };
@@ -292,14 +278,11 @@ const TrfBookingRequestsPage = ({
       setLoading(true);
 
       // 1) Fetch ONLY bookings for this schedule (server already filters)
-      const { data: bookingsData } = await axios.get(
+      const { data: bookingsData } = await http.get(
         `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
         {
           params: { page: 1, limit: 500 },
           signal,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
 
@@ -327,14 +310,13 @@ const TrfBookingRequestsPage = ({
       const [baseUsers, attendanceRes] = await Promise.all([
         userIds.length ? fetchUsersByIds(userIds) : Promise.resolve([]),
         userIds.length
-          ? axios
+          ? http
               .post(
                 `${API_BASE}/api/v1/user/attendance/bulk`,
                 { userIds },
                 {
                   headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
                   },
                   signal,
                 }
@@ -614,13 +596,10 @@ const TrfBookingRequestsPage = ({
     }
 
     try {
-      const response = await axios.put(
+      const response = await http.put(
         `${API_BASE}/api/v1/admin/users/${userId}/schedules/${scheduleId}/teacher`,
         { skill, teacher: newTeacher, email },
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
 

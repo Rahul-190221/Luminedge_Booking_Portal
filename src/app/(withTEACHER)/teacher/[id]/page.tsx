@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
+import http from "@/lib/http";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -80,10 +81,8 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
   // -------- users fetcher (paged) --------
   async function fetchUsersByIds(
     userIds: string[],
-    requestedPageSize = 500,
-    token?: string | null
+    requestedPageSize = 500
   ): Promise<any[]> {
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
     const need = new Set(userIds.map(toId));
     const found = new Map<string, any>();
 
@@ -99,9 +98,8 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
     };
 
     // First page
-    const first = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+    const first = await http.get(`${API_BASE}/api/v1/admin/users`, {
       params: { page: 1, limit: requestedPageSize },
-      headers,
     });
 
     const firstPageUsers: any[] = first.data?.users || [];
@@ -122,9 +120,8 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
     const totalPages = Math.max(1, Math.ceil(total / serverLimit));
 
     for (let page = 2; page <= totalPages && found.size < need.size; page++) {
-      const pageRes = await axios.get(`${API_BASE}/api/v1/admin/users`, {
+      const pageRes = await http.get(`${API_BASE}/api/v1/admin/users`, {
         params: { page, limit: serverLimit },
-        headers,
       });
       ingest(pageRes.data?.users || []);
     }
@@ -138,13 +135,10 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem("accessToken");
-      const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
-
       // Only this schedule’s bookings
-      const { data } = await axios.get(
+      const { data } = await http.get(
         `${API_BASE}/api/v1/admin/bookings/by-schedule/${scheduleId}`,
-        { params: { page: 1, limit: PAGE_SIZE }, headers: authHeaders }
+        { params: { page: 1, limit: PAGE_SIZE } }
       );
       const scheduleBookings: Booking[] = data?.bookings || [];
 
@@ -167,7 +161,7 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
       // Fetch only the users we need (paged)
       const matchedUsers =
-        userIds.length > 0 ? await fetchUsersByIds(userIds, 500, token) : [];
+        userIds.length > 0 ? await fetchUsersByIds(userIds, 500) : [];
 
       // Attendance map + totals (case-insensitive)
       const attMap: Record<string, string> = {};
@@ -190,10 +184,10 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
       // Optional bulk totals per user
       if (userIds.length) {
         try {
-          const { data: att } = await axios.post(
+          const { data: att } = await http.post(
             `${API_BASE}/api/v1/user/attendance/bulk`,
             { userIds },
-            { headers: { "Content-Type": "application/json", ...authHeaders } }
+            { headers: { "Content-Type": "application/json" } }
           );
           const totals: Record<string, number | null> = {};
           for (const id of userIds) {

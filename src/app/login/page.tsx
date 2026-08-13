@@ -6,6 +6,8 @@ import { loginUser } from "../utils/actions/loginUser";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { getUserIdFromToken } from "../helpers/jwt";
+import Cookies from "js-cookie";
+import { jwtDecode } from "jwt-decode";
 import { useEffect, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import LuminedgeLogo from "@/components/LuminedgeLogo";
@@ -39,6 +41,23 @@ const LoginPage = () => {
       if (response.accessToken) {
         toast.success("Successfully logged in");
         localStorage.setItem("accessToken", response.accessToken);
+        // Also store the token in a cookie so edge middleware can gate routes.
+        // (localStorage is invisible to middleware; the cookie is what it reads.)
+        // Tie the cookie's lifetime to the JWT's own `exp` so the cookie the
+        // middleware reads can't outlive (or expire before) the actual token.
+        // Falls back to a session cookie if the token carries no `exp`.
+        let expires: Date | undefined;
+        try {
+          const { exp } = jwtDecode<{ exp?: number }>(response.accessToken);
+          if (exp) expires = new Date(exp * 1000);
+        } catch {
+          /* leave as a session cookie */
+        }
+        Cookies.set("accessToken", response.accessToken, {
+          expires,
+          sameSite: "lax",
+          secure: window.location.protocol === "https:",
+        });
 
         const userData = getUserIdFromToken();
         setUser(userData);

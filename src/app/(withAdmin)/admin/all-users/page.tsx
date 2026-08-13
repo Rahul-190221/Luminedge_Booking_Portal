@@ -1,5 +1,5 @@
 "use client";
-import axios from "axios";
+import http from "@/lib/http";
 import { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
@@ -79,11 +79,8 @@ const fetchAllCompletedUsers = async (): Promise<User[]> => {
   const all: User[] = [];
 
   while (all.length < total) {
-    const { data } = await axios.get<ApiUsersResp>(`${API_BASE}/api/v1/admin/users`, {
+    const { data } = await http.get<ApiUsersResp>(`${API_BASE}/api/v1/admin/users`, {
       params: { status: "completed", page, limit },
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
     });
 
     const batch = Array.isArray(data?.users) ? data!.users! : [];
@@ -166,11 +163,7 @@ const BookingsTable = () => {
   // ✅ Fetch mocks (work with either of your backend shapes)
   const fetchUserMockData = async (userId: string) => {
     try {
-      const { data } = await axios.get(`${API_BASE}/api/v1/user/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+      const { data } = await http.get(`${API_BASE}/api/v1/user/${userId}`);
       if (data?.success || data?.mocks || data?.lastMock) {
         setSubmittedItems(data.mocks || []);
         setLastMock(data.lastMock || null);

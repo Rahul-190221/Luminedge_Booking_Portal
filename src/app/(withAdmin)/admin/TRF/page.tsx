@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 
 import { API_BASE } from "@/lib/config";
+import { authFetch } from "@/lib/http";
 
 /* ===========================
    API base + bulk fetchers
@@ -25,11 +26,7 @@ async function fetchAllUsers(params?: {
   qs.set("page", "1");
   qs.set("limit", String(pageSize));
 
-  const first = await fetch(`${API_BASE}/api/v1/admin/users?${qs.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-    },
-  });
+  const first = await authFetch(`${API_BASE}/api/v1/admin/users?${qs.toString()}`);
   if (!first.ok) {
     if (first.status === 404) return [];
     throw new Error(`users page 1 failed: ${first.status}`);
@@ -43,11 +40,7 @@ async function fetchAllUsers(params?: {
   for (let page = 2; page <= totalPages; page++) {
     const qsp = new URLSearchParams(qs);
     qsp.set("page", String(page));
-    const res = await fetch(`${API_BASE}/api/v1/admin/users?${qsp.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
-    });
+    const res = await authFetch(`${API_BASE}/api/v1/admin/users?${qsp.toString()}`);
     if (!res.ok) break;
     const json = await res.json();
     if (Array.isArray(json.users)) all.push(...json.users);
@@ -69,11 +62,7 @@ async function fetchAllBookings(params?: {
   baseQS.set("limit", String(pageSize));
 
   baseQS.set("page", "1");
-  const first = await fetch(`${API_BASE}/api/v1/admin/bookings?${baseQS.toString()}`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-    },
-  });
+  const first = await authFetch(`${API_BASE}/api/v1/admin/bookings?${baseQS.toString()}`);
   if (!first.ok) {
     if (first.status === 404) return [];
     throw new Error(`bookings page 1 failed: ${first.status}`);
@@ -86,11 +75,7 @@ async function fetchAllBookings(params?: {
   while (true) {
     const qsp = new URLSearchParams(baseQS);
     qsp.set("page", String(page++));
-    const res = await fetch(`${API_BASE}/api/v1/admin/bookings?${qsp.toString()}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
-    });
+    const res = await authFetch(`${API_BASE}/api/v1/admin/bookings?${qsp.toString()}`);
     if (!res.ok) break;
     const json = await res.json();
     const chunk: any[] = json.bookings || [];
@@ -216,11 +201,7 @@ function TrfAvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-      });
+      const response = await authFetch(`${API_BASE}/api/v1/admin/get-schedules`);
       const data = await response.json();
       
       // Accept array or {schedules: [...]}

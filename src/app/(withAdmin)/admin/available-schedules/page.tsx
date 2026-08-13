@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
-import { API_BASE } from "@/lib/config";
+import { authFetch } from "@/lib/http";
 
 // ---------- Types ----------
 type TimeSlot = {
@@ -104,11 +104,8 @@ function AvailableSchedulesPage() {
   // Fetch + normalize
   const fetchSchedules = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/admin/get-schedules`, {
+      const res = await authFetch(`/api/v1/admin/get-schedules`, {
         cache: "no-store",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -195,13 +192,12 @@ function AvailableSchedulesPage() {
   // Delete
   const deleteSchedule = async (id: string) => {
     try {
-      const res = await fetch(
-        `${API_BASE}/api/v1/admin/delete-schedule/${id}`,
+      const res = await authFetch(
+        `/api/v1/admin/delete-schedule/${id}`,
         {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
           },
         }
       );

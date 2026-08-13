@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import http from "@/lib/http";
 import { API_BASE } from "@/lib/config";
 import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
@@ -266,25 +266,13 @@ const FinalTRFPage = () => {
       setLoading(true);
       try {
         const [feedbackRes, adminRes, bookingsRes, userRes] = await Promise.all([
-          axios.get(`${API_BASE}/api/v1/admin/feedback-status/${urlUserId}/${urlScheduleId}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
+          http.get(`${API_BASE}/api/v1/admin/feedback-status/${urlUserId}/${urlScheduleId}`, {
           }),
-          axios.get(`${API_BASE}/api/v1/admin/get-admin-section/${urlUserId}/${urlScheduleId}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
+          http.get(`${API_BASE}/api/v1/admin/get-admin-section/${urlUserId}/${urlScheduleId}`, {
           }),
-          axios.get(`${API_BASE}/api/v1/user/bookings/${urlUserId}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
+          http.get(`${API_BASE}/api/v1/user/bookings/${urlUserId}`, {
           }),
-          axios.get(`${API_BASE}/api/v1/user/status/${urlUserId}`, {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
+          http.get(`${API_BASE}/api/v1/user/status/${urlUserId}`, {
           }),
         ]);
 
@@ -428,10 +416,8 @@ const FinalTRFPage = () => {
 
   useEffect(() => {
     if (!urlUserId || !urlScheduleId) return;
-    axios
-      .get(`${API_BASE}/api/v1/admin/trf-email-status/${urlUserId}/${urlScheduleId}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` },
-      })
+    http
+      .get(`${API_BASE}/api/v1/admin/trf-email-status/${urlUserId}/${urlScheduleId}`)
       .then((r) => setEmailStatus(r.data))
       .catch(() => {});
   }, [urlUserId, urlScheduleId]);
@@ -881,10 +867,10 @@ const FinalTRFPage = () => {
       form.append("file", file);
 
       // Don't set Content-Type — let axios set multipart/form-data with boundary automatically
-      const res = await axios.post(
+      const res = await http.post(
         `${API_BASE}/api/v1/admin/send-trf-email/${urlUserId}/${urlScheduleId}`,
         form,
-        { headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` } }
+        { }
       );
 
       const { success, message, to, userEmail, email, user, lastSentAt } = (res?.data || {}) as any;

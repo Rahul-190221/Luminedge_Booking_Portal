@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, Fragment, type ReactNode } from "react";
-import axios from "axios";
+import http from "@/lib/http";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -66,13 +66,10 @@ export default function ProfileEditApprovalPage() {
   const fetchRequestedUsers = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(
+      const { data } = await http.get(
         `${API_BASE}/api/v1/users/with-profile-request`,
         {
           timeout: 15000,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
       if (data?.success && Array.isArray(data.users)) {
@@ -157,7 +154,7 @@ export default function ProfileEditApprovalPage() {
 
     try {
       setSavingId(userId);
-      const { data } = await axios.put(
+      const { data } = await http.put(
         `${API_BASE}/api/v1/user/approve-profile-edit/${userId}`,
         {
           name: payload.name?.trim() || "",
@@ -168,9 +165,6 @@ export default function ProfileEditApprovalPage() {
         },
         {
           timeout: 20000,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
         }
       );
 
