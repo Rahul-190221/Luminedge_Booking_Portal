@@ -4,23 +4,10 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
-import { authFetch } from "@/lib/http";
+import { fetchAllSchedules, NormalizedSchedule } from "@/app/utils/schedules";
+import { formatTimeToPeriod } from "@/app/utils/time";
 
-type Schedule = {
-  [x: string]: any;
-  id: string;              // normalized from _id | id
-  name: string;
-  testType: string;
-  startDate: string;       // "YYYY-MM-DD"
-  status: string;
-  timeSlots: Array<{
-    slotId: string;
-    startTime: string;
-    endTime: string;
-    totalSlot?: number;
-    slot?: number;
-  }>;
-};
+type Schedule = NormalizedSchedule;
 
 function toDateKey(v: unknown): string {
   if (typeof v === "string") {
@@ -45,31 +32,7 @@ function AvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const response = await authFetch(`${API_BASE}/api/v1/admin/get-schedules`, {
-        cache: "no-store",
-      });
-      const json = await response.json();
-      const raw = Array.isArray(json) ? json : Array.isArray(json?.schedules) ? json.schedules : [];
-
-      // keep ONLY real schedules; normalize fields
-      const normalized: Schedule[] = raw
-        .filter((it: unknown) => it && typeof it === "object" && typeof (it as any).startDate === "string" && Array.isArray((it as any).timeSlots))
-        .map((s: any) => ({
-          id: String(s._id ?? s.id ?? ""),
-          name: String(s.name ?? "Unknown"),
-          testType: String(s.testType ?? ""),
-          startDate: toDateKey(s.startDate) || "",   // date-only key
-          status: String(s.status ?? ""),
-          timeSlots: (s.timeSlots || []).map((t: any) => ({
-            slotId: String(t?.slotId ?? ""),
-            startTime: String(t?.startTime ?? ""),
-            endTime: String(t?.endTime ?? ""),
-            totalSlot: t?.totalSlot != null ? Number(t.totalSlot) : undefined,
-            slot: t?.slot != null ? Number(t.slot) : undefined,
-          })),
-        }))
-        .filter((s: Schedule) => s.id && s.startDate); // final guard
-
+      const normalized = await fetchAllSchedules(`${API_BASE}/api/v1/admin/get-schedules`);
       setSchedules(normalized);
     } catch (error) {
       console.error("Error fetching schedules:", error);
@@ -114,16 +77,7 @@ function AvailableSchedulesBDMPage() {
   const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;
   const currentSchedules = sortedSchedules.slice(indexOfFirstSchedule, indexOfLastSchedule);
 
-  function formatTime(time: string) {
-    if (!time || typeof time !== "string" || !time.includes(":")) return "N/A";
-    const [hourStr, minuteStr] = time.split(":");
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr || "0", 10);
-    if (Number.isNaN(hour) || Number.isNaN(minute)) return "N/A";
-    const period = hour >= 12 ? "PM" : "AM";
-    const formattedHour = hour % 12 || 12;
-    return `${formattedHour}:${String(minute).padStart(2, "0")} ${period}`;
-  }
+  const formatTime = (time: string) => formatTimeToPeriod(time, "N/A");
 
   return (
     <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">

@@ -11,6 +11,7 @@
         "Firestore",
         "Gawsia",
         "homebased",
+        "homebasedbdm",
         "homebasedtrf",
         "IELTS",
         "ieltslogo",
@@ -32,11 +33,14 @@
         "Saiham",
         "Satmasjid",
         "Sazzadur",
+        "schedulesbdm",
         "scheduletest",
         "setscheduletest",
         "subscores",
         "Svgjs",
         "Tamim",
-        "Tanvir"
+        "Tanvir",
+        "timeslots",
+        "usersbdm"
     ]
 }

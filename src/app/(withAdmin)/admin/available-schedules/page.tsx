@@ -3,140 +3,40 @@ import { useRouter } from "next/navigation";
 import React, { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
+import { API_BASE } from "@/lib/config";
 import { authFetch } from "@/lib/http";
+import { fetchAllSchedules, NormalizedSchedule } from "@/app/utils/schedules";
+import { formatTimeToPeriod } from "@/app/utils/time";
 
-// ---------- Types ----------
-type TimeSlot = {
-  slotId: string;
-  startTime: string;
-  endTime: string;
-  totalSlot?: number | null;
-  slot?: number; // available seats as number after normalization
-};
+const toEpochUTC00 = (ymd: string): number => (ymd ? Date.parse(`${ymd}T00:00:00Z`) : Number.NaN);
 
-type Schedule = {
-  _id?: string;          // backend _id
-  id?: string;           // convenience
-  name: string;          // course name (IELTS/GRE/etc.)
-  testType: string;      // Paper-Based / Computer-Based
-  startDate: string;     // normalized "YYYY-MM-DD"
-  status?: string;
-  timeSlots: TimeSlot[];
-  [x: string]: any;
-};
-
-// ---------- Helpers ----------
-const toYMD = (v: unknown): string => {
-  if (!v) return "";
-  try {
-    if (v instanceof Date) {
-      return isNaN(+v) ? "" : v.toISOString().slice(0, 10);
-    }
-    if (typeof v === "number") {
-      const d = new Date(v);
-      return isNaN(+d) ? "" : d.toISOString().slice(0, 10);
-    }
-    if (typeof v === "string") {
-      const s = v.trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // already Y-M-D
-      if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
-        const [dd, mm, yyyy] = s.split("-");
-        return `${yyyy}-${mm}-${dd}`;
-      }
-      const d = new Date(s);
-      return isNaN(+d) ? "" : d.toISOString().slice(0, 10);
-    }
-    if (v && typeof v === "object") {
-      const o: any = v;
-      if (o.$date) {
-        const d = new Date(o.$date);
-        return isNaN(+d) ? "" : d.toISOString().slice(0, 10);
-      }
-      if (typeof o.seconds === "number") {
-        const d = new Date(o.seconds * 1000);
-        return isNaN(+d) ? "" : d.toISOString().slice(0, 10);
-      }
-      if (typeof o.toDate === "function") {
-        const d = o.toDate();
-        if (d instanceof Date && !isNaN(+d)) return d.toISOString().slice(0, 10);
-      }
-    }
-  } catch {}
-  return "";
-};
-
-const toEpochUTC00 = (ymd: string): number =>
-  ymd ? Date.parse(`${ymd}T00:00:00Z`) : Number.NaN;
-
-// local-timezone “today” in YYYY-MM-DD (avoids UTC off-by-one)
 const todayLocalYMD = (): string => {
   const d = new Date();
   const tzAdj = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
   return tzAdj.toISOString().slice(0, 10);
 };
 
-function formatTime(time: string) {
-  if (!time || typeof time !== "string" || !time.includes(":")) return "Invalid time";
-  const [hStr, mStr] = time.split(":");
-  const h = Number(hStr);
-  const m = Number(mStr);
-  if (isNaN(h) || isNaN(m)) return "Invalid time";
-  const period = h >= 12 ? "PM" : "AM";
-  const hh = h % 12 || 12;
-  return `${hh}:${m.toString().padStart(2, "0")} ${period}`;
-}
+const formatTime = (time: string) => formatTimeToPeriod(time, "Invalid time");
 
-// ---------- Component ----------
 function AvailableSchedulesPage() {
   const router = useRouter();
 
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [schedules, setSchedules] = useState<NormalizedSchedule[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [schedulesPerPage, setSchedulesPerPage] = useState<number>(20);
 
   // Filters
-  const [testTypeFilter, setTestTypeFilter] = useState<string>("");      // course name (IELTS/GRE/...)
-  const [scheduletestType, setscheduletestType] = useState<string>("");  // Paper-Based/Computer-Based
+  const [testTypeFilter, setTestTypeFilter] = useState<string>("");
+  const [scheduletestType, setscheduletestType] = useState<string>("");
   const [dateSortOrder, setDateSortOrder] = useState<string>("ascending");
-  const [dateFilter, setDateFilter] = useState<string>("upcoming");       // all/past/upcoming
+  const [dateFilter, setDateFilter] = useState<string>("upcoming");
   const [startDateFilter, setStartDateFilter] = useState<string>("");
 
-  // Fetch + normalize
   const fetchSchedules = async () => {
     try {
-      const res = await authFetch(`/api/v1/admin/get-schedules`, {
-        cache: "no-store",
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      // Accept array or {schedules: [...]}
-      const raw: any[] = Array.isArray(data) ? data : Array.isArray(data?.schedules) ? data.schedules : [];
-
-      // Keep only schedule-like rows (ignore bookings or other shapes)
-      const onlySchedules = raw.filter((x) => {
-        if (!x || typeof x !== "object") return false;
-        const ymd = toYMD((x as any).startDate ?? (x as any).date ?? (x as any).examDate);
-        return !!ymd && Array.isArray((x as any).timeSlots) && (x as any).timeSlots.length > 0;
-      });
-
-      const normalized: Schedule[] = onlySchedules.map((s: any) => ({
-        _id: s._id ?? s.id,
-        id: s._id ?? s.id,
-        name: s.name ?? s.courseName ?? s.title ?? "",
-        testType: s.testType ?? s.type ?? s.mode ?? "",
-        startDate: toYMD(s.startDate ?? s.date ?? s.examDate), // YYYY-MM-DD
-        status: s.status ?? "",
-        timeSlots: (Array.isArray(s.timeSlots) ? s.timeSlots : []).map((ts: any) => ({
-          slotId: String(ts.slotId ?? ""),
-          startTime: String(ts.startTime ?? ""),
-          endTime: String(ts.endTime ?? ""),
-          totalSlot: ts.totalSlot ?? null,
-          slot: Number(ts.slot) || 0,
-        })),
-      }));
-
-      setSchedules(normalized);
+      const normalized = await fetchAllSchedules(`${API_BASE}/api/v1/admin/get-schedules`);
+      // Admin only lists schedules that actually have bookable time slots.
+      setSchedules(normalized.filter((s) => s.timeSlots.length > 0));
     } catch (err) {
       console.error("Error fetching schedules:", err);
       toast.error("Error fetching schedules");
@@ -147,17 +47,15 @@ function AvailableSchedulesPage() {
     fetchSchedules();
   }, []);
 
-  // Reset page when filters/page-size change
   useEffect(() => {
     setCurrentPage(1);
   }, [testTypeFilter, scheduletestType, dateFilter, startDateFilter, schedulesPerPage]);
 
-  // Filter
   const filteredSchedules = useMemo(() => {
     const today = todayLocalYMD();
 
     return schedules.filter((s) => {
-      const scheduleDate = s.startDate; // already normalized
+      const scheduleDate = s.startDate;
 
       const isCourseMatch = !testTypeFilter || s.name === testTypeFilter;
       const isScheduleTypeMatch = !scheduletestType || s.testType === scheduletestType;
@@ -171,7 +69,6 @@ function AvailableSchedulesPage() {
     });
   }, [schedules, testTypeFilter, scheduletestType, dateFilter, startDateFilter]);
 
-  // Sort
   const sortedSchedules = useMemo(() => {
     const dir = dateSortOrder === "ascending" ? 1 : -1;
     return [...filteredSchedules].sort((a, b) => {
@@ -184,23 +81,18 @@ function AvailableSchedulesPage() {
     });
   }, [filteredSchedules, dateSortOrder]);
 
-  // Pagination
   const indexOfLast = currentPage * schedulesPerPage;
   const indexOfFirst = indexOfLast - schedulesPerPage;
   const currentSchedules = sortedSchedules.slice(indexOfFirst, indexOfLast);
 
-  // Delete
   const deleteSchedule = async (id: string) => {
     try {
-      const res = await authFetch(
-        `/api/v1/admin/delete-schedule/${id}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const res = await authFetch(`${API_BASE}/api/v1/admin/delete-schedule/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
       const result = await res.json();
       if (!res.ok || !result?.success) {
         throw new Error(result?.message || "Failed to delete schedule");
@@ -224,7 +116,6 @@ function AvailableSchedulesPage() {
         Available Schedules
       </motion.h1>
 
-      {/* Filters */}
       <div className="bg-gray-100 p-2 h-22 mb-0 text-[#00000f]">
         <h3><b>Filter by</b></h3>
         <div className="my-4 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 text-sm">
@@ -283,7 +174,6 @@ function AvailableSchedulesPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="table-auto w-full border-collapse">
           <thead>
@@ -387,7 +277,6 @@ function AvailableSchedulesPage() {
         </table>
       </div>
 
-      {/* Pagination */}
       <div className="flex flex-col sm:flex-row justify-between items-center mt-4 space-y-4 sm:space-y-0">
         <div>
           <label htmlFor="schedulesPerPage" className="mr-2">Schedules per page:</label>

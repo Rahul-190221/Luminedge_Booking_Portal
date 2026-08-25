@@ -13,6 +13,7 @@ import "./calendarStyles.css";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
 import { homeBasedCourses } from "@/lib/courseConfig";
+import { normalizeScheduleRow } from "@/app/utils/schedules";
 
 // --- Types ---
 type ValuePiece = Date | null;
@@ -115,6 +116,10 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   useEffect(() => {
     if (isComputer && !isHomeEligibleCourse && selectedLocation !== "Test Center") {
       setSelectedLocation("Test Center");
+      // Clear any slot/schedule picked while a previous (Home-eligible) course
+      // was selected — mirrors the manual location dropdown's onChange.
+      setSelectedSlotId(null);
+      setScheduleId(null);
     }
   }, [isComputer, isHomeEligibleCourse, selectedLocation]);
 
@@ -239,7 +244,22 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
           { signal: controller.signal }
         );
 
-        setScheduleData(response?.data?.schedules || []);
+        const rawSchedules = Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.data?.schedules)
+          ? response.data.schedules
+          : [];
+        const normalizedSchedules = rawSchedules
+          .map(normalizeScheduleRow)
+          .filter(Boolean)
+          .map((schedule: any) => ({
+            ...schedule,
+            courseId: schedule.courseId ?? "",
+            endDate: schedule.endDate ?? schedule.startDate,
+            testSystem: schedule.testSystem ?? "",
+          })) as Schedule[];
+
+        setScheduleData(normalizedSchedules);
       } catch (error: any) {
         if (!axios.isCancel(error)) {
           console.error("Error fetching schedule data:", error);

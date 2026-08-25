@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 import { API_BASE } from "@/lib/config";
 import { authFetch } from "@/lib/http";
+import { fetchAllSchedules } from "@/app/utils/schedules";
 
 /* ===========================
    API base + bulk fetchers
@@ -94,7 +95,7 @@ type TimeSlot = {
   startTime: string;
   endTime: string;
   totalSlot?: number; // Optional
-  slot?: string; // Available seats?
+  slot?: number; // Available seats?
 };
 
 type Schedule = {
@@ -201,13 +202,7 @@ function TrfAvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const response = await authFetch(`${API_BASE}/api/v1/admin/get-schedules`);
-      const data = await response.json();
-      
-      // Accept array or {schedules: [...]}
-      const raw: any[] = Array.isArray(data) ? data : Array.isArray(data?.schedules) ? data.schedules : [];
-      
-      const cleaned = raw.filter(isScheduleLike);
+      const cleaned = await fetchAllSchedules(`${API_BASE}/api/v1/admin/get-schedules`);
       setSchedules(cleaned);
     } catch (error) {
       toast.error("Error fetching schedules");

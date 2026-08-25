@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
 import { authFetch } from "@/lib/http";
+import { fetchAllSchedules } from "@/app/utils/schedules";
 
 // ---------- Types ----------
 type TimeSlot = {
@@ -12,7 +13,7 @@ type TimeSlot = {
   startTime: string;
   endTime: string;
   totalSlot?: number;
-  slot?: string; // available seats
+  slot?: number; // available seats
 };
 
 type Schedule = {
@@ -107,10 +108,7 @@ function TrfAvailableSchedulesBDMPage() {
 
   const fetchSchedules = async () => {
     try {
-      const response = await authFetch(`${API_BASE}/api/v1/admin/get-schedules`);
-      const json = await response.json();
-      const raw = Array.isArray(json) ? json : Array.isArray(json?.schedules) ? json.schedules : [];
-      const cleaned = raw.filter(isScheduleLike);
+      const cleaned = await fetchAllSchedules(`${API_BASE}/api/v1/admin/get-schedules`);
       setSchedules(cleaned);
     } catch (error) {
       toast.error("Error fetching schedules");
