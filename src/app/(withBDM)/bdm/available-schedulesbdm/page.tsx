@@ -5,60 +5,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
-import { authFetch } from "@/lib/http";
+import { fetchAllSchedules, NormalizedSchedule } from "@/app/utils/schedules";
+import { formatTimeToPeriod } from "@/app/utils/time";
 
-// ===== Types that mirror your backend =====
-type TimeSlot = {
-  slotId: string;          // "1", "2", ...
-  startTime: string;       // "HH:mm" | "HH:mm:ss"
-  endTime: string;         // "HH:mm" | "HH:mm:ss"
-  totalSlot?: number;      // optional in DB
-  slot?: number;           // available seats (number on backend)
-};
-
-type ScheduleDoc = {
-  _id: string;             // Mongo _id (stringified in JSON)
-  courseId?: string;
-  name?: string;           // often set when creating the schedule
-  testType: "Paper-Based" | "Computer-Based" | string;
-  startDate: string;       // "YYYY-MM-DD" or ISO string
-  endDate?: string;
-  status?: string;
-  createdAt?: string;
-  timeSlots: TimeSlot[];
-  [k: string]: unknown;    // allow extra fields without breaking
-};
-
-// ===== Small helpers =====
-
-const isScheduleRow = (row: any): row is ScheduleDoc => {
-  if (!row || typeof row !== "object") return false;
-  return (
-    typeof row._id === "string" &&
-    typeof row.testType === "string" &&
-    typeof row.startDate === "string" &&
-    Array.isArray(row.timeSlots)
-  );
-};
-
-const normalizeYMD = (value: string): string | null => {
-  if (typeof value !== "string") return null;
-
-  // already YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-
-  // ISO -> take date portion
-  if (value.includes("T")) {
-    const d = value.split("T")[0];
-    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-  }
-
-  // last resort parse
-  const dt = new Date(value);
-  if (!Number.isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
-
-  return null;
-};
+type ScheduleDoc = NormalizedSchedule;
 
 const prettyDate = (ymd: string) => {
   // ymd is "YYYY-MM-DD"
@@ -68,16 +18,7 @@ const prettyDate = (ymd: string) => {
   return us.replace(/^(\w+)\s(\d+),\s(\d+)$/, "$2 $1, $3");
 };
 
-const to12h = (time: string) => {
-  // accepts "HH:mm" or "HH:mm:ss"
-  const [hStr, mStr] = time.split(":");
-  const h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
-  if (Number.isNaN(h) || Number.isNaN(m)) return time;
-  const period = h >= 12 ? "PM" : "AM";
-  const hh = h % 12 || 12;
-  return `${hh}:${String(m).padStart(2, "0")} ${period}`;
-};
+const to12h = (time: string) => formatTimeToPeriod(time);
 
 export default function AvailableSchedulesBDMPage() {
   const router = useRouter();
@@ -102,28 +43,8 @@ export default function AvailableSchedulesBDMPage() {
     (async () => {
       setLoading(true);
       try {
-        const res = await authFetch(`${API_BASE}/api/v1/admin/get-schedules`, {
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        // Be defensive: only keep rows that look like schedules; normalize startDate to YYYY-MM-DD
-        const raw: any[] = Array.isArray(data) ? data : Array.isArray(data?.schedules) ? data.schedules : [];
-        const clean: ScheduleDoc[] = raw
-          .filter(isScheduleRow)
-          .map((s) => {
-            const d = normalizeYMD(s.startDate);
-            // normalize each timeSlots.slot to number if any string slips through
-            const slots = (s.timeSlots || []).map((t) => ({
-              ...t,
-              slot: typeof t.slot === "string" ? Number(t.slot) : t.slot,
-            }));
-            return d ? { ...s, startDate: d, timeSlots: slots } : null;
-          })
-          .filter(Boolean) as ScheduleDoc[];
-
-        setSchedules(clean);
+        const normalized = await fetchAllSchedules(`${API_BASE}/api/v1/admin/get-schedules`);
+        setSchedules(normalized);
       } catch (e) {
         console.error(e);
         toast.error("Error fetching schedules");
