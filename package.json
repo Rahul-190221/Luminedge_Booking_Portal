@@ -14,7 +14,6 @@
     "date-fns-tz": "^3.2.0",
     "framer-motion": "^12.6.3",
     "js-cookie": "^3.0.5",
-    "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
     "jwt-decode": "^4.0.0",
@@ -34,7 +33,6 @@
   "devDependencies": {
     "@types/cookie": "^0.6.0",
     "@types/js-cookie": "^3.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20.19.27",
     "@types/react": "^18",
     "@types/react-datepicker": "^6.2.0",
