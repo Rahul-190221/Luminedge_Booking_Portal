@@ -6,16 +6,13 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
 import { fetchAllSchedules, NormalizedSchedule } from "@/app/utils/schedules";
-import { formatTimeToPeriod } from "@/app/utils/time";
+import { formatTimeToPeriod, formatPrettyDate } from "@/app/utils/time";
 
 type ScheduleDoc = NormalizedSchedule;
 
 const prettyDate = (ymd: string) => {
   // ymd is "YYYY-MM-DD"
-  const d = new Date(ymd + "T00:00:00Z");
-  const us = d.toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" });
-  // "Month DD, YYYY" -> "DD Month, YYYY"
-  return us.replace(/^(\w+)\s(\d+),\s(\d+)$/, "$2 $1, $3");
+  return formatPrettyDate(new Date(ymd + "T00:00:00Z"));
 };
 
 const to12h = (time: string) => formatTimeToPeriod(time);
@@ -43,7 +40,9 @@ export default function AvailableSchedulesBDMPage() {
     (async () => {
       setLoading(true);
       try {
-        const normalized = await fetchAllSchedules(`${API_BASE}/api/v1/admin/get-schedules`);
+        const normalized = await fetchAllSchedules(`${API_BASE}/api/v1/admin/get-schedules`, {
+          requireTestType: true,
+        });
         setSchedules(normalized);
       } catch (e) {
         console.error(e);

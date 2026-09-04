@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
 import { fetchAllSchedules, NormalizedSchedule } from "@/app/utils/schedules";
-import { formatTimeToPeriod } from "@/app/utils/time";
+import { formatTimeToPeriod, formatPrettyDate } from "@/app/utils/time";
 
 type Schedule = NormalizedSchedule;
 
@@ -150,9 +150,7 @@ function AvailableSchedulesBDMPage() {
                     if (!dk) return "N/A";
                     const d = new Date(dk);
                     if (isNaN(+d)) return "N/A";
-                    return d
-                      .toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })
-                      .replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3");
+                    return formatPrettyDate(d);
                   })()}
                 </td>
                 <td className="px-4 py-2">

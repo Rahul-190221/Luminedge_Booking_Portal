@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
 import UserTable from "@/components/userTable";
 import { API_BASE } from "@/lib/config";
+import { formatPrettyDate } from "@/app/utils/time";
 
 // ✅ Define User Interface
 export interface User {
@@ -66,9 +67,7 @@ const toNum = (v: number | string | undefined | null) => {
 const formatDisplayDate = (u: User) => {
   const ms = createdAtSafe(u);
   if (!ms) return "—";
-  return new Date(ms)
-    .toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })
-    .replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3");
+  return formatPrettyDate(new Date(ms));
 };
 
 // 🔁 fetch *all* completed users by paging the API (no backend change needed)

@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
 import UserTable from "@/components/userTable";
 import { API_BASE } from "@/lib/config";
+import { formatPrettyDate } from "@/app/utils/time";
 
 // ✅ Define User Interface
 export interface User {
@@ -255,13 +256,7 @@ const BookingsTable = () => {
                 <tr key={user._id} className="border-b">
                   <td className="px-4 py-2 break-words">{user.name}</td>
                   <td className="px-4 py-2 break-words">
-                    {new Date(user.createdAt)
-                      .toLocaleDateString("en-US", {
-                        month: "long",
-                        day: "2-digit",
-                        year: "numeric",
-                      })
-                      .replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
+                    {formatPrettyDate(new Date(user.createdAt))}
                   </td>
                   <td className="px-4 py-2 break-words">{user.email}</td>
                   <td className="px-4 py-2 break-words">{user.status}</td>

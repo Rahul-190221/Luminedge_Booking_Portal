@@ -117,18 +117,21 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
   useEffect(() => { setMounted(true); }, []);
 
-  // For a Computer-Based course that isn't Home-eligible, Test Center is the only
-  // real choice — effectiveLocation above already treats it as selected on every
-  // read site (dropdown, calendar, fetch, validation), so this no longer needs to
-  // force selectedLocation into state. It only clears any slot/schedule picked
-  // while a previous (Home-eligible) course was selected, mirroring the manual
-  // location dropdown's onChange.
+  // For a Computer-Based course that isn't Home-eligible, Test Center is the
+  // only real choice. effectiveLocation above already treats it as selected on
+  // every render-time read site (dropdown, calendar, fetch, validation), so
+  // this doesn't cause the old one-paint "select a location" flash — but
+  // selectedLocation itself is still synced here (not left stale) so that
+  // handleProceed's raw-state defense-in-depth guard below can't be fooled by
+  // a leftover "Home" value from a previous course. Also clears any slot/
+  // schedule picked while that previous (Home-eligible) course was selected.
   useEffect(() => {
-    if (isComputer && !isHomeEligibleCourse) {
+    if (isComputer && !isHomeEligibleCourse && selectedLocation !== "Test Center") {
+      setSelectedLocation("Test Center");
       setSelectedSlotId(null);
       setScheduleId(null);
     }
-  }, [isComputer, isHomeEligibleCourse]);
+  }, [isComputer, isHomeEligibleCourse, selectedLocation]);
 
   // Highlight which days of the visible month have schedules for this course.
   // Uses the PUBLIC course-schedules endpoint (same auth as the per-day route,
@@ -257,7 +260,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
           ? response.data.schedules
           : [];
         const normalizedSchedules = rawSchedules
-          .map(normalizeScheduleRow)
+          .map((row: any) => normalizeScheduleRow(row))
           .filter(Boolean)
           .map((schedule: any) => ({
             ...schedule,
@@ -659,7 +662,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
             </div>
 
             {/* Test Time for Home */}
-            {selectedLocation === "Home" && (
+            {effectiveLocation === "Home" && (
               <div className="w-full flex flex-col items-start">
                 <label htmlFor="testTime" className="block mb-0 font-medium">
                   Test Time <span className="text-red-500">*</span>
@@ -805,7 +808,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
                 </>
               ) : (
                 <p className="text-base font-medium text-[#00000f] mt-0">
-                  {selectedLocation === "Home"
+                  {effectiveLocation === "Home"
                     ? "You can choose any date for home-based booking. Select your date and test time, then click Proceed."
                     : "No schedules available for this date."}
                 </p>

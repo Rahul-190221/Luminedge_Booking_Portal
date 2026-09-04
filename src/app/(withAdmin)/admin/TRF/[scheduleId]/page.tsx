@@ -9,6 +9,10 @@ import autoTable from "jspdf-autotable";
 import { useRouter } from "next/navigation";
 
 import { API_BASE } from "@/lib/config";
+import {
+  TEACHER_EMAIL_MAP as teacherEmailMap,
+  getTeacherBgClass,
+} from "@/app/utils/teachers";
 
 type Booking = {
   id?: string;
@@ -133,23 +137,6 @@ const TrfBookingRequestsPage = ({
   >({});
   // Budget map for each user
   const [userBudgets, setUserBudgets] = useState<Record<string, number>>({});
-
-  // Map teacher code -> email
-  const teacherEmailMap: Record<string, string> = {
-    Prima: "prima.luminedge@gmail.com",
-    Neelima: "neelima.luminedge2023@gmail.com",
-    Tamim: "tamim.luminedge@gmail.com",
-    Raisa: "raisa.luminedge@gmail.com",
-    Rafi: "rafi.luminedge@gmail.com",
-    Saiham: "saiham.luminedge@gmail.com",
-    Tanvir: "tanvirkhan.luminedge@gmail.com",
-    Iffat: "iffat.luminedge@gmail.com",
-    Najia: "najia.luminedge@gmail.com",
-    Sazzadur: "sazzadur.luminedge@gmail.com",
-    Mubasshira: "mubasshira.luminedge@gmail.com",
-    Sadman: "salim.sadman.luminedge@gmail.com",
-    // Rahul: "rahul1921@cseku.ac.bd",
-  };
 
   // Pull per-schedule feedback flags
   const hydrateFeedbackStatus = useCallback(
@@ -658,6 +645,11 @@ const TrfBookingRequestsPage = ({
           )} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
         >
           <option value="">Select</option>
+          {value && !(value in teacherEmailMap) && (
+            <option value={value} disabled>
+              {value} (removed)
+            </option>
+          )}
           {Object.keys(teacherEmailMap).map((code) => (
             <option key={code} value={code}>
               {code}
@@ -676,25 +668,6 @@ const TrfBookingRequestsPage = ({
       </div>
     );
   };
-
-  const teacherColorMap: Record<string, string> = {
-    Prima: "bg-green-500 text-white",
-    Neelima: "bg-blue-600 text-white",
-    Tamim: "bg-yellow-500 text-black",
-    Raisa: "bg-red-600 text-white",
-    Rafi: "bg-indigo-600 text-white",
-    Saiham: "bg-emerald-600 text-white",
-    Tanvir: "bg-purple-600 text-white",
-    Iffat: "bg-pink-600 text-white",
-    Najia: "bg-cyan-600 text-white",
-    Sazzadur: "bg-lime-600 text-white",
-    Mubasshira: "bg-rose-600 text-white",
-    Sadman: "bg-orange-600 text-white",
-    // Rahul: "bg-teal-600 text-white",
-  };
-
-  const getTeacherBgClass = (value: string) =>
-    teacherColorMap[value] || "bg-white text-black";
 
   // Helper: are all 4 segments saved for THIS schedule?
   const isFeedbackComplete = (u: any) =>

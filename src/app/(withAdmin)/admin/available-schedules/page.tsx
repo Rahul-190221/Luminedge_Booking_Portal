@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
 import { authFetch } from "@/lib/http";
 import { fetchAllSchedules, NormalizedSchedule } from "@/app/utils/schedules";
-import { formatTimeToPeriod } from "@/app/utils/time";
+import { formatTimeToPeriod, formatPrettyDate } from "@/app/utils/time";
 
 const toEpochUTC00 = (ymd: string): number => (ymd ? Date.parse(`${ymd}T00:00:00Z`) : Number.NaN);
 
@@ -19,9 +19,7 @@ const todayLocalYMD = (): string => {
 const formatTime = (time: string) => formatTimeToPeriod(time, "Invalid time");
 
 const formatScheduleDate = (startDate: string): string =>
-  new Date(`${startDate}T00:00:00`)
-    .toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })
-    .replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3");
+  formatPrettyDate(new Date(`${startDate}T00:00:00`));
 
 function AvailableSchedulesPage() {
   const router = useRouter();

@@ -65,25 +65,51 @@ const pickTimeSlots = (row: any): any[] => {
   return [];
 };
 
-export const normalizeScheduleRow = (row: any): NormalizedSchedule | null => {
+export type NormalizeScheduleRowOptions = {
+  // When true, a row with no resolvable testType/type/mode is rejected
+  // (returns null) instead of falling back to an empty string. Some pages
+  // (e.g. BDM available schedules) previously enforced this via their own
+  // local row guard; pass it here instead of re-adding a parallel guard.
+  requireTestType?: boolean;
+};
+
+export const normalizeScheduleRow = (
+  row: any,
+  options?: NormalizeScheduleRowOptions
+): NormalizedSchedule | null => {
   if (!row || typeof row !== "object") return null;
 
   const startDate = toYMD(row.startDate ?? row.date ?? row.examDate);
   const timeSlots = pickTimeSlots(row);
   const id = row._id ?? row.id;
+  const testType = row.testType ?? row.type ?? row.mode ?? "";
 
   // Only require an actual timeSlots/timeslots array on the row, not that it's
   // non-empty — an empty array is still a real (if slot-less) schedule.
   const hasTimeSlotsField = Array.isArray(row?.timeSlots) || Array.isArray(row?.timeslots);
 
-  if (!id || !startDate || !hasTimeSlotsField) return null;
+  if (!id || !startDate || !hasTimeSlotsField) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("normalizeScheduleRow: dropping row that failed validation", {
+        reason: !id ? "missing _id/id" : !startDate ? "missing/unparseable startDate" : "missing timeSlots/timeslots array",
+        row,
+      });
+    }
+    return null;
+  }
+  if (options?.requireTestType && !testType) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("normalizeScheduleRow: dropping row with no resolvable testType", { row });
+    }
+    return null;
+  }
 
   return {
     ...row,
     _id: id,
     id,
     name: row.name ?? row.courseName ?? row.title ?? "",
-    testType: row.testType ?? row.type ?? row.mode ?? "",
+    testType,
     startDate,
     status: row.status ?? "",
     timeSlots: timeSlots.map((ts: any) => ({
@@ -103,17 +129,32 @@ export const normalizeScheduleRow = (row: any): NormalizedSchedule | null => {
 // shorter than the requested limit — do NOT rely solely on the response's `total`
 // field to decide when to stop, since a response without a numeric `total` would
 // make the loop exit after page 1 and silently drop every older row. `total` is
-// only used opportunistically to skip a redundant extra request when the row
-// count lands exactly on a page boundary; a page-2+ request failing (e.g. an
-// out-of-range page) just ends pagination instead of throwing, and a hard cap
-// on page count guards against a backend that never returns a short/empty page.
+// only used opportunistically, to skip a redundant extra request once the row
+// count reaches it.
+//
+// A non-OK response is normally treated as a genuine failure and throws
+// immediately. The one exception: if the previous page came back exactly
+// `limit`-sized with no numeric `total` ever reported, the loop has no way to
+// know it reached the end short of issuing one more "confirming" request past
+// the last real page. We assume (unverified against the live backend, which
+// requires an authenticated session to probe) that the backend returns 200
+// with an empty `schedules` array in that case, but if it instead responds
+// non-2xx, we treat that specific request as "end of pagination" rather than
+// discarding every row already collected — a boundary quirk shouldn't fail
+// the whole list. Any other non-2xx (page 1, or after a short/known-complete
+// page) still throws; a 401/403/5xx or network error there must never be
+// swallowed as if it meant "no more data". A hard page-count cap guards
+// against a misbehaving backend that never returns a short/empty page.
 export const fetchAllSchedules = async (
-  endpoint = "/api/v1/admin/get-schedules"
+  endpoint = "/api/v1/admin/get-schedules",
+  options?: NormalizeScheduleRowOptions
 ): Promise<NormalizedSchedule[]> => {
   const limit = 500;
   const maxPages = 200; // safety cap (100k rows) against a misbehaving backend
   const rows: any[] = [];
   let page = 1;
+  let total: number | undefined;
+  let lastPageWasFull = false;
 
   while (page <= maxPages) {
     const separator = endpoint.includes("?") ? "&" : "?";
@@ -122,21 +163,34 @@ export const fetchAllSchedules = async (
     });
 
     if (!res.ok) {
-      if (page === 1) throw new Error(`HTTP ${res.status}`);
-      break;
+      if (lastPageWasFull && total === undefined && rows.length > 0) {
+        console.warn(
+          `fetchAllSchedules: confirming request for page ${page} returned HTTP ${res.status}; treating as end of pagination (${rows.length} row(s) already collected).`
+        );
+        break;
+      }
+      throw new Error(`HTTP ${res.status}`);
     }
 
     const data = await res.json();
     const pageRows = extractScheduleRows(data);
     rows.push(...pageRows);
+    if (typeof data?.total === "number") total = data.total;
+    lastPageWasFull = pageRows.length === limit;
 
-    const total = typeof data?.total === "number" ? data.total : undefined;
     if (pageRows.length < limit) break;
     if (total !== undefined && rows.length >= total) break;
     page += 1;
   }
 
+  if (page > maxPages) {
+    console.error(
+      `fetchAllSchedules: hit the ${maxPages}-page safety cap (${rows.length} row(s) fetched) without reaching the end of results`
+    );
+    throw new Error(`fetchAllSchedules: exceeded maximum page limit of ${maxPages}`);
+  }
+
   return rows
-    .map(normalizeScheduleRow)
+    .map((row) => normalizeScheduleRow(row, options))
     .filter((row): row is NormalizedSchedule => Boolean(row));
 };
