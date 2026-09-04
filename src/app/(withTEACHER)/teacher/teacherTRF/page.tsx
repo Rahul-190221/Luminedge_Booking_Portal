@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
 import { authFetch } from "@/lib/http";
 import { fetchAllSchedules } from "@/app/utils/schedules";
+import { formatTimeToPeriod } from "@/app/utils/time";
 
 // ---------- Types ----------
 type TimeSlot = {
@@ -84,14 +85,6 @@ const displayDate = (v: unknown): string => {
 const safeRowKey = (s: Schedule, fallback: number) =>
   s._id ?? s.id ?? `${s.name}-${getStartDateYMD(s) ?? "na"}-${fallback}`;
 
-// Consider it a schedule only if it has a usable date and some identifying fields
-const isScheduleLike = (x: any): boolean => {
-  if (!x || typeof x !== "object") return false;
-  const ymd = getStartDateYMD(x);
-  const hasNameOrType = typeof x?.name === "string" || typeof x?.testType === "string";
-  return !!ymd && hasNameOrType;
-};
-
 // ---------- Component ----------
 function TrfAvailableSchedulesBDMPage() {
   const router = useRouter();
@@ -159,14 +152,7 @@ function TrfAvailableSchedulesBDMPage() {
   const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;
   const currentSchedules = sortedSchedules.slice(indexOfFirstSchedule, indexOfLastSchedule);
 
-  function formatTime(time: string) {
-    const [hour, minute] = (time ?? "").split(":").map(Number);
-    const h = Number.isFinite(hour) ? (hour as number) : 0;
-    const m = Number.isFinite(minute) ? (minute as number) : 0;
-    const period = h >= 12 ? "PM" : "AM";
-    const formattedHour = h % 12 || 12;
-    return `${formattedHour}:${m.toString().padStart(2, "0")} ${period}`;
-  }
+  const formatTime = formatTimeToPeriod;
 
   return (
     <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">

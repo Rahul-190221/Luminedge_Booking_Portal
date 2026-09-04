@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
 import { authFetch } from "@/lib/http";
 import { fetchAllSchedules } from "@/app/utils/schedules";
+import { formatTimeToPeriod } from "@/app/utils/time";
 
 /* ===========================
    API base + bulk fetchers
@@ -169,17 +170,6 @@ const displayDate = (src: unknown): string => {
   }).format(new Date(Date.UTC(y, m - 1, d)));
 };
 
-const isScheduleLike = (x: any): boolean => {
-  if (!x || typeof x !== "object") return false;
-  const ymd = getStartDateYMD(x);
-  const hasName =
-    typeof x?.name === "string" ||
-    typeof x?.courseName === "string" ||
-    typeof x?.title === "string";
-  const hasType = typeof x?.testType === "string" || typeof x?.type === "string";
-  return !!ymd && (hasName || hasType);
-};
-
 const safeRowKey = (s: Schedule, idx: number) =>
   s._id ?? s.id ?? `${s.name ?? "unknown"}-${getStartDateYMD(s) ?? "na"}-${idx}`;
 
@@ -260,14 +250,7 @@ function TrfAvailableSchedulesBDMPage() {
   const indexOfFirstSchedule = indexOfLastSchedule - schedulesPerPage;
   const currentSchedules = sortedSchedules.slice(indexOfFirstSchedule, indexOfLastSchedule);
 
-  function formatTime(time: string) {
-    const [hour, minute] = (time ?? "").split(":").map(Number);
-    const h = Number.isFinite(hour) ? (hour as number) : 0;
-    const m = Number.isFinite(minute) ? (minute as number) : 0;
-    const period = h >= 12 ? "PM" : "AM";
-    const formattedHour = h % 12 || 12;
-    return `${formattedHour}:${m.toString().padStart(2, "0")} ${period}`;
-  }
+  const formatTime = formatTimeToPeriod;
 
   return (
     <div className="p-0 sm:p-3 w-full sm:max-w-[100%] mx-auto bg-[#ffffff] text-[#00000f] shadow-1xl rounded-2xl border border-[#00000f]/10">

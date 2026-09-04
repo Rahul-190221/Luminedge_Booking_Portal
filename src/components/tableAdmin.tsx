@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import { AiOutlineEye } from "react-icons/ai";
 import { FiDownload } from "react-icons/fi";
+import { formatPrettyDate } from "@/app/utils/time";
 
 // ✅ Define User Interface
 export interface User {
@@ -558,13 +559,7 @@ const TableAdmin = ({ rows, externalLoading }: TableAdminProps) => {
               <tr key={user._id} className="border-b">
                 <td className="px-4 py-2 break-words">{user.name}</td>
                 <td className="px-4 py-2 break-words">
-                  {new Date(user.createdAt)
-                    .toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "2-digit",
-                      year: "numeric",
-                    })
-                    .replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
+                  {formatPrettyDate(new Date(user.createdAt))}
                 </td>
                 <td className="px-4 py-3 break-words">
                   <select

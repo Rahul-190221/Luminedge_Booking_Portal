@@ -6,37 +6,7 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { API_BASE } from "@/lib/config";
-
-// -------- Shared constants (no hook warnings) --------
-const TEACHER_EMAIL_MAP: Record<string, string> = {
-  Prima: "prima.luminedge@gmail.com",
-  Neelima: "neelima.luminedge2023@gmail.com",
-  Tamim: "tamim.luminedge@gmail.com",
-  Raisa: "raisa.luminedge@gmail.com",
-  Rafi: "rafi.luminedge@gmail.com",
-  Saiham: "saiham.luminedge@gmail.com",
-  Tanvir: "tanvirkhan.luminedge@gmail.com",
-  Iffat: "iffat.luminedge@gmail.com",
-  Najia: "najia.luminedge@gmail.com",
-  Sazzadur: "sazzadur.luminedge@gmail.com",
-  Mubasshira: "mubasshira.luminedge@gmail.com",
-  // Rahul: "rahul1921@cseku.ac.bd",
-};
-
-const TEACHER_COLOR_MAP: Record<string, string> = {
-  Prima: "bg-green-500 text-white",
-  Neelima: "bg-blue-600 text-white",
-  Tamim: "bg-yellow-500 text-black",
-  Raisa: "bg-red-600 text-white",
-  Rafi: "bg-indigo-600 text-white",
-  Saiham: "bg-emerald-600 text-white",
-  Tanvir: "bg-purple-600 text-white",
-  Iffat: "bg-pink-600 text-white",
-  Najia: "bg-cyan-600 text-white",
-  Sazzadur: "bg-lime-600 text-white",
-  Mubasshira: "bg-rose-600 text-white",
-  // Rahul: "bg-gray-600 text-white",
-};
+import { TEACHER_EMAIL_MAP, ALL_TEACHER_EMAIL_MAP, getTeacherBgClass } from "@/app/utils/teachers";
 
 // ---------- Types ----------
 type SegmentKey = "listening" | "writing" | "reading" | "speaking";
@@ -187,9 +157,12 @@ export default function HomeBasedPage() {
   }, [fetchHomeBookingsAndUsers]);
 
   // -------- teacher reverse map (email -> name) --------
+  // Built from the full roster (selectable + legacy) so an existing booking
+  // assigned to a since-removed teacher (e.g. Tamim, Tanvir) still resolves
+  // to their name instead of showing blank.
   const emailToTeacher: Record<string, string> = useMemo(() => {
     const m: Record<string, string> = {};
-    Object.entries(TEACHER_EMAIL_MAP).forEach(([name, email]) => {
+    Object.entries(ALL_TEACHER_EMAIL_MAP).forEach(([name, email]) => {
       if (email) m[email.trim().toLowerCase()] = name;
     });
     return m;
@@ -812,8 +785,6 @@ function TeacherSelect({
   tooltipText?: string;
   disabled?: boolean;
 }) {
-  const getTeacherBgClass = (val: string) => TEACHER_COLOR_MAP[val] || "bg-white text-black";
-
   return (
     <div className="relative w-full">
       <select
@@ -826,6 +797,11 @@ function TeacherSelect({
         )} ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         <option value="">Select</option>
+        {value && !(value in TEACHER_EMAIL_MAP) && (
+          <option value={value} disabled>
+            {value} (removed)
+          </option>
+        )}
         {Object.keys(TEACHER_EMAIL_MAP).map((code) => (
           <option key={code} value={code}>
             {code}

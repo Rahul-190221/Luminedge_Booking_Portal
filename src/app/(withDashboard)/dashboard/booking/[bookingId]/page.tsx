@@ -92,8 +92,15 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   const isComputer = userTestType === "Computer-Based";
   // Home is a course-level policy (see homeBasedCourses); GRE/TOEFL are excluded.
   const isHomeEligibleCourse = homeBasedCourses[courseName] === true;
-  const isHome = isComputer && selectedLocation === "Home";
-  const isCenter = isComputer && selectedLocation === "Test Center";
+  // For a Computer-Based, non-Home-eligible course, Test Center is the only real
+  // choice. This is the single source of truth for "current location" used by
+  // every read site (dropdown value, calendar/legend visibility, schedule fetch,
+  // proceed validation, booking payload) — selectedLocation itself is only ever
+  // set by the user's manual dropdown choice, never forced.
+  const effectiveLocation =
+    isComputer && !isHomeEligibleCourse ? "Test Center" : selectedLocation;
+  const isHome = isComputer && effectiveLocation === "Home";
+  const isCenter = isComputer && effectiveLocation === "Test Center";
   const isPaper = userTestType !== "Computer-Based";
 
   const canProceed = useMemo(() => {
@@ -110,14 +117,17 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
   useEffect(() => { setMounted(true); }, []);
 
-  // For a Computer-Based course that isn't Home-eligible, Test Center is the only
-  // real choice — auto-select it so the calendar appears without a one-option
-  // dropdown, and so the "Home" branch can never be reached for these courses.
+  // For a Computer-Based course that isn't Home-eligible, Test Center is the
+  // only real choice. effectiveLocation above already treats it as selected on
+  // every render-time read site (dropdown, calendar, fetch, validation), so
+  // this doesn't cause the old one-paint "select a location" flash — but
+  // selectedLocation itself is still synced here (not left stale) so that
+  // handleProceed's raw-state defense-in-depth guard below can't be fooled by
+  // a leftover "Home" value from a previous course. Also clears any slot/
+  // schedule picked while that previous (Home-eligible) course was selected.
   useEffect(() => {
     if (isComputer && !isHomeEligibleCourse && selectedLocation !== "Test Center") {
       setSelectedLocation("Test Center");
-      // Clear any slot/schedule picked while a previous (Home-eligible) course
-      // was selected — mirrors the manual location dropdown's onChange.
       setSelectedSlotId(null);
       setScheduleId(null);
     }
@@ -231,7 +241,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       setScheduleData([]);
       return;
     }
-    if (isComputer && !selectedLocation) return; // wait for location selection
+    if (isComputer && !effectiveLocation) return; // wait for location selection
 
     const controller = new AbortController();
 
@@ -250,7 +260,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
           ? response.data.schedules
           : [];
         const normalizedSchedules = rawSchedules
-          .map(normalizeScheduleRow)
+          .map((row: any) => normalizeScheduleRow(row))
           .filter(Boolean)
           .map((schedule: any) => ({
             ...schedule,
@@ -270,7 +280,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
     fetchScheduleData(value);
     return () => controller.abort();
-  }, [value, isHome, isComputer, selectedLocation, userTestType, params.bookingId]);
+  }, [value, isHome, isComputer, effectiveLocation, userTestType, params.bookingId]);
 
   const handleSlotSelect = (slotId: string, scheduleId: string, testType: string) => {
     setSelectedSlotId(slotId);
@@ -285,7 +295,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       return;
     }
 
-    if (userTestType === "Computer-Based" && !selectedLocation) {
+    if (userTestType === "Computer-Based" && !effectiveLocation) {
       toast.error("Please select a location (Home or Test Center).");
       return;
     }
@@ -324,7 +334,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
 
     const bookingPayload: any = {
       userId,
-      location: selectedLocation || "Test Center",
+      location: effectiveLocation || "Test Center",
       status: "pending",
       name: courseName,
       testType: userTestType || "Unknown",
@@ -635,7 +645,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
               <select
                 id="location"
                 className="select select-bordered bg-[#FACE39] text-black w-full"
-                value={selectedLocation}
+                value={effectiveLocation}
                 onChange={(e) => {
                   setSelectedLocation(e.target.value);
                   // Clear previously selected slot/schedule when location changes
@@ -652,7 +662,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
             </div>
 
             {/* Test Time for Home */}
-            {selectedLocation === "Home" && (
+            {effectiveLocation === "Home" && (
               <div className="w-full flex flex-col items-start">
                 <label htmlFor="testTime" className="block mb-0 font-medium">
                   Test Time <span className="text-red-500">*</span>
@@ -674,7 +684,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         )}
 
         {/* Calendar + Slot Selection */}
-        {userTestType !== "Computer-Based" || (userTestType === "Computer-Based" && selectedLocation) ? (
+        {userTestType !== "Computer-Based" || (userTestType === "Computer-Based" && effectiveLocation) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 mt-2 gap-14 mx-auto">
             {/* Calendar */}
             <div className="w-full max-w-md mx-auto rounded-lg shadow border border-gray-200 p-8 pb-0 bg-white ">
@@ -706,7 +716,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
               {/* Legend for Test Center / Paper */}
               {(userTestType === "Paper-Based" ||
                 (userTestType === "Computer-Based" &&
-                  selectedLocation === "Test Center")) && (
+                  effectiveLocation === "Test Center")) && (
                 <div className="flex gap-6 mt-2 text-sm">
                   <div className="flex items-center gap-1">
                     <div className="w-4 h-4 border-2 border-[#FACE39] bg-[#FEF6D9]"></div>
@@ -798,7 +808,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
                 </>
               ) : (
                 <p className="text-base font-medium text-[#00000f] mt-0">
-                  {selectedLocation === "Home"
+                  {effectiveLocation === "Home"
                     ? "You can choose any date for home-based booking. Select your date and test time, then click Proceed."
                     : "No schedules available for this date."}
                 </p>

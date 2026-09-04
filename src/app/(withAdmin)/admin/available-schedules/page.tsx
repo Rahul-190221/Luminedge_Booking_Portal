@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { API_BASE } from "@/lib/config";
 import { authFetch } from "@/lib/http";
 import { fetchAllSchedules, NormalizedSchedule } from "@/app/utils/schedules";
-import { formatTimeToPeriod } from "@/app/utils/time";
+import { formatTimeToPeriod, formatPrettyDate } from "@/app/utils/time";
 
 const toEpochUTC00 = (ymd: string): number => (ymd ? Date.parse(`${ymd}T00:00:00Z`) : Number.NaN);
 
@@ -17,6 +17,9 @@ const todayLocalYMD = (): string => {
 };
 
 const formatTime = (time: string) => formatTimeToPeriod(time, "Invalid time");
+
+const formatScheduleDate = (startDate: string): string =>
+  formatPrettyDate(new Date(`${startDate}T00:00:00`));
 
 function AvailableSchedulesPage() {
   const router = useRouter();
@@ -195,9 +198,7 @@ function AvailableSchedulesPage() {
                 <td className="px-4 py-2">{schedule.name}</td>
                 <td className="px-4 py-2">{schedule.testType}</td>
                 <td className="px-4 py-2">
-                  {new Date(`${schedule.startDate}T00:00:00`)
-                    .toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })
-                    .replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
+                  {formatScheduleDate(schedule.startDate)}
                 </td>
                 <td className="px-4 py-2">
                   {Array.isArray(schedule.timeSlots) && schedule.timeSlots.length > 0 ? (
@@ -227,13 +228,7 @@ function AvailableSchedulesPage() {
                           <div className="bg-gray-100 p-4 rounded shadow-lg text-black">
                             <p className="text-sm">
                               Are you sure you want to delete the schedule on{" "}
-                              {new Date(`${schedule.startDate}T00:00:00`)
-                                .toLocaleDateString("en-US", {
-                                  month: "long",
-                                  day: "2-digit",
-                                  year: "numeric",
-                                })
-                                .replace(/^(\w+) (\d+), (\d+)$/, "$2 $1, $3")}
+                              {formatScheduleDate(schedule.startDate)}
                               ?
                             </p>
                             <div className="mt-4 flex justify-center gap-4">
