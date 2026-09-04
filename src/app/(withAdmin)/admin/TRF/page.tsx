@@ -203,7 +203,7 @@ function TrfAvailableSchedulesBDMPage() {
   const fetchSchedules = async () => {
     try {
       const cleaned = await fetchAllSchedules(`${API_BASE}/api/v1/admin/get-schedules`);
-      setSchedules(cleaned);
+      setSchedules(cleaned.filter(isScheduleLike));
     } catch (error) {
       toast.error("Error fetching schedules");
       console.error("Error fetching schedules:", error);

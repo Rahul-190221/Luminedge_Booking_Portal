@@ -99,33 +99,40 @@ export const normalizeScheduleRow = (row: any): NormalizedSchedule | null => {
 // /api/v1/admin/get-schedules is paginated server-side (default page=1&limit=100,
 // capped at 500/page) and sorted by _id descending, so a single unparameterized
 // request silently drops any schedule older than the newest page-worth of rows
-// once the collection grows past the limit. Page through until every row backed
-// by the server's own `total` count has been collected.
+// once the collection grows past the limit. Page through until a page comes back
+// shorter than the requested limit — do NOT rely solely on the response's `total`
+// field to decide when to stop, since a response without a numeric `total` would
+// make the loop exit after page 1 and silently drop every older row. `total` is
+// only used opportunistically to skip a redundant extra request when the row
+// count lands exactly on a page boundary; a page-2+ request failing (e.g. an
+// out-of-range page) just ends pagination instead of throwing, and a hard cap
+// on page count guards against a backend that never returns a short/empty page.
 export const fetchAllSchedules = async (
   endpoint = "/api/v1/admin/get-schedules"
 ): Promise<NormalizedSchedule[]> => {
   const limit = 500;
+  const maxPages = 200; // safety cap (100k rows) against a misbehaving backend
   const rows: any[] = [];
   let page = 1;
-  let total = Infinity;
 
-  while (rows.length < total) {
+  while (page <= maxPages) {
     const separator = endpoint.includes("?") ? "&" : "?";
     const res = await authFetch(`${endpoint}${separator}page=${page}&limit=${limit}`, {
       cache: "no-store",
     });
 
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+      if (page === 1) throw new Error(`HTTP ${res.status}`);
+      break;
     }
 
     const data = await res.json();
     const pageRows = extractScheduleRows(data);
     rows.push(...pageRows);
 
-    total = typeof data?.total === "number" ? data.total : rows.length;
-
-    if (pageRows.length === 0) break;
+    const total = typeof data?.total === "number" ? data.total : undefined;
+    if (pageRows.length < limit) break;
+    if (total !== undefined && rows.length >= total) break;
     page += 1;
   }
 

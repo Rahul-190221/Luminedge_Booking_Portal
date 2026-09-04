@@ -20,6 +20,7 @@ const TEACHER_EMAIL_MAP: Record<string, string> = {
   Najia: "najia.luminedge@gmail.com",
   Sazzadur: "sazzadur.luminedge@gmail.com",
   Mubasshira: "mubasshira.luminedge@gmail.com",
+  Sadman: "salim.sadman.luminedge@gmail.com",
   // Rahul: "rahul1921@cseku.ac.bd",
 };
 
@@ -35,6 +36,7 @@ const TEACHER_COLOR_MAP: Record<string, string> = {
   Najia: "bg-cyan-600 text-white",
   Sazzadur: "bg-lime-600 text-white",
   Mubasshira: "bg-rose-600 text-white",
+  Sadman: "bg-orange-600 text-white",
   // Rahul: "bg-gray-600 text-white",
 };
 
