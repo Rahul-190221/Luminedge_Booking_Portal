@@ -51,6 +51,7 @@ export const TEACHER_COLOR_MAP: Record<string, string> = {
   Mubasshira: "bg-rose-600 text-white",
   Sadman: "bg-orange-600 text-white",
   Juthi: "bg-violet-600 text-white",
+  Mahi: "bg-teal-600 text-white",
   // Rahul: "bg-teal-600 text-white" / "bg-gray-600 text-white",
 };
 
