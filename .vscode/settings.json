@@ -12,6 +12,7 @@
         "Gawsia",
         "homebased",
         "homebasedbdm",
+        "homebasedteacher",
         "homebasedtrf",
         "IELTS",
         "ieltslogo",
@@ -35,6 +36,7 @@
         "Satmasjid",
         "Sazzadur",
         "schedulesbdm",
+        "schedulesteacher",
         "scheduletest",
         "setscheduletest",
         "subscores",
@@ -42,7 +44,9 @@
         "Tamim",
         "Tanvir",
         "timeslots",
+        "trfhomebased",
         "unparameterized",
-        "usersbdm"
+        "usersbdm",
+        "usersteacher"
     ]
 }
