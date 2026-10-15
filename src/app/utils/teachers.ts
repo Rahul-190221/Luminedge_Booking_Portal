@@ -12,6 +12,8 @@ export const TEACHER_EMAIL_MAP: Record<string, string> = {
   Sazzadur: "sazzadur.luminedge@gmail.com",
   Sadman: "salim.sadman.luminedge@gmail.com",
   Juthi: "juthiluminedge@gmail.com",
+  Mahi: "mahi.luminedge@gmail.com",
+  // Arnab: "rzarnab150@gmail.com",
   // Rahul: "rahul1921@cseku.ac.bd",
 };
 
