@@ -3,5 +3,5 @@
 // break every request (plus mixed-content over HTTPS). Override locally via
 // NEXT_PUBLIC_API_BASE_URL in .env.local.
 export const API_BASE = (
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://luminedge-server.vercel.app"
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://lumi-booking-backend.vercel.app"
 ).replace(/\/$/, "");
