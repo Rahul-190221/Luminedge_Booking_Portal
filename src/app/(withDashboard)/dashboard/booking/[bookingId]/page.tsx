@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import axios from "axios";
@@ -38,15 +38,9 @@ type Schedule = {
   status: string;
 };
 
-type Booking = {
-  _id: string;
-  name: string;
-  scheduleId?: string;
-  bookingDate: string;
-};
-
 // --- Component ---
-const BookingId = ({ params }: { params: { bookingId: string } }) => {
+const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: string }> }) => {
+  const params = use(paramsPromise);
   const [value, onChange] = useState<Value>(new Date());
   const [testType, setTestType] = useState<string>("");
   const [testSystem, setTestSystem] = useState<string>("");
@@ -62,7 +56,6 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   const [userMocks, setUserMocks] = useState<
     { mockType: string; mock: number; testType?: string; testSystem?: string }[]
   >([]);
-  const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [mounted, setMounted] = useState(false);
 
   const router = useRouter();
@@ -204,12 +197,6 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         }
 
         setUserStatus(data?.user?.status || null);
-
-        // user bookings (matches backend: GET /api/v1/user/bookings/:userId)
-        const bookingsRes = await http.get(
-          `${API_BASE}/api/v1/user/bookings/${id}`
-        );
-        setExistingBookings(bookingsRes.data.bookings || []);
       } catch (error: any) {
         // If the route isn't available locally, continue with safe defaults
         const status = error?.response?.status;
@@ -218,7 +205,6 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         }
         setUserStatus(null);
         setUserMocks([]);
-        setExistingBookings([]);
       }
     };
 
@@ -289,6 +275,17 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
   };
 
   const handleProceed = async () => {
+    // FIX-02c: rescheduling is a front-desk operation. Any `?oldBookingId=`
+    // entry point — a bookmarked URL, an open tab running stale JavaScript,
+    // or an old link — must abort here, before validation and before any
+    // booking POST or cancellation DELETE is issued.
+    if (oldBookingId) {
+      toast.error(
+        "Rescheduling is done by the front desk. Please contact us at least 24 hours before your test."
+      );
+      return;
+    }
+
     // If a selection field is shown (IELTS), backend requires testSystem
     if (availableTestSystems.length > 0 && !testSystem.trim()) {
       toast.error("Please select a test system.");
@@ -315,21 +312,6 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
     if (userStatus?.toLowerCase() !== "completed") {
       toast.error("Booking is only available for users with completed status.");
       return;
-    }
-
-    // Rescheduling guard: can only reschedule same course
-    if (oldBookingId) {
-      const oldBooking = existingBookings.find((b) => b._id === oldBookingId);
-      if (!oldBooking) {
-        toast.error("Old booking not found.");
-        return;
-      }
-      if (oldBooking.name !== courseName) {
-        toast.error(
-          `You can only reschedule your ${oldBooking.name} mock, not ${courseName}.`
-        );
-        return;
-      }
     }
 
     const bookingPayload: any = {
@@ -374,46 +356,12 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
           testTime: selectedSlotId,
         });
 
-        if (oldBookingId) {
-          await http.delete(
-            `${API_BASE}/api/v1/bookings/${oldBookingId}`
-          );
-          toast.success("Rescheduled successfully! 🎯");
-        } else {
-          toast.success("Home test booked successfully! 🏡");
-        }
+        toast.success("Home test booked successfully! 🏡");
 
         await new Promise((r) => setTimeout(r, 1200));
         router.push(`/dashboard`);
       } catch (error: any) {
-        const errorMessage =
-          error.response?.data?.message || "An unexpected error occurred.";
-
-        if (
-          oldBookingId &&
-          (errorMessage.includes("Insufficient mock tests") ||
-            errorMessage.includes("Insufficient mock"))
-        ) {
-          try {
-            await http.delete(
-              `${API_BASE}/api/v1/bookings/${oldBookingId}`
-            );
-            await http.post(`${API_BASE}/api/v1/user/book-slot`, {
-              ...bookingPayload,
-              testTime: selectedSlotId,
-            });
-
-            toast.success("Rescheduled successfully after adjusting mocks! 🎯");
-            await new Promise((r) => setTimeout(r, 1200));
-            router.push(`/dashboard`);
-          } catch (secondError: any) {
-            toast.error(
-              secondError.response?.data?.message || "Error after retrying booking."
-            );
-          }
-        } else {
-          toast.error(errorMessage);
-        }
+        toast.error(error.response?.data?.message || "An unexpected error occurred.");
       }
       return;
     }
@@ -453,12 +401,7 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
         slotId: selectedSlotId,
       });
 
-      if (oldBookingId) {
-        await http.delete(`${API_BASE}/api/v1/bookings/${oldBookingId}`);
-        toast.success("Rescheduled successfully! 🎯");
-      } else {
-        toast.success("Test Center booking successful! 🏢");
-      }
+      toast.success("Test Center booking successful! 🏢");
 
       await new Promise((r) => setTimeout(r, 1200));
       router.push(`/dashboard`);
@@ -466,36 +409,11 @@ const BookingId = ({ params }: { params: { bookingId: string } }) => {
       const errorMessage =
         error.response?.data?.message || "An unexpected error occurred.";
 
-      if (
-        oldBookingId &&
-        (errorMessage.includes("Insufficient mock tests") ||
-          errorMessage.includes("Insufficient mock"))
-      ) {
-        try {
-          await http.delete(
-            `${API_BASE}/api/v1/bookings/${oldBookingId}`
-          );
-          await http.post(`${API_BASE}/api/v1/user/book-slot`, {
-            ...bookingPayload,
-            scheduleId,
-            slotId: selectedSlotId,
-          });
-
-          toast.success("Rescheduled successfully after adjusting mocks! 🎯");
-          await new Promise((r) => setTimeout(r, 1200));
-          router.push(`/dashboard`);
-        } catch (secondError: any) {
-          toast.error(
-            secondError.response?.data?.message || "Error after retrying booking."
-          );
-        }
-      } else {
-        toast.error(
-          errorMessage.includes("already booked")
-            ? "You already have booked a test for the selected date."
-            : errorMessage
-        );
-      }
+      toast.error(
+        errorMessage.includes("already booked")
+          ? "You already have booked a test for the selected date."
+          : errorMessage
+      );
     }
   };
 

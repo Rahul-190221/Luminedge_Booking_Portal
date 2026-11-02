@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { use, useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import http from "@/lib/http";
 import toast from "react-hot-toast";
@@ -75,7 +75,8 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   return Array.from(found.values());
 }
 
-const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
+const BookingRequestsPage = ({ params: paramsPromise }: { params: Promise<{ id: string }> }) => {
+  const params = use(paramsPromise);
   const scheduleId = params.id;
 
   const [bookings, setBookings] = useState<Booking[]>([]);

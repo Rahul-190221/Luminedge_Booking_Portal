@@ -1,58 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import toast from "react-hot-toast";
-import GetMe from "@/hooks/useUser";
 
-const CoursesPage = ({ params }: { params: { contact: string } }) => {
-  const user = GetMe();
-  const { contact: bookingId } = params || {};
-  const router = useRouter();
+// Route: /dashboard/<bookingId> — the confirmation screen shown after a new
+// booking. FIX-02c removed the student reschedule action, so the catch-all
+// segment is intentionally not read any more: the page is informational only
+// and offers no control that could mutate a booking.
+const CoursesPage = () => {
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
   }, []);
-
-
-  const handleRescheduleClick = () => {
-    toast((t) => (
-      <div className="flex flex-col space-y-4 p-4 rounded-2xl font-[Montserrat] text-[#00000f] bg-white shadow-lg">
-        <span className="font-bold text-lg text-center">
-          Are you sure you want to reschedule?
-        </span>
-        <div className="flex justify-center gap-6">
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-              router.push(`/dashboard/mockType?oldBookingId=${bookingId}`);
-            }}
-            className="px-5 py-2 rounded-full bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-200 shadow-md font-[Montserrat]"
-          >
-            Confirm
-          </button>
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="px-5 py-2 rounded-full bg-red-600 hover:bg-red-700 text-white font-semibold transition-all duration-200 shadow-md font-[Montserrat]"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    ), {
-      duration: 5000,
-      style: {
-        background: "transparent",
-        border: "none",
-        padding: "0",
-        boxShadow: "none",
-        fontFamily: "Montserrat, sans-serif",
-        color: "#00000f",
-      },
-    });
-  };
-  
 
   return (
     <div className="flex flex-col items-center w-full max-w-screen-xl mx-auto space-y-4 px-0 sm:px-0 md:px-0">
@@ -67,9 +26,10 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
         <ul className="list-disc list-inside ml-3 sm:ml-4">
           <li className="mb-1 sm:mb-1">
             <strong>Test Date and Time:</strong> Check the exact schedule of your mock test from the <span>&nbsp;</span>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/dashboard" className="text-[#FACE39] underline text-lg">Dashboard</a>.
           </li>
-          <li className="mb-1 sm:mb-1"><strong>Venue Information:</strong> Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi 9/A, Dhaka-1205, Bangladesh.</li>
+          <li className="mb-1 sm:mb-1"><strong>Venue Information:</strong> Check the venue listed in your booking details on the Dashboard.</li>
           <li className="mb-1 sm:mb-1"><strong>Required Documents:</strong> Ensure you have the correct identification (NID/ Passport) ready for test day.</li>
         </ul>
       
@@ -94,7 +54,7 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
               <strong>Reporting Time:</strong>
               <ul className="list-disc list-inside ml-3 sm:ml-4 mt-1 sm:mt-1">
                 <li>
-                  Arrive at the Luminedge office at least 30 minutes before your scheduled mock test.
+                  Arrive at the venue listed in your booking details at least 30 minutes before your scheduled mock test.
                 </li>
                 <li>
                   Being late or failing to appear will be treated as if the test has already been taken, and no refunds or rescheduling will be allowed.
@@ -124,13 +84,10 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
     </li>
   </ul>
   <div className="flex justify-center mt-4">
-  <button
-            onClick={handleRescheduleClick}
-            className="px-5 py-3 bg-[#FACE39] text-[#00000f] font-semibold rounded-lg hover:bg-yellow-500 transition duration-200"
-          >
-            Reschedule
-          </button>
-      </div>
+    <p className="text-center font-semibold">
+      To reschedule, please contact the front desk at least 24 hours before your test.
+    </p>
+  </div>
 </div>
         {/* Key Reminders */}
         <div className="w-full max-w-5xl bg-transparent p-0 sm:p-0">
@@ -155,13 +112,13 @@ const CoursesPage = ({ params }: { params: { contact: string } }) => {
           <div className="p-3 border rounded-lg shadow-md">
             <h2 className="text-lg font-semibold mb-0">Address</h2>
             <p>
-              Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi, Dhaka,
-              Bangladesh, 1205
+              42 Satmasjid Road, Dhanmondi
             </p>
           </div>
 
           <div className="p-3 border rounded-lg shadow-md">
               <h2 className="text-lg font-semibold mb-0">Telephone</h2>
+              <p>01400-403485</p>
               <p>01400-403474</p>
               <p>01400-403475</p>
               <p>01400-403486</p>
