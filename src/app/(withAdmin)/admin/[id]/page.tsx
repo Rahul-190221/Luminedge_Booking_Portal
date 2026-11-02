@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import http from "@/lib/http";
 import toast from "react-hot-toast";
@@ -83,7 +83,8 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   return Array.from(found.values());
 }
 
-const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
+const BookingRequestsPage = ({ params: paramsPromise }: { params: Promise<{ id: string }> }) => {
+  const params = use(paramsPromise);
   const { id: scheduleId } = params || {};
 
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -100,7 +101,11 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
     present: 0,
     absent: 0,
   });
-  const [emailsSent, setEmailsSentState] = useState<boolean>(false);
+  const [isSendingReminder, setIsSendingReminder] = useState<boolean>(false);
+  const [reminderResult, setReminderResult] = useState<{
+    sent: number; alreadyAccepted: number; failed: number; deferred: number; processing?: number; uncertain: number;
+  } | null>(null);
+  const reminderInFlight = useRef(false);
 
   const fetchBookingsAndUsers = useCallback(async () => {
     if (!scheduleId) return;
@@ -430,95 +435,40 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
     doc.save(`booking_requests_${currentDate}.pdf`);
   };
 
-  const handleSendMail = async (usersArr: any[], bookingsArr: Booking[]) => {
+  const handleSendMail = async () => {
+    if (reminderInFlight.current) return;
+    reminderInFlight.current = true;
+    setIsSendingReminder(true);
     try {
-      if (
-        typeof window !== "undefined" &&
-        localStorage.getItem(`emailsSent_${scheduleId}`)
-      ) {
-        toast.error("Emails have already been sent for this schedule.");
-        return;
-      }
-      if (!usersArr.length || !bookingsArr.length) {
-        toast.error("No users or bookings data available.");
-        return;
-      }
-
-      const emailData = usersArr
-        .map((user) => {
-          const uid = toId(user._id);
-          const booking = bookingsArr.find((b) => hasUserInBooking(b, uid));
-          if (!booking) return null;
-
-          const examDate = formatExamDate(booking.bookingDate);
-          const examTime = formatExamTime(booking.startTime, booking.endTime);
-
-          return {
-            email: user.email,
-            subject: "Reminder: Your Mock Test at Luminedge is Tomorrow.",
-            message: `
-              <p>Dear ${user.name},</p>
-              <p>This is a friendly reminder that your mock test is scheduled for tomorrow. Please find the details below:</p>
-              <h3>Test Details:</h3>
-              <p><strong>Test Title:</strong> ${booking.name} ${booking.testType}</p>
-              <p><strong>Test Date:</strong> ${examDate}</p>
-              <p><strong>Test Time:</strong> ${examTime}</p>
-              <p><strong>Reporting Time:</strong> 30 minutes before Test Time</p>
-              <p><strong>Office Address:</strong> Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi 9/A, Dhaka-1205, Bangladesh</p>
-              <h3>Important Instructions:</h3>
-              <ul>
-                <li>Arrive at least 30 minutes before the test time for check-in.</li>
-                <li>Bring a valid photo ID (Passport/NID) that matches the ID information provided at the time of account creation.</li>
-                <li>Candidates must bring their own stationery items (e.g., pens, pencils, erasers) as they will not be provided at the test venue.</li>
-              </ul>
-              <h3>Mock Test Terms & Conditions:</h3>
-              <ul>
-                <li>Purchased or course-provided mock test(s) must be used within 6 months of the MR date.</li>
-                <li>Free mock test(s) must be taken within 10 days of the MR date.</li>
-                <li>Mock test rescheduling requests must be made 24 hours prior to the booked test date.</li>
-                <li>Any mismatch between the provided ID details and the ID shown on the test day may result in test cancellation, and no refunds will be issued in such cases.</li>
-                <li>Late arrivals, no-shows, invalid photo IDs, or expired service validity may result in forfeiting the test, with no refund requests entertained.</li>
-                <li>Students are required to maintain professional behavior with Luminedge employees at all times. Any instance of misbehavior may result in service cancellation, with no refund issued.</li>
-              </ul>
-              <p>To facilitate a smooth check-in process, kindly present your valid photo ID (Passport/NID) voucher to our office executive upon arrival. This step is crucial to confirm your eligibility for the mock test.</p>
-              <p>We sincerely appreciate your cooperation in adhering to these guidelines. Your punctuality and preparedness will contribute to a successful and efficient mock test experience.</p>
-              <p>Thank you for choosing Luminedge for your test preparation needs. If you have any questions or require further assistance, please do not hesitate to contact us.</p>
-              <p><strong>Contact Us:</strong> 📞 01400-406374 | 01400-403475 | 01400-403486 | 01400-403487 | 01400-403493 | 01400-403494</p>
-              <p>We wish you the best for your mock test!</p>
-              <p>Best regards,<br>The Luminedge Team</p>
-            `,
-          };
-        })
-        .filter(Boolean) as Array<{ email: string; subject: string; message: string }>;
-
-      if (!emailData.length) {
-        toast.error("No valid email data to send.");
-        return;
-      }
-
-      const response = await http.post(
-        `${API}/api/v1/send-reminder`,
-        {
-          emails: emailData,
-        },
-        {
-        }
-      );
+      const response = await http.post(`${API}/api/v1/send-reminder`, { scheduleId });
+      const result = response.data;
+      setReminderResult(result);
+      const accepted = Number(result?.sent || 0) + Number(result?.alreadyAccepted || 0);
       if (response.status === 200) {
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`emailsSent_${scheduleId}`, "true");
-        }
-        setEmailsSentState(true);
-        toast.success("Emails sent successfully!");
-      } else {
-        throw new Error(response.data?.message || "Failed to send emails.");
+        toast.success(`Reminder processing complete: ${accepted} accepted; ${Number(result?.invalidRecipients || 0)} invalid addresses skipped.`);
+      } else if (response.status === 207) {
+        toast(`Reminder incomplete: ${Number(result?.sent || 0)} sent, ${Number(result?.failed || 0)} failed, ${Number(result?.deferred || 0)} deferred, ${Number(result?.processing || 0)} in progress, ${Number(result?.uncertain || 0)} uncertain.`);
       }
     } catch (error) {
-      console.error("Error sending emails:", error);
-      toast.error("Failed to send emails.");
+      const response = axios.isAxiosError(error) ? error.response : undefined;
+      const data = response?.data as any;
+      if (data && typeof data === "object") setReminderResult(data);
+      if (response?.status === 502) {
+        toast.error(`All attempted reminders failed. ${Number(data?.failed || 0)} failed; ${Number(data?.deferred || 0)} deferred; ${Number(data?.uncertain || 0)} uncertain.`);
+      } else if (response?.status === 403) {
+        toast.error("Only a verified administrator can send reminders.");
+      } else if (response?.status === 400 || response?.status === 404) {
+        toast.error(data?.message || "The schedule reminder request is invalid.");
+      } else if (response?.status === 503) {
+        toast.error("Reminder delivery is unavailable until its service configuration is ready.");
+      } else {
+        toast.error("Reminder delivery could not be completed.");
+      }
+    } finally {
+      reminderInFlight.current = false;
+      setIsSendingReminder(false);
     }
   };
-
   if (!scheduleId) return <div>No Schedule ID provided.</div>;
 
   return (
@@ -695,77 +645,42 @@ const BookingRequestsPage = ({ params }: { params: { id: string } }) => {
 
             <button
               onClick={() => {
-                if (
-                  typeof window !== "undefined" &&
-                  (emailsSent ||
-                    localStorage.getItem(`emailsSent_${scheduleId}`))
-                ) {
-                  toast.error("Emails have already been sent to all users!");
-                  return;
-                }
-
+                if (isSendingReminder) return;
                 toast((t) => (
                   <div className="text-left text-[#00000f]">
-                    <p className="mb-1 text-sm font-medium ">
-                      Are you sure you want to send reminder emails to all users?
-                    </p>
-                    <p className="mb-2 text-sm leading-snug text-[#00000f] font-bold">
-                      The exam date is{" "}
-                      <span className="font-semibold">
-                        {bookings[0]?.bookingDate
-                          ? formatCustomDate(bookings[0].bookingDate)
-                          : "N/A"}
-                      </span>
-                      .<br />
-                      The exam time is{" "}
-                      <span className="font-semibold">
-                        {bookings[0]?.startTime && bookings[0]?.endTime
-                          ? formatCustomTime(
-                              bookings[0].startTime,
-                              bookings[0].endTime
-                            )
-                          : "N/A"}
-                      </span>
-                      .
-                    </p>
+                    <p className="mb-1 text-sm font-medium">Send reminder emails to students with active bookings?</p>
+                    <p className="mb-2 text-sm leading-snug">Each eligible student receives their verified booking date and time.</p>
                     <div className="flex justify-between items-center w-full mt-4">
                       <button
-                        onClick={() => {
-                          handleSendMail(users, bookings);
-                          setEmailsSentState(true);
-                          if (typeof window !== "undefined") {
-                            localStorage.setItem(
-                              `emailsSent_${scheduleId}`,
-                              "true"
-                            );
-                          }
+                        onClick={async () => {
                           toast.dismiss(t.id);
+                          await handleSendMail();
                         }}
+                        disabled={isSendingReminder}
                         className="px-5 py-2 bg-green-400 hover:bg-green-500 text-[#00000f] rounded-full text-sm font-bold shadow-md hover:shadow-lg transition duration-300 ease-in-out"
                       >
-                        ✅ Confirm
+                        Confirm
                       </button>
-
                       <button
                         onClick={() => toast.dismiss(t.id)}
                         className="px-5 py-2 bg-red-400 hover:bg-red-500 text-[#00000f] rounded-full text-sm font-bold shadow-md hover:shadow-lg transition duration-300 ease-in-out"
                       >
-                        ❌ Cancel
+                        Cancel
                       </button>
                     </div>
                   </div>
                 ));
               }}
-              className={`w-80 px-6 py-4 rounded-full font-semibold text-sm uppercase tracking-wide shadow-lg transition-all duration-300 ease-in-out ${
-                emailsSent ||
-                (typeof window !== "undefined" &&
-                  localStorage.getItem(`emailsSent_${scheduleId}`))
-                  ? "bg-gray-400 text-[#00000f] cursor-not-allowed"
-                  : "bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f] ring-2 ring-transparent hover:ring-[#face39] hover:scale-105"
-              }`}
+              disabled={isSendingReminder}
+              className={`w-80 px-6 py-4 rounded-full font-semibold text-sm uppercase tracking-wide shadow-lg transition-all duration-300 ease-in-out ${isSendingReminder ? "bg-gray-400 text-[#00000f] cursor-not-allowed" : "bg-[#00000f] text-white hover:bg-[#face39] hover:text-[#00000f] ring-2 ring-transparent hover:ring-[#face39] hover:scale-105"}`}
             >
-              🚀 Send Reminder Emails
+              {isSendingReminder ? "Sending Reminder Emails..." : "Send Reminder Emails"}
             </button>
+            {reminderResult && (
+              <p className="w-full text-sm" role="status">
+                Reminder status: {reminderResult.sent} sent, {reminderResult.alreadyAccepted} already accepted, {reminderResult.failed} failed, {reminderResult.deferred} deferred, {reminderResult.processing || 0} in progress, {reminderResult.uncertain} uncertain.
+              </p>
+            )}
           </div>
         </>
       )}

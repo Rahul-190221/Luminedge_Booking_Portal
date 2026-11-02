@@ -167,14 +167,14 @@ const TermsAndConditions = () => {
           <div className="p-2 border rounded-lg shadow-md">
             <h2 className="text-lg font-semibold mb-0">Address</h2>
             <p>
-              Level 12, Gawsia Twin Peak, 743 Satmasjid Road, Dhanmondi, Dhaka,
-              Bangladesh, 1205
+              42 Satmasjid Road, Dhanmondi
             </p>
           </div>
 
           <div className="p-2 border rounded-lg shadow-md">
             <h2 className="text-lg font-semibold mb-0">Telephone</h2>
-            <p>01400-403474</p>
+            <p>01400-403485</p>
+              <p>01400-403474</p>
             <p>01400-403475</p>
             <p>01400-403486</p>
             <p>01400-403487</p>

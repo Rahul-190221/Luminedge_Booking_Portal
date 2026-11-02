@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import http from "@/lib/http";
 import toast from "react-hot-toast";
@@ -105,10 +105,11 @@ async function fetchUsersByIds(
 }
 
 const TrfBookingRequestsPage = ({
-  params,
+  params: paramsPromise,
 }: {
-  params: { scheduleId: string };
+  params: Promise<{ scheduleId: string }>;
 }) => {
+  const params = use(paramsPromise);
   const { scheduleId } = params || {};
   const router = useRouter();
 
