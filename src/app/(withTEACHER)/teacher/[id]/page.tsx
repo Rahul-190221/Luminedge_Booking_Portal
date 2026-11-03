@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams } from "next/navigation";
 import axios from "axios";
 import http from "@/lib/http";
 import toast from "react-hot-toast";
@@ -27,9 +28,9 @@ const PAGE_SIZE = 1000; // large; backend caps will apply
 
 const toId = (v: any) => String(v ?? "").trim();
 
-const BookingRequestsPage = ({ params: paramsPromise }: { params: Promise<{ id: string }> }) => {
-  const params = use(paramsPromise);
-  const { id: scheduleId } = params || {};
+const BookingRequestsPage = () => {
+  const routeParams = useParams<{ id: string }>();
+  const scheduleId = routeParams?.id ? String(routeParams.id) : "";
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<any[]>([]);

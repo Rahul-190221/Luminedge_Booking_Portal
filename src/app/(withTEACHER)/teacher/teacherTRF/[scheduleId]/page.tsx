@@ -1,12 +1,12 @@
 "use client";
 
-import { use, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import http from "@/lib/http";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { API_BASE } from "@/lib/config";
 
 type Booking = {
@@ -104,13 +104,9 @@ async function fetchUsersByIds(
   return Array.from(found.values());
 }
 
-const TrfBookingRequestsPage = ({
-  params: paramsPromise,
-}: {
-  params: Promise<{ scheduleId: string }>;
-}) => {
-  const params = use(paramsPromise);
-  const { scheduleId } = params || {};
+const TrfBookingRequestsPage = () => {
+  const routeParams = useParams<{ scheduleId: string }>();
+  const scheduleId = routeParams?.scheduleId ? String(routeParams.scheduleId) : "";
   const router = useRouter();
 
   const [bookings, setBookings] = useState<Booking[]>([]);

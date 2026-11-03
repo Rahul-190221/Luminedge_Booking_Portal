@@ -183,10 +183,10 @@ test("T08 — the upgrade used no dependency-resolution workarounds", () => {
   }
 });
 
-test("T09 — the Phase 04 API-origin configuration boundary is untouched by Phase 03A", () => {
+test("T09 — the Phase 04 API-origin configuration boundary is enforced safely", () => {
   const config = source("src/lib/config.ts");
-  assert.match(config, /lumi-booking-backend\.vercel\.app/, "the production fallback must remain");
-  assert.match(config, /process\.env\.NEXT_PUBLIC_API_BASE_URL \|\|/, "the fallback expression must remain");
+  assert.doesNotMatch(config, /lumi-booking-backend\.vercel\.app/, "the unsafe production fallback must not be present");
+  assert.match(config, /process\.env\.NEXT_PUBLIC_API_BASE_URL/, "config must read NEXT_PUBLIC_API_BASE_URL");
   const nextConfig = source("next.config.js");
   assert.match(nextConfig, /module\.exports = nextConfig;/, "next.config.js must stay the plain export");
   assert.doesNotMatch(

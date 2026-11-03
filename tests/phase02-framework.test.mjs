@@ -42,11 +42,16 @@ const allSourceFiles = () => {
 
 // The only pages that read route params, and therefore the only ones that need
 // the Next.js 15 async params API.
-const DYNAMIC_PARAM_PAGES = [
+// Pages reading dynamic route params via the Next.js 15 async params Promise API (server components):
+const ASYNC_PARAM_PAGES = [];
+
+// Client component dynamic pages that use the supported Next.js client route hook useParams():
+const CLIENT_PARAM_PAGES = [
+  "src/app/(withDashboard)/dashboard/booking/[bookingId]/page.tsx",
+  "src/app/(withDashboard)/dashboard/reschedule/[bookingId]/page.tsx",
   "src/app/(withAdmin)/admin/[id]/page.tsx",
   "src/app/(withAdmin)/admin/TRF/[scheduleId]/page.tsx",
   "src/app/(withBDM)/bdm/[id]/page.tsx",
-  "src/app/(withDashboard)/dashboard/booking/[bookingId]/page.tsx",
   "src/app/(withTEACHER)/teacher/[id]/page.tsx",
   "src/app/(withTEACHER)/teacher/teacherTRF/[scheduleId]/page.tsx",
 ];
@@ -114,12 +119,18 @@ test("T04 — the lockfile resolves the framework and libraries to those exact v
 });
 
 test("T05 — the async params migration covers exactly the pages that read route params", () => {
-  for (const p of DYNAMIC_PARAM_PAGES) {
+  for (const p of ASYNC_PARAM_PAGES) {
     const page = source(p);
     assert.match(page, /params: paramsPromise/, `${p} must rename params to paramsPromise`);
     assert.match(page, /params: Promise</, `${p} must type params as a Promise`);
     assert.match(page, /const params = use\(paramsPromise\);/, `${p} must unwrap params with use()`);
     assert.match(page, /import \{[^}]*\buse\b[^}]*\} from "react";/, `${p} must import use from react`);
+  }
+  for (const p of CLIENT_PARAM_PAGES) {
+    const page = source(p);
+    assert.match(page, /useParams/, `${p} must use the supported Next.js client route hook useParams`);
+    assert.doesNotMatch(page, /use\(paramsPromise\)/, `${p} must not use unsupported use(paramsPromise)`);
+    assert.doesNotMatch(page, /use\(props\.params\)/, `${p} must not use unsupported use(props.params)`);
   }
 });
 
@@ -128,7 +139,7 @@ test("T06 — use(paramsPromise) appears only where the Next.js 15 API requires 
     .filter((f) => /const params = use\(paramsPromise\)/.test(fs.readFileSync(f, "utf8")))
     .map((f) => path.relative(root, f).replace(/\\/g, "/"))
     .sort();
-  assert.deepEqual(users, [...DYNAMIC_PARAM_PAGES].sort(), "unexpected use(paramsPromise) sites");
+  assert.deepEqual(users, [...ASYNC_PARAM_PAGES].sort(), "unexpected use(paramsPromise) sites");
 });
 
 test("T07 — routes that do not read params stay free of the params API", () => {
@@ -168,10 +179,10 @@ test("T09 — preserved security surfaces: middleware guard, reminder contract a
   assert.match(admin, /api\/v1\/send-reminder/, "the backend reminder endpoint must remain");
   assert.match(admin, /\{ scheduleId \}/, "the reminder body must remain exactly { scheduleId }");
 
-  // Phase 04 gate: the production API-origin behaviour must be untouched.
+  // Phase B / Phase 04: The silent production fallback is removed and fail-closed validation is enforced.
   const config = source("src/lib/config.ts");
-  assert.match(config, /lumi-booking-backend\.vercel\.app/, "the production fallback must remain");
-  assert.match(config, /process\.env\.NEXT_PUBLIC_API_BASE_URL \|\|/, "the fallback expression must remain");
+  assert.doesNotMatch(config, /lumi-booking-backend\.vercel\.app/, "the unsafe production fallback must not be present");
+  assert.match(config, /process\.env\.NEXT_PUBLIC_API_BASE_URL/, "config must read NEXT_PUBLIC_API_BASE_URL");
   const nextConfig = source("next.config.js");
   assert.doesNotMatch(
     nextConfig,

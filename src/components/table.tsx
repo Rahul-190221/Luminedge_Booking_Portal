@@ -7,6 +7,11 @@ import { useState, useEffect } from "react";
 import { AiOutlineEllipsis } from "react-icons/ai";
 import React from "react";
 import toast from "react-hot-toast";
+import {
+  formatDhakaExamDate,
+  formatExamTime,
+  isEligibleForReschedule,
+} from "@/lib/dateUtils";
 
 interface Booking {
   _id: string;
@@ -86,28 +91,39 @@ const Table = ({ userId }: { userId: string }) => {
   // -------------------------------------------------------------
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleString("en-US", { month: "long" });
-    const year = date.getFullYear();
-    return `${day} ${month}, ${year}`;
+    return formatDhakaExamDate(dateString);
   };
 
   const isPast24Hours = (bookingDate: string, time: string | undefined): boolean => {
-    if (!time) return false;
-    const bookingDateTime = new Date(`${bookingDate}T${time}`);
-    return bookingDateTime.getTime() - new Date().getTime() >= 24 * 60 * 60 * 1000;
+    return isEligibleForReschedule(bookingDate, time);
+  };
+
+  const checkEligibility = (booking: Booking): { isEligible: boolean; reason: string } => {
+    const status = (booking.status || "").toLowerCase().trim();
+    if (status === "cancelled") {
+      return { isEligible: false, reason: "Cancelled" };
+    }
+    if (status === "completed") {
+      return { isEligible: false, reason: "Completed" };
+    }
+    if (status !== "pending") {
+      return { isEligible: false, reason: "Unavailable" };
+    }
+    if (booking.attendance && /^\s*(present|absent)\s*$/i.test(booking.attendance)) {
+      return { isEligible: false, reason: "Attended" };
+    }
+
+    const examTime = booking.location === "Home" ? booking.testTime : booking.startTime;
+    const hasEnoughNotice = isEligibleForReschedule(booking.bookingDate, examTime);
+    if (!hasEnoughNotice) {
+      return { isEligible: false, reason: "Closed (< 24h)" };
+    }
+
+    return { isEligible: true, reason: "" };
   };
 
   const formatTime = (timeString?: string): string => {
-    if (!timeString) return "N/A";
-    const [hourStr, minuteStr] = timeString.split(":");
-    const hour = Number(hourStr);
-    const minute = Number(minuteStr);
-    if (isNaN(hour) || isNaN(minute)) return "Invalid Time";
-    const date = new Date();
-    date.setHours(hour, minute);
-    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+    return formatExamTime(timeString);
   };
 
   const handleViewResult = async (bookingId: string, bookingName: string) => {
@@ -159,40 +175,42 @@ const Table = ({ userId }: { userId: string }) => {
               </td>
               <td>{booking.location}</td>
               <td>{booking.status}</td>
-              <td>
-                <button
-                  aria-label="View booking details"
-                  onClick={() => {
-                    const timeToCompare = booking.location === "Home" ? booking.testTime : booking.startTime;
-                    if (booking.status === "pending" && timeToCompare && isPast24Hours(booking.bookingDate, timeToCompare)) {
+              <td className="whitespace-nowrap">
+                <div className="flex items-center space-x-2">
+                  {(() => {
+                    const { isEligible, reason } = checkEligibility(booking);
+                    return isEligible ? (
+                      <button
+                        type="button"
+                        aria-label={`Reschedule booking ${booking._id}`}
+                        onClick={() => router.push(`/dashboard/reschedule/${booking._id}`)}
+                        className="px-3 py-1 bg-[#face39] hover:bg-[#e5a812] text-black font-semibold rounded text-xs transition-colors cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-[#face39]"
+                      >
+                        Reschedule
+                      </button>
+                    ) : (
+                      <span
+                        title={`Rescheduling unavailable: ${reason}`}
+                        aria-label={`Rescheduling unavailable: ${reason}`}
+                        className="px-2 py-1 bg-gray-100 text-gray-400 font-medium rounded text-xs cursor-not-allowed border border-gray-200 select-none inline-block"
+                      >
+                        {reason}
+                      </span>
+                    );
+                  })()}
+                  <button
+                    type="button"
+                    aria-label="View booking details"
+                    onClick={() => {
+                      // Booking details remain accessible independently of rescheduling eligibility
                       router.push(`/dashboard/${booking._id}`);
-                    } else {
-                      router.push("/dashboard/contact1");
-                    }
-                  }}
-                  disabled={
-                    !(
-                      booking.status === "pending" &&
-                      (booking.location === "Home" ? booking.testTime : booking.startTime) &&
-                      isPast24Hours(
-                        booking.bookingDate,
-                        booking.location === "Home" ? booking.testTime : booking.startTime
-                      )
-                    )
-                  }
-                  className={`px-4 py-2 font-bold rounded ${
-                    booking.status === "pending" &&
-                    (booking.location === "Home" ? booking.testTime : booking.startTime) &&
-                    isPast24Hours(
-                      booking.bookingDate,
-                      booking.location === "Home" ? booking.testTime : booking.startTime
-                    )
-                      ? "text-black hover:bg-white-700"
-                      : "text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  <AiOutlineEllipsis />
-                </button>
+                    }}
+                    title="View booking details"
+                    className="p-1.5 font-bold rounded text-black hover:bg-yellow-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-400 inline-flex items-center"
+                  >
+                    <AiOutlineEllipsis className="text-xl" />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

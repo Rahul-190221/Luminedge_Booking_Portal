@@ -83,8 +83,16 @@ const CoursesPage = () => {
       If you fail to attend your test on the scheduled date, it will be considered as taken, and no rescheduling or refunds will be possible.
     </li>
   </ul>
-  <div className="flex justify-center mt-4">
-    <p className="text-center font-semibold">
+  <div className="flex flex-col items-center justify-center mt-4 space-y-2 text-center">
+    <p className="font-semibold text-gray-800">
+      You can reschedule your eligible mock test directly from your{' '}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+      <a href="/dashboard" className="text-[#FACE39] underline font-bold">
+        Dashboard
+      </a>{' '}
+      at least 24 hours before your test.
+    </p>
+    <p className="text-center font-semibold text-gray-700">
       To reschedule, please contact the front desk at least 24 hours before your test.
     </p>
   </div>
