@@ -49,7 +49,7 @@ const CourseCard2 = ({
         // fill the grid/slider cell
         "w-full h-full flex flex-col rounded-2xl border border-gray-700 bg-[#00000f] text-white shadow-xl",
         "transition-transform duration-300",
-        isRegistered ? "cursor-pointer hover:scale-[1.02]" : "cursor-not-allowed opacity-85",
+        isRegistered ? "cursor-pointer group hover:scale-[1.02] focus:outline-none focus-visible:scale-[1.02]" : "cursor-not-allowed opacity-85",
       ].join(" ")}
     >
       {/* Image with consistent aspect ratio */}
@@ -61,7 +61,7 @@ const CourseCard2 = ({
           sizes={sizes}
           priority={priority}
           loading={priority ? "eager" : "lazy"}
-          className={["object-cover", isRegistered ? "group-hover:scale-105" : ""].join(" ")}
+          className={["object-cover transition-transform duration-300", isRegistered ? "group-hover:scale-105" : ""].join(" ")}
         />
       </div>
 
@@ -69,18 +69,18 @@ const CourseCard2 = ({
       <div
         className={[
           "flex flex-col p-4 rounded-b-2xl min-h-[140px]",
-          isRegistered ? "transition-colors duration-300 hover:bg-[#FACE39] hover:text-black" : "",
+          isRegistered ? "transition-colors duration-300 group-hover:bg-[#FACE39] group-hover:text-black" : "",
         ].join(" ")}
       >
-        <p className="mb-3 text-xs font-medium leading-snug text-gray-300">
+        <p className={["mb-3 text-xs font-medium leading-snug text-gray-300 transition-colors duration-300", isRegistered ? "group-hover:text-black" : ""].join(" ")}>
           {courseDescriptions[course.name] ||
             "Explore your path to success with Luminedge’s premium mock tests."}
         </p>
 
         <div
           className={[
-            "mt-auto flex items-center gap-2 text-sm font-semibold uppercase tracking-wide",
-            isRegistered ? "text-yellow-400" : "text-red-500",
+            "mt-auto flex items-center gap-2 text-sm font-semibold uppercase tracking-wide transition-colors duration-300",
+            isRegistered ? "text-yellow-400 group-hover:text-[#00000f]" : "text-red-500",
           ].join(" ")}
         >
           {isRegistered ? (
