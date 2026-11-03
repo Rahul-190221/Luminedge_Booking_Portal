@@ -1,13 +1,13 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import axios from "axios";
 import http from "@/lib/http";
 import { MdOutlinePersonOutline } from "react-icons/md";
 import { getUserIdOnlyFromToken } from "@/app/helpers/jwt";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import "./calendarStyles.css";
 import { motion } from "framer-motion";
@@ -39,8 +39,10 @@ type Schedule = {
 };
 
 // --- Component ---
-const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: string }> }) => {
-  const params = use(paramsPromise);
+const BookingId = () => {
+  const routeParams = useParams<{ bookingId: string }>();
+  const bookingId = (routeParams?.bookingId || "") as string;
+  const params = { bookingId };
   const [value, onChange] = useState<Value>(new Date());
   const [testType, setTestType] = useState<string>("");
   const [testSystem, setTestSystem] = useState<string>("");
@@ -53,6 +55,8 @@ const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: str
   const [userMockType, setUserMockType] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [userMocks, setUserMocks] = useState<
     { mockType: string; mock: number; testType?: string; testSystem?: string }[]
   >([]);
@@ -146,6 +150,10 @@ const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: str
       const dates = raw
         .filter((s: any) => {
           if (!s?.startDate) return false;
+          const hasCapacity = Array.isArray(s?.timeSlots)
+            ? s.timeSlots.some((slot: any) => (Number(slot?.slot) || 0) > 0)
+            : true;
+          if (!hasCapacity) return false;
           const d = new Date(s.startDate);
           return d.getFullYear() === year && d.getMonth() === month;
         })
@@ -219,6 +227,73 @@ const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: str
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.bookingId, isHome]);
 
+  const formatLocalYMD = (d: Date): string => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const scheduleAbortRef = useRef<AbortController | null>(null);
+
+  const fetchScheduleData = useCallback(async (selectedDate: Date) => {
+    if (isHome) {
+      setScheduleData([]);
+      return;
+    }
+    if (scheduleAbortRef.current) {
+      scheduleAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    scheduleAbortRef.current = controller;
+
+    setScheduleLoading(true);
+    setScheduleError(null);
+    setSelectedSlotId(null);
+    setScheduleId(null);
+
+    try {
+      const formattedDate = formatLocalYMD(selectedDate);
+
+      const response = await http.get(
+        `${API_BASE}/api/v1/schedule/${formattedDate}/${params.bookingId}`,
+        { signal: controller.signal }
+      );
+
+      const rawSchedules = Array.isArray(response?.data)
+        ? response.data
+        : Array.isArray(response?.data?.schedules)
+        ? response.data.schedules
+        : [];
+      const normalizedSchedules = rawSchedules
+        .map((row: any) => normalizeScheduleRow(row))
+        .filter(Boolean)
+        .map((schedule: any) => ({
+          ...schedule,
+          courseId: schedule.courseId ?? "",
+          endDate: schedule.endDate ?? schedule.startDate,
+          testSystem: schedule.testSystem ?? "",
+        })) as Schedule[];
+
+      setScheduleData(normalizedSchedules);
+    } catch (error: any) {
+      if (!axios.isCancel(error)) {
+        console.error("Error fetching schedule data:", error);
+        setScheduleData([]);
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) {
+          setScheduleError("Session expired or unauthorized. Please sign in again.");
+        } else if (status >= 500) {
+          setScheduleError("Server error loading schedules. Please try again shortly.");
+        } else {
+          setScheduleError("Unable to load schedules. Please check your connection.");
+        }
+      }
+    } finally {
+      setScheduleLoading(false);
+    }
+  }, [isHome, params.bookingId]);
+
   // fetch per-day schedules (NOT for Home; backend has no /schedule/Home/:courseId)
   useEffect(() => {
     if (!(value instanceof Date)) return;
@@ -229,44 +304,11 @@ const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: str
     }
     if (isComputer && !effectiveLocation) return; // wait for location selection
 
-    const controller = new AbortController();
-
-    const fetchScheduleData = async (selectedDate: Date) => {
-      try {
-        const formattedDate = selectedDate.toLocaleDateString("en-CA");
-
-        const response = await http.get(
-          `${API_BASE}/api/v1/schedule/${formattedDate}/${params.bookingId}`,
-          { signal: controller.signal }
-        );
-
-        const rawSchedules = Array.isArray(response?.data)
-          ? response.data
-          : Array.isArray(response?.data?.schedules)
-          ? response.data.schedules
-          : [];
-        const normalizedSchedules = rawSchedules
-          .map((row: any) => normalizeScheduleRow(row))
-          .filter(Boolean)
-          .map((schedule: any) => ({
-            ...schedule,
-            courseId: schedule.courseId ?? "",
-            endDate: schedule.endDate ?? schedule.startDate,
-            testSystem: schedule.testSystem ?? "",
-          })) as Schedule[];
-
-        setScheduleData(normalizedSchedules);
-      } catch (error: any) {
-        if (!axios.isCancel(error)) {
-          console.error("Error fetching schedule data:", error);
-          setScheduleData([]);
-        }
-      }
-    };
-
     fetchScheduleData(value);
-    return () => controller.abort();
-  }, [value, isHome, isComputer, effectiveLocation, userTestType, params.bookingId]);
+    return () => {
+      if (scheduleAbortRef.current) scheduleAbortRef.current.abort();
+    };
+  }, [value, isHome, isComputer, effectiveLocation, userTestType, fetchScheduleData]);
 
   const handleSlotSelect = (slotId: string, scheduleId: string, testType: string) => {
     setSelectedSlotId(slotId);
@@ -654,35 +696,104 @@ const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: str
 
             {/* Slots */}
             <div className="mt-8 w-full mx-auto">
-              {scheduleData.length > 0 ? (
-                <>
-                  {scheduleData
-                    .filter(
-                      (schedule) =>
-                        schedule.testType === userTestType &&
-                        schedule.name === userMockType
-                    )
-                    .map((schedule) => (
+              {(() => {
+                const normalizeText = (s?: string) => (s || "").toLowerCase().trim();
+                const filteredSchedules = scheduleData.filter((schedule) => {
+                  const modeMatch =
+                    !userTestType ||
+                    userTestType === "N/A" ||
+                    normalizeText(schedule.testType) === normalizeText(userTestType);
+                  const courseMatch =
+                    !userMockType ||
+                    userMockType === "N/A" ||
+                    normalizeText(schedule.name) === normalizeText(userMockType) ||
+                    normalizeText(schedule.name) === normalizeText(courseName);
+                  return modeMatch && courseMatch;
+                });
+
+                if (scheduleLoading) {
+                  return (
+                    <div className="flex items-center space-x-2 text-sm text-gray-500 py-6">
+                      <div className="w-5 h-5 border-2 border-[#face39] border-t-transparent rounded-full animate-spin" />
+                      <span>Checking available schedules...</span>
+                    </div>
+                  );
+                }
+
+                if (scheduleError) {
+                  return (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                      <p className="font-semibold mb-1">Failed to Load Schedules</p>
+                      <p className="text-xs mb-3">{scheduleError}</p>
+                      <button
+                        type="button"
+                        onClick={() => value instanceof Date && fetchScheduleData(value)}
+                        className="px-3 py-1.5 bg-[#face39] text-black font-semibold text-xs rounded-lg hover:bg-yellow-400 transition"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (effectiveLocation === "Home") {
+                  return (
+                    <p className="text-base font-medium text-[#00000f] mt-0">
+                      You can choose any date for home-based booking. Select your date and test time, then click Proceed.
+                    </p>
+                  );
+                }
+
+                if (scheduleData.length === 0) {
+                  return (
+                    <p className="text-base font-medium text-[#00000f] mt-0">
+                      No schedules available for this date.
+                    </p>
+                  );
+                }
+
+                if (filteredSchedules.length === 0) {
+                  return (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+                      <p className="font-semibold">No Matching Schedules</p>
+                      <p className="text-xs mt-1">
+                        Schedules exist for this date, but none match your course ({courseName}) and test mode ({userTestType || "N/A"}).
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {filteredSchedules.map((schedule) => (
                       <div
                         key={schedule._id}
                         className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
                       >
                         {schedule.timeSlots.map((slot) => {
                           const isSelected = selectedSlotId === slot.slotId;
+                          const isFull = (Number(slot.slot) || 0) <= 0;
                           return (
                             <div
                               key={slot.slotId}
-                              onClick={() =>
-                                handleSlotSelect(
-                                  slot.slotId,
-                                  schedule._id,
-                                  schedule.testType
-                                )
-                              }
+                              onClick={() => {
+                                if (!isFull) {
+                                  handleSlotSelect(
+                                    slot.slotId,
+                                    schedule._id,
+                                    schedule.testType
+                                  );
+                                }
+                              }}
                               className={`
-                                mt-2 w-full px-4 py-4 rounded-xl cursor-pointer transition-all duration-300
-                                ${isSelected ? "bg-yellow-300 shadow-md scale-[1.01]" : "bg-gray-100"}
-                                hover:bg-[#FACE39] hover:shadow-lg
+                                mt-2 w-full px-4 py-4 rounded-xl transition-all duration-300
+                                ${
+                                  isFull
+                                    ? "bg-gray-100 opacity-60 cursor-not-allowed border border-gray-300"
+                                    : isSelected
+                                    ? "bg-yellow-300 shadow-md scale-[1.01] cursor-pointer"
+                                    : "bg-gray-100 hover:bg-[#FACE39] hover:shadow-lg cursor-pointer"
+                                }
                               `}
                             >
                               <div className="grid grid-cols-2 gap-2">
@@ -703,7 +814,9 @@ const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: str
                               <div className="flex items-center gap-1 mt-0 text-sm text-[#00000f]">
                                 <MdOutlinePersonOutline className="text-lg" />
                                 <span className="font-medium">Available Seats:</span>
-                                <span className="font-bold">{slot.slot}</span>
+                                <span className={`font-bold ${isFull ? "text-red-600" : ""}`}>
+                                  {isFull ? "Fully Booked (0)" : slot.slot}
+                                </span>
                               </div>
 
                               <h4 className="text-sm font-medium mt-2 text-[#00000f]">
@@ -723,14 +836,9 @@ const BookingId = ({ params: paramsPromise }: { params: Promise<{ bookingId: str
                         })}
                       </div>
                     ))}
-                </>
-              ) : (
-                <p className="text-base font-medium text-[#00000f] mt-0">
-                  {effectiveLocation === "Home"
-                    ? "You can choose any date for home-based booking. Select your date and test time, then click Proceed."
-                    : "No schedules available for this date."}
-                </p>
-              )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         ) : (

@@ -163,22 +163,17 @@ test("T07 — existing eligibility checks and error responses are unchanged", ()
 });
 
 test("T08 — React 19 and Next.js 15 conventions are preserved", () => {
-  // Phase 02 upgraded the stack; this page now uses the Next.js 15 async params
-  // API with React 19's use() to unwrap the promise.
+  // Phase 02 upgraded the stack; the client booking page uses the supported
+  // Next.js client route hook useParams() to avoid React use() runtime type crashes.
   assert.match(
     bookingPage,
-    /import \{ use, useEffect, useMemo, useState \} from "react";/,
-    "React 19 hook imports, including use"
+    /useParams/,
+    "the Next.js client route hook useParams must be used"
   );
-  assert.match(
-    bookingPage,
-    /\(\{ params: paramsPromise \}: \{ params: Promise<\{ bookingId: string \}> \}\)/,
-    "the Next.js 15 async params signature must be used"
-  );
-  assert.match(
+  assert.doesNotMatch(
     bookingPage,
     /const params = use\(paramsPromise\);/,
-    "React 19 use() must unwrap the params promise"
+    "unsupported use(paramsPromise) must not be used on the client booking page"
   );
 
   for (const [name, page] of [["contact1", contact1Page], ["[...contact]", catchAllPage]]) {
