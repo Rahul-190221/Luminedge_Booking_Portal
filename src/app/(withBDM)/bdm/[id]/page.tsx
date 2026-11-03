@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams } from "next/navigation";
 import axios from "axios";
 import http from "@/lib/http";
 import toast from "react-hot-toast";
@@ -75,9 +76,9 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   return Array.from(found.values());
 }
 
-const BookingRequestsPage = ({ params: paramsPromise }: { params: Promise<{ id: string }> }) => {
-  const params = use(paramsPromise);
-  const scheduleId = params.id;
+const BookingRequestsPage = () => {
+  const routeParams = useParams<{ id: string }>();
+  const scheduleId = routeParams?.id ? String(routeParams.id) : "";
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<any[]>([]);

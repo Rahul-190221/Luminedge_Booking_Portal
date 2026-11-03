@@ -42,19 +42,18 @@ const allSourceFiles = () => {
 
 // The only pages that read route params, and therefore the only ones that need
 // the Next.js 15 async params API.
-// Pages reading dynamic route params via the Next.js 15 async params Promise API:
-const ASYNC_PARAM_PAGES = [
-  "src/app/(withAdmin)/admin/[id]/page.tsx",
-  "src/app/(withAdmin)/admin/TRF/[scheduleId]/page.tsx",
-  "src/app/(withBDM)/bdm/[id]/page.tsx",
-  "src/app/(withTEACHER)/teacher/[id]/page.tsx",
-  "src/app/(withTEACHER)/teacher/teacherTRF/[scheduleId]/page.tsx",
-];
+// Pages reading dynamic route params via the Next.js 15 async params Promise API (server components):
+const ASYNC_PARAM_PAGES = [];
 
 // Client component dynamic pages that use the supported Next.js client route hook useParams():
 const CLIENT_PARAM_PAGES = [
   "src/app/(withDashboard)/dashboard/booking/[bookingId]/page.tsx",
   "src/app/(withDashboard)/dashboard/reschedule/[bookingId]/page.tsx",
+  "src/app/(withAdmin)/admin/[id]/page.tsx",
+  "src/app/(withAdmin)/admin/TRF/[scheduleId]/page.tsx",
+  "src/app/(withBDM)/bdm/[id]/page.tsx",
+  "src/app/(withTEACHER)/teacher/[id]/page.tsx",
+  "src/app/(withTEACHER)/teacher/teacherTRF/[scheduleId]/page.tsx",
 ];
 
 test("T01 — the framework is pinned to the security-patched Next.js 15.5.28 / React 19.2.9", () => {

@@ -134,9 +134,7 @@ test("T08 — the legacy template is gone and the page's booking, attendance, PD
   assert.match(page, /api\/v1\/user\/bookings\/\$\{scheduleId\}/, "the attendance update must remain");
   assert.match(page, /api\/v1\/user\/attendance\/bulk/, "the bulk attendance lookup must remain");
 
-  // Phase 02 moved this page to the Next.js 15 / React 19 async params API.
-  // This page uses the inline signature, so assert the brace/destructure shape
-  // rather than a trailing comma or semicolon.
-  assert.match(page, /\(\{ params: paramsPromise \}: \{ params: Promise<\{ id: string \}> \}\)/, "the Next.js 15 async params signature must be used");
-  assert.match(page, /const params = use\(paramsPromise\);/, "React 19 use() must unwrap the params promise");
+  // Client component route params use useParams() to avoid React 19 use() plain-object crash.
+  assert.match(page, /useParams<\{ id: string \}>\(\)/, "useParams<{ id: string }>() must be used");
+  assert.doesNotMatch(page, /use\(paramsPromise\)/, "use(paramsPromise) must not be used");
 });

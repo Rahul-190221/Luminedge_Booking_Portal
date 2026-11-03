@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams } from "next/navigation";
 import axios from "axios";
 import http from "@/lib/http";
 import toast from "react-hot-toast";
@@ -83,9 +84,9 @@ async function fetchUsersByIds(userIds: string[], requestedPageSize = 500) {
   return Array.from(found.values());
 }
 
-const BookingRequestsPage = ({ params: paramsPromise }: { params: Promise<{ id: string }> }) => {
-  const params = use(paramsPromise);
-  const { id: scheduleId } = params || {};
+const BookingRequestsPage = () => {
+  const routeParams = useParams<{ id: string }>();
+  const scheduleId = routeParams?.id ? String(routeParams.id) : "";
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -400,17 +401,17 @@ const BookingRequestsPage = ({ params: paramsPromise }: { params: Promise<{ id: 
       ],
       body,
       theme: "grid",
-      styles: { 
-        fontSize: 8, 
-        cellPadding: { top: 2.5, right: 1, bottom: 2.5, left: 1 }, 
+      styles: {
+        fontSize: 8,
+        cellPadding: { top: 2.5, right: 1, bottom: 2.5, left: 1 },
         minCellHeight: 8,
-        overflow: "linebreak", 
+        overflow: "linebreak",
         valign: "middle",
         textColor: [0, 0, 15] // #00000f
       },
-      headStyles: { 
+      headStyles: {
         fillColor: [250, 206, 57], // #face39
-        textColor: [0, 0, 15], 
+        textColor: [0, 0, 15],
         fontStyle: "bold",
         halign: "center"
       },
@@ -460,7 +461,12 @@ const BookingRequestsPage = ({ params: paramsPromise }: { params: Promise<{ id: 
       } else if (response?.status === 400 || response?.status === 404) {
         toast.error(data?.message || "The schedule reminder request is invalid.");
       } else if (response?.status === 503) {
-        toast.error("Reminder delivery is unavailable until its service configuration is ready.");
+        const cat = data?.errorCategory;
+        if (cat) {
+          toast.error(`Reminder delivery is unavailable until its service configuration is ready. Diagnostic: ${cat}`);
+        } else {
+          toast.error("Reminder delivery is unavailable until its service configuration is ready.");
+        }
       } else {
         toast.error("Reminder delivery could not be completed.");
       }
